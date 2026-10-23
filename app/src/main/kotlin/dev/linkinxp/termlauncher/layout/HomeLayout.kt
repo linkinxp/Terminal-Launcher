@@ -130,7 +130,10 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         const val MAX_PAGES = 5
         const val MAX_FOLDER_NAME = 24
         private const val VERSION = 1
-        private val COMMAND_WORDS = setOf("ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help")
+        private val COMMAND_WORDS = setOf(
+            "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
+            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix",
+        )
         private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
         fun default(): HomeLayout = HomeLayout(emptyList(), listOf(Page(emptyList())))

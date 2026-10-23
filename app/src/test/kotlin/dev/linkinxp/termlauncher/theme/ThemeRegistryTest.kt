@@ -6,9 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeRegistryTest {
-    @Test fun allHasTheFiveSpecThemesInOrder() {
+    @Test fun allHasTheNineSpecThemesInOrder() {
         assertEquals(
-            listOf("classy-black", "matrix", "amber", "solarized-dark", "dracula"),
+            listOf(
+                "classy-black", "matrix", "amber", "solarized-dark", "dracula",
+                "neon-city", "synthwave", "blade-runner", "glitch-red",
+            ),
             ThemeRegistry.all.map { it.name },
         )
     }
@@ -33,5 +36,23 @@ class ThemeRegistryTest {
     @Test fun everyBorderStyleIsUsed() {
         assertEquals(BorderStyle.entries.toSet(), ThemeRegistry.all.map { it.border }.toSet())
         assertTrue(ThemeRegistry.all.all { it.background ushr 24 == 0xFFL })
+    }
+
+    @Test fun newThemesUseSpecColors() {
+        val neon = ThemeRegistry.byName("neon-city")!!
+        assertEquals(0xFF0B0014L, neon.background)
+        assertEquals(0xFF00F0FFL, neon.foreground)
+        assertEquals(0xFFFF2BD6L, neon.accent)
+        assertEquals(BorderStyle.BRACKET, neon.border)
+        assertEquals(0xFFFF3B3BL, ThemeRegistry.byName("glitch-red")!!.foreground)
+        assertEquals(BorderStyle.DOUBLE, ThemeRegistry.byName("blade-runner")!!.border)
+        assertEquals(BorderStyle.ROUNDED, ThemeRegistry.byName("synthwave")!!.border)
+    }
+
+    @Test fun onlyTheNewThemesAreCyber() {
+        assertEquals(
+            listOf("neon-city", "synthwave", "blade-runner", "glitch-red"),
+            ThemeRegistry.all.filter { it.cyber }.map { it.name },
+        )
     }
 }

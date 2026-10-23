@@ -190,4 +190,10 @@ class HomeLayoutTest {
         assertTrue(l.renameFolder("nope", "c").isFailure)
         assertEquals(listOf("a", "b"), l.folders().map { it.name })
     }
+
+    @Test fun mkdirRejectsNewReservedWords() {
+        for (word in listOf("fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix")) {
+            assertTrue("'$word' should be reserved", empty.mkdir(word).isFailure)
+        }
+    }
 }

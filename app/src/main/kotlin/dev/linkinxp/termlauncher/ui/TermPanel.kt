@@ -36,6 +36,19 @@ fun TermPanel(
             Modifier
                 .fillMaxWidth()
                 .drawBehind {
+                    if (theme.border == BorderStyle.BRACKET) {
+                        // Corner ticks only: four L-shaped strokes.
+                        val t = 12.dp.toPx()
+                        val sw = 2.dp.toPx()
+                        val x1 = size.width
+                        val y1 = size.height
+                        fun line(a: Offset, b: Offset) = drawLine(stroke, a, b, strokeWidth = sw)
+                        line(Offset(0f, 0f), Offset(t, 0f)); line(Offset(0f, 0f), Offset(0f, t))
+                        line(Offset(x1, 0f), Offset(x1 - t, 0f)); line(Offset(x1, 0f), Offset(x1, t))
+                        line(Offset(0f, y1), Offset(t, y1)); line(Offset(0f, y1), Offset(0f, y1 - t))
+                        line(Offset(x1, y1), Offset(x1 - t, y1)); line(Offset(x1, y1), Offset(x1, y1 - t))
+                        return@drawBehind
+                    }
                     val w = 1.dp.toPx()
                     val radius = if (theme.border == BorderStyle.ROUNDED) 10.dp.toPx() else 0f
                     val dash = if (theme.border == BorderStyle.ASCII) PathEffect.dashPathEffect(floatArrayOf(6f, 5f)) else null
