@@ -26,6 +26,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +35,9 @@ import androidx.core.content.ContextCompat
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.sys.SysSnapshot
+import dev.linkinxp.termlauncher.sys.readSystemStats
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.TextStyle
 import java.time.temporal.IsoFields
@@ -61,20 +65,9 @@ private fun rememberNow(): LocalDateTime {
     return now
 }
 
-private fun batteryText(context: Context): String {
-    val i = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return "bat ?"
-    val level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-    val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-    val status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-    val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-    return "bat ${if (level < 0) "?" else "${level * 100 / scale}%"}${if (charging) " +" else ""}"
-}
-
 @Composable
-private fun ClockHeader() {
-    val now = rememberNow()
+private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot) {
     val date = now.toLocalDate()
-    val context = LocalContext.current
     Column(Modifier.fillMaxWidth()) {
         PixelClock(now.toLocalTime())
         TermText(
@@ -83,9 +76,7 @@ private fun ClockHeader() {
                 "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}",
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
-        TermPanel("sys", Modifier.fillMaxWidth().padding(top = 8.dp), trailing = String.format(Locale.ROOT, "%02d:%02d", now.hour, now.minute)) {
-            TermText(batteryText(context))
-        }
+        SysPanel(snapshot)
     }
 }
 
@@ -103,6 +94,10 @@ fun PagerHome(
 ) {
     val pageCount = ui.layout.pages.size
     val pager = rememberPagerState { pageCount }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val now = rememberNow()
+    val snapshot = remember(now) { readSystemStats(context) }
     Column(
         modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
             .pointerInput(Unit) {
@@ -118,7 +113,7 @@ fun PagerHome(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
             ) {
-                if (index == 0) ClockHeader()
+                if (index == 0) ClockHeader(now, snapshot)
                 ui.layout.pages[index].items.forEach { item ->
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(
@@ -128,11 +123,7 @@ fun PagerHome(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            (0 until pageCount).forEach { i ->
-                TermText(if (i == pager.currentPage) "[${i + 1}]" else " ${i + 1} ", Modifier.padding(horizontal = 2.dp), dim = i != pager.currentPage)
-            }
-        }
+        StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } })
         Dock(ui, onItemTap, onItemLongPress)
         PromptBar(ui, vm)
     }
