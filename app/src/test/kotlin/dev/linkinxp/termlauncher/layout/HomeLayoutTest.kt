@@ -7,7 +7,7 @@ import org.junit.Test
 class HomeLayoutTest {
     private val empty = HomeLayout.default()
     private fun apps(l: HomeLayout) = (l.dock + l.pages.flatMap { it.items }).flatMap {
-        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps }
+        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps; is Item.Widget -> emptyList() }
     }
 
     @Test fun defaultHasEmptyDockAndOneEmptyPage() {
@@ -204,5 +204,71 @@ class HomeLayoutTest {
     @Test fun mkdirRejectsPanelAndWx() {
         assertTrue(empty.mkdir("panel").isFailure)
         assertTrue(empty.mkdir("wx").isFailure)
+    }
+
+    private fun w(id: Int, provider: String = "p/.W", size: WidgetSize = WidgetSize.MEDIUM) = Item.Widget(id, provider, size)
+
+    @Test fun addWidgetPutsItOnThePage() {
+        assertEquals(listOf<Item>(w(1)), empty.addWidget(0, w(1)).pages[0].items)
+    }
+
+    @Test fun addWidgetToAMissingPageLeavesTheLayoutUnchanged() {
+        assertEquals(empty, empty.addWidget(5, w(1)))
+    }
+
+    @Test fun aDuplicateWidgetIdIsIgnored() {
+        assertEquals(1, empty.addWidget(0, w(1)).addWidget(0, w(1)).widgetIds().size)
+    }
+
+    @Test fun removeWidgetKeepsOtherItems() {
+        val l = empty.addToPage(0, Item.App("a")).addWidget(0, w(1)).addWidget(0, w(2)).removeWidget(1)
+        assertEquals(listOf(Item.App("a"), w(2)), l.pages[0].items)
+    }
+
+    @Test fun resizeChangesOnlyThatWidget() {
+        val l = empty.addWidget(0, w(1)).addWidget(0, w(2)).resizeWidget(2, WidgetSize.LARGE)
+        assertEquals(listOf<Item>(w(1), w(2, size = WidgetSize.LARGE)), l.pages[0].items)
+    }
+
+    @Test fun pruneWidgetsDropsUninstalledProvidersAndReturnsTheirIds() {
+        val l = empty.addToPage(0, Item.App("a")).addWidget(0, w(1, "keep/.W")).addWidget(0, w(2, "gone/.W"))
+            .addPage().addWidget(1, w(3, "gone/.W"))
+        val (pruned, removed) = l.pruneWidgets(setOf("keep/.W"))
+        assertEquals(setOf(1), pruned.widgetIds())
+        assertEquals(listOf(Item.App("a"), w(1, "keep/.W")), pruned.pages[0].items)
+        assertEquals(setOf(2, 3), removed.toSet())
+    }
+
+    @Test fun widgetIdsListEveryPage() {
+        val l = empty.addWidget(0, w(1)).addPage().addWidget(1, w(2))
+        assertEquals(setOf(1, 2), l.widgetIds())
+    }
+
+    @Test fun removingAPageMakesItsWidgetIdsDisappear() {
+        val l = empty.addWidget(0, w(1)).addPage().addWidget(1, w(2)).removePage(1)
+        assertEquals(setOf(1), l.widgetIds())
+    }
+
+    @Test fun layoutsWithWidgetsRoundTrip() {
+        val l = empty.pin("a").addWidget(0, w(7, "p/.W", WidgetSize.SMALL)).mkdir("g").getOrThrow()
+        assertEquals(l, HomeLayout.decode(l.encode()))
+    }
+
+    @Test fun layoutsSavedBeforeWidgetsStillDecode() {
+        val old = """{"v":1,"layout":{"dock":[],"pages":[{"items":[{"type":"app","pkg":"x"}]}]}}"""
+        assertEquals(listOf<Item>(Item.App("x")), HomeLayout.decode(old).pages[0].items)
+    }
+
+    @Test fun appPruningLeavesWidgetsAlone() {
+        val l = empty.addWidget(0, w(1)).addToPage(0, Item.App("gone")).prune(emptySet())
+        assertEquals(listOf<Item>(w(1)), l.pages[0].items)
+    }
+
+    @Test fun folderOperationsStillWorkNextToAWidget() {
+        val l = empty.addWidget(0, w(1)).mkdir("a").getOrThrow().mv("x", "a").getOrThrow()
+        assertEquals(setOf(1), l.widgetIds())
+        assertEquals(listOf("x"), l.folders().single().apps)
+        val back = l.unfile("x").rmdir("a").pinFolder("nope")
+        assertEquals(setOf(1), back.widgetIds())
     }
 }

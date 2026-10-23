@@ -8,12 +8,35 @@ import kotlinx.serialization.json.Json
 sealed interface Item {
     @Serializable @SerialName("app") data class App(val pkg: String) : Item
     @Serializable @SerialName("folder") data class Folder(val name: String, val apps: List<String>) : Item
+
+    /** A hosted Android widget: [id] is its AppWidgetHost id, [provider] the flattened ComponentName. */
+    @Serializable @SerialName("widget") data class Widget(val id: Int, val provider: String, val size: WidgetSize) : Item
 }
 
 @Serializable data class Page(val items: List<Item>)
 
 @Serializable
 data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
+
+    fun widgetIds(): Set<Int> = pages.flatMap { it.items }.filterIsInstance<Item.Widget>().map { it.id }.toSet()
+
+    /** Adds [widget] to [page]; a missing page or an id that is already on a page leaves the layout unchanged. */
+    fun addWidget(page: Int, widget: Item.Widget): HomeLayout =
+        if (widget.id in widgetIds()) this else addToPage(page, widget)
+
+    fun removeWidget(id: Int): HomeLayout =
+        copy(pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget && it.id == id }) })
+
+    fun resizeWidget(id: Int, size: WidgetSize): HomeLayout = copy(
+        pages = pages.map { p -> Page(p.items.map { if (it is Item.Widget && it.id == id) it.copy(size = size) else it }) },
+    )
+
+    /** Drops widgets whose provider is no longer installed; also returns their ids so the host can delete them. */
+    fun pruneWidgets(providers: Set<String>): Pair<HomeLayout, List<Int>> {
+        val gone = pages.flatMap { it.items }.filterIsInstance<Item.Widget>().filter { it.provider !in providers }
+        val pruned = copy(pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget && it.provider !in providers }) })
+        return pruned to gone.map { it.id }
+    }
 
     fun folders(): List<Item.Folder> = (dock + pages.flatMap { it.items }).filterIsInstance<Item.Folder>()
 
@@ -118,6 +141,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
             when (item) {
                 is Item.App -> item.takeIf { it.pkg in installed }
                 is Item.Folder -> item.copy(apps = item.apps.filter { it in installed })
+                is Item.Widget -> item
             }
         }
         return copy(dock = clean(dock), pages = pages.map { Page(clean(it.items)) })
