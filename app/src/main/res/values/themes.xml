@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Transparent window over the system wallpaper; SOLID mode paints its own opaque background. -->
+    <!-- Transparent window background; MainActivity sets FLAG_SHOW_WALLPAPER only in SYSTEM wall mode,
+         and SOLID/ASCII paint their own opaque background. Not translucent: the app below must stop. -->
     <style name="Theme.Launcher" parent="android:Theme.Material.Wallpaper.NoTitleBar">
-        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowShowWallpaper">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
     </style>
 </resources>

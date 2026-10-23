@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.view.WindowManager
+import androidx.compose.runtime.LaunchedEffect
+import dev.linkinxp.termlauncher.wall.WallMode
 import android.os.SystemClock
 import androidx.lifecycle.Lifecycle
 import dev.linkinxp.termlauncher.sys.bootWindowOpen
@@ -82,6 +85,13 @@ class MainActivity : ComponentActivity() {
             var menuPkg by remember { mutableStateOf<String?>(null) }
             var folderName by remember { mutableStateOf<String?>(null) }
             var editing by remember { mutableStateOf(false) }
+            // The system wallpaper is only composited behind the window in SYSTEM mode (saves power otherwise).
+            LaunchedEffect(ui.wall.mode) {
+                window.setFlags(
+                    if (ui.wall.mode == WallMode.SYSTEM) WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER else 0,
+                    WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER,
+                )
+            }
             BackHandler { /* a launcher stays home */ }
             TermTheme(ui.theme, ui.wall) {
                 val tap = { item: Item ->

@@ -13,6 +13,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -51,9 +54,11 @@ private fun AsciiBackground(wall: WallSettings, theme: Theme, reduceMotion: Bool
     val measurer = rememberTextMeasurer()
     val drifting = wall.animate && !reduceMotion
     var step by remember { mutableIntStateOf(0) }
-    LaunchedEffect(drifting) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(drifting, lifecycle) {
         step = 0
-        while (drifting) { delay(DRIFT_MS); step++ }
+        // Only tick while the launcher is resumed: no wakeups while another app is in front.
+        if (drifting) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { while (true) { delay(DRIFT_MS); step++ } }
     }
     BoxWithConstraints(modifier.fillMaxSize().background(theme.background.color())) {
         val cellW = with(density) { ART_SP.sp.toPx() * MONO_ADVANCE }
