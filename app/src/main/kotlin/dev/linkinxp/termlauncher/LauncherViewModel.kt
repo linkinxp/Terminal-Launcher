@@ -274,7 +274,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun Ephemeral.withPrompt(p: PromptState) = copy(prompt = p)
 
-    private companion object {
+    companion object {
         const val LAUNCHER_VERSION = "0.2.0"
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(

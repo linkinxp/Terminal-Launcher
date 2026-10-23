@@ -9,6 +9,10 @@ import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.PromptState
 import dev.linkinxp.termlauncher.apps.AppEntry
+import dev.linkinxp.termlauncher.fx.FxSettings
+import dev.linkinxp.termlauncher.prompt.DeviceInfo
+import dev.linkinxp.termlauncher.prompt.neofetch
+import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.apps.AppStat
 import dev.linkinxp.termlauncher.apps.buildDrawer
@@ -41,7 +45,12 @@ class ScreenshotsTest {
     private val appList = names.mapIndexed { i, n -> AppEntry("pkg.${n.lowercase().replace(' ', '_')}", n, i.toLong()) }
     private fun pkg(name: String) = appList.first { it.label == name }.pkg
 
-    private fun ui(theme: Theme, drawer: Boolean = false, prompt: PromptState = PromptState()): LauncherUi {
+    private fun ui(
+        theme: Theme,
+        drawer: Boolean = false,
+        prompt: PromptState = PromptState(),
+        fx: FxSettings = FxSettings(),
+    ): LauncherUi {
         val layout = HomeLayout(
             dock = listOf("Phone", "Messages", "Chrome", "Camera").map { Item.App(pkg(it)) },
             pages = listOf(
@@ -57,14 +66,21 @@ class ScreenshotsTest {
             drawer = buildDrawer(appList, emptySet(), stats, DrawerSort.AZ, "", false),
             drawerOpen = drawer,
             prompt = prompt,
+            fx = fx,
         )
     }
 
     private fun vm() = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
 
-    private fun home(name: String, theme: Theme, prompt: PromptState = PromptState()) {
+    private fun home(name: String, theme: Theme, prompt: PromptState = PromptState(), fx: FxSettings = FxSettings()) {
         val vm = vm()
-        rule.setContent { TermTheme(theme) { PagerHome(ui(theme, prompt = prompt), vm, {}, {}, {}, {}) } }
+        rule.setContent {
+            TermTheme(theme) {
+                val ui = ui(theme, prompt = prompt, fx = fx)
+                PagerHome(ui, vm, {}, {}, {}, {})
+                EffectsOverlay(ui.fx, theme, reduceMotion = true)
+            }
+        }
         rule.onRoot().captureRoboImage("build/shots/$name.png")
     }
 
@@ -87,4 +103,25 @@ class ScreenshotsTest {
         rule.setContent { TermTheme(theme) { AppDrawer(ui(theme, drawer = true), vm, {}, {}) } }
         rule.onRoot().captureRoboImage("build/shots/drawer-classy-black.png")
     }
+
+    @Test fun homeNeonCity() = home("home-neon-city", ThemeRegistry.byName("neon-city")!!)
+
+    @Test fun homeSynthwave() = home("home-synthwave", ThemeRegistry.byName("synthwave")!!)
+
+    @Test fun homeBladeRunner() = home("home-blade-runner", ThemeRegistry.byName("blade-runner")!!)
+
+    @Test fun homeGlitchRed() = home("home-glitch-red", ThemeRegistry.byName("glitch-red")!!)
+
+    @Test fun homeNeonCityScanlinesOff() =
+        home("home-neon-city-no-scanlines", ThemeRegistry.byName("neon-city")!!, fx = FxSettings(scanlines = false))
+
+    @Test fun neofetchOutputPanel() {
+        val text = neofetch(DeviceInfo("Pixel 10 Pro", "17", "0.2.0", "3d 4h", "neon-city", 142, 41))
+        home("home-neofetch", ThemeRegistry.byName("neon-city")!!, PromptState("", emptyList(), text, listOf("theme matrix", "ls -a")))
+    }
+
+    @Test fun helpOutputPanel() = home(
+        "home-help", ThemeRegistry.byName("blade-runner")!!,
+        PromptState("", emptyList(), LauncherViewModel.HELP),
+    )
 }

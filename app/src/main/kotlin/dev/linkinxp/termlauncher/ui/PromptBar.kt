@@ -1,6 +1,7 @@
 package dev.linkinxp.termlauncher.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,21 +59,31 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
         }
         Row {
             TermText("$PROMPT ", color = theme.accent.color(), bold = true)
-            BasicTextField(
-                value = value,
-                onValueChange = { value = it; vm.onPromptChange(it.text) },
-                singleLine = true,
-                textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
-                cursorBrush = SolidColor(if (ui.fx.cursor) Color.Transparent else theme.accent.color()),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(value.text) }),
-                modifier = Modifier.weight(1f),
-            )
-            if (ui.fx.cursor) {
-                // Block cursor: the native caret is hidden and this block blinks after the text.
-                var lit by remember { mutableStateOf(true) }
-                LaunchedEffect(Unit) { while (true) { delay(530); lit = !lit } }
-                TermText("█", color = theme.accent.color().copy(alpha = if (lit) 1f else 0f))
+            Box(Modifier.weight(1f)) {
+                val blockCursor = ui.fx.cursor
+                BasicTextField(
+                    value = value,
+                    onValueChange = { value = it; vm.onPromptChange(it.text) },
+                    singleLine = true,
+                    // With the block cursor the field is only the (invisible) input: the text is drawn below.
+                    textStyle = TextStyle(
+                        color = if (blockCursor) Color.Transparent else theme.foreground.color(),
+                        fontFamily = TermFont, fontSize = 14.sp,
+                    ),
+                    cursorBrush = SolidColor(if (blockCursor) Color.Transparent else theme.accent.color()),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(value.text) }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (blockCursor) {
+                    var lit by remember { mutableStateOf(true) }
+                    LaunchedEffect(Unit) { while (true) { delay(530); lit = !lit } }
+                    // Touches fall through to the field underneath; the block follows the text.
+                    Row {
+                        TermText(value.text, Modifier.weight(1f, fill = false))
+                        TermText("█", color = theme.accent.color().copy(alpha = if (lit) 1f else 0f))
+                    }
+                }
             }
             TermText(
                 "⇥",
