@@ -23,6 +23,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,11 +91,14 @@ fun PagerHome(
     onItemLongPress: (Item) -> Unit,
     onSwipeUp: () -> Unit,
     onEdit: () -> Unit,
+    homeSignal: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
+    // A Home press scrolls back to the first page.
+    LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.animateScrollToPage(0) }
     val context = LocalContext.current
     val now = rememberNow()
     val snapshot = remember(now) { readSystemStats(context) }

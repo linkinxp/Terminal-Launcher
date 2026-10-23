@@ -22,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +40,17 @@ import dev.linkinxp.termlauncher.ui.TermTheme
 
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
+
+    private val homePresses = mutableIntStateOf(0)
+
+    /** Pressing Home (button or gesture) while the launcher is open goes back to the first home page. */
+    public override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) {
+            vm.closeDrawer()
+            homePresses.intValue++
+        }
+    }
 
     private var unlockAt = 0L
 
@@ -85,6 +97,10 @@ class MainActivity : ComponentActivity() {
             var menuPkg by remember { mutableStateOf<String?>(null) }
             var folderName by remember { mutableStateOf<String?>(null) }
             var editing by remember { mutableStateOf(false) }
+            val homeSignal = homePresses.intValue
+            LaunchedEffect(homeSignal) {
+                if (homeSignal > 0) { menuPkg = null; folderName = null; editing = false }
+            }
             // The system wallpaper is only composited behind the window in SYSTEM mode (saves power otherwise).
             LaunchedEffect(ui.wall.mode) {
                 window.setFlags(
@@ -111,6 +127,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onSwipeUp = { vm.openDrawer() },
                     onEdit = { editing = true },
+                    homeSignal = homeSignal,
                     // Kept composed but invisible under the drawer so the wall shows and the page is kept.
                     modifier = Modifier.alpha(if (ui.drawerOpen) 0f else 1f),
                 )
