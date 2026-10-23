@@ -62,7 +62,7 @@ fun AppDrawer(
     val showFolders = ui.filter.isBlank() && !ui.showHidden
 
     // Item positions of each section header, for the fast-scroll rail.
-    val headerIndex = remember(d) {
+    val headerIndex = remember(d, folders.size, showFolders) {
         val map = LinkedHashMap<Char, Int>()
         var i = (if (showFolders) folders.size else 0) + (if (d.recent.isEmpty()) 0 else 1 + d.recent.size)
         d.sections.forEach { map[it.letter] = i; i += 1 + it.apps.size }

@@ -165,4 +165,29 @@ class HomeLayoutTest {
     @Test fun removeShortcutOfAbsentAppIsUnchanged() {
         assertEquals(empty, empty.removeShortcut("nope"))
     }
+
+    @Test fun renameFolderKeepsAppsAndPosition() {
+        val l = empty.addToPage(0, Item.App("first")).mkdir("games").getOrThrow().mv("x", "games").getOrThrow()
+            .renameFolder("GAMES", "arcade").getOrThrow()
+        assertEquals(listOf(Item.App("first"), Item.Folder("arcade", listOf("x"))), l.pages[0].items)
+    }
+
+    @Test fun renameFolderInDock() {
+        val l = empty.mkdir("a").getOrThrow().pinFolder("a").renameFolder("a", "b").getOrThrow()
+        assertEquals(listOf(Item.Folder("b", emptyList())), l.dock)
+    }
+
+    @Test fun renameFolderCaseOnlyChangeIsAllowed() {
+        val l = empty.mkdir("games").getOrThrow().renameFolder("games", "Games").getOrThrow()
+        assertEquals("Games", l.folders().single().name)
+    }
+
+    @Test fun renameFolderRejectsBadOrTakenOrMissing() {
+        val l = empty.mkdir("a").getOrThrow().mkdir("b").getOrThrow()
+        assertTrue(l.renameFolder("a", "B").isFailure)
+        assertTrue(l.renameFolder("a", "ls").isFailure)
+        assertTrue(l.renameFolder("a", "x y").isFailure)
+        assertTrue(l.renameFolder("nope", "c").isFailure)
+        assertEquals(listOf("a", "b"), l.folders().map { it.name })
+    }
 }

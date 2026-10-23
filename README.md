@@ -13,7 +13,7 @@ Switch the default Home app back in Settings, or `adb uninstall dev.linkinxp.ter
 
 ## Prompt commands
 `theme <name>` (classy-black, matrix, amber, solarized-dark, dracula) | `pin <app>` | `hide <app>` (toggles) |
-`mkdir <folder>` | `mv <app> <folder>` | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help`.
+`mkdir <folder>` | `mv <app> <folder>` | `mv <folder> <newname>` (rename) | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help`.
 Any other text fuzzy-matches installed apps; Enter launches the top match.
 
 ## Gestures

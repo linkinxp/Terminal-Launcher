@@ -103,20 +103,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             is Command.Help -> HELP
             is Command.Theme -> ThemeRegistry.byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
                 ?: "theme: ${cmd.name}: no such theme (${ThemeRegistry.all.joinToString(" ") { it.name }})"
-            is Command.Pin -> withApp(cmd.app, cur) { app ->
-                applyLayout { l ->
-                    val next = l.pin(app.pkg)
-                    if (next == l) Result.failure(IllegalStateException("pin: ${app.label}: dock full or already pinned"))
-                    else Result.success(next)
-                }
-                null
-            }
+            is Command.Pin -> withApp(cmd.app, cur) { app -> pinApp(app); null }
             is Command.Hide -> withApp(cmd.app, cur) { app ->
                 val set = if (app.pkg in cur.hidden) cur.hidden - app.pkg else cur.hidden + app.pkg
                 viewModelScope.launch { prefs.setHidden(set) }; null
             }
             is Command.Mkdir -> { applyLayout { it.mkdir(cmd.folder) }; null }
-            is Command.Mv -> withApp(cmd.app, cur) { app -> applyLayout { it.mv(app.pkg, cmd.folder) }; null }
+            is Command.Mv -> {
+                val isFolder = cur.layout.folders().any { it.name.equals(cmd.app, ignoreCase = true) }
+                val isApp = cur.apps.values.any { it.label.equals(cmd.app, ignoreCase = true) }
+                if (isFolder && !isApp) { applyLayout { it.renameFolder(cmd.app, cmd.folder) }; null } // mv <folder> <new>
+                else withApp(cmd.app, cur) { app -> applyLayout { it.mv(app.pkg, cmd.folder) }; null }
+            }
             is Command.Rmdir -> {
                 applyLayout { l ->
                     if (l.folders().none { it.name.equals(cmd.folder, true) }) Result.failure(IllegalArgumentException("rmdir: ${cmd.folder}: no such folder"))
@@ -138,7 +136,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun launch(pkg: String) {
         val app = ui.value.apps[pkg]
         if (repo.launch(pkg)) viewModelScope.launch { prefs.recordLaunch(pkg) }
-        else eph.update { it.withPrompt(PromptState("", emptyList(), "exec: ${app?.label ?: pkg}: not found")) }
+        else {
+            repo.refresh() // the app may be gone: rescan so stale entries disappear
+            eph.update { it.withPrompt(PromptState("", emptyList(), "exec: ${app?.label ?: pkg}: not found")) }
+        }
     }
 
     fun uninstall(pkg: String) = repo.uninstall(pkg)
@@ -160,7 +161,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     // ---- layout operations (used by UI directly) ----
 
-    fun pin(pkg: String) = edit { it.pin(pkg) }
+    fun pin(pkg: String) { ui.value.apps[pkg]?.let(::pinApp) }
     fun unpin(pkg: String) = edit { it.unpin(pkg) }
     fun addPage() = edit { it.addPage() }
     fun removePage(index: Int) = edit { it.removePage(index) }
@@ -185,10 +186,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Pins [app] to the dock; a full dock or an already pinned app is reported in the prompt area. */
+    private fun pinApp(app: AppEntry) = applyLayout { l ->
+        val next = l.pin(app.pkg)
+        if (next == l) Result.failure(IllegalStateException("pin: ${app.label.lowercase()}: dock full or already pinned"))
+        else Result.success(next)
+    }
+
     private fun edit(op: (HomeLayout) -> HomeLayout) = applyLayout { Result.success(op(it)) }
 
     private fun withApp(name: String, cur: LauncherUi, block: (AppEntry) -> String?): String? {
-        val all = cur.apps.values.toList()
+        val all = cur.apps.values.sortedWith(compareBy({ it.label.lowercase() }, { it.pkg }))
         val app = all.firstOrNull { it.label.equals(name, ignoreCase = true) }
             ?: fuzzyRank(name, all.map { it.label }).firstOrNull()?.let { all[it] }
         return if (app == null) "no match: $name" else block(app)
@@ -196,13 +204,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Visible (non-hidden) apps best-first for [query]. */
     private fun rank(query: String, cur: LauncherUi): List<AppEntry> {
-        val visible = cur.apps.values.filter { it.pkg !in cur.hidden }.sortedBy { it.label.lowercase() }
+        val visible = cur.apps.values.filter { it.pkg !in cur.hidden }.sortedWith(compareBy({ it.label.lowercase() }, { it.pkg }))
         return fuzzyRank(query, visible.map { it.label }).map { visible[it] }
     }
 
     private fun Ephemeral.withPrompt(p: PromptState) = Ephemeral(drawerOpen, showHidden, filter, p)
 
     private companion object {
-        const val HELP = "theme <name> | pin <app> | hide <app> | mkdir <f> | mv <app> <f> | rmdir <f> | ls [-a] | help"
+        const val HELP = "theme <name> | pin <app> | hide <app> | mkdir <f> | mv <app> <f> | mv <f> <new> | rmdir <f> | ls [-a] | help"
     }
 }

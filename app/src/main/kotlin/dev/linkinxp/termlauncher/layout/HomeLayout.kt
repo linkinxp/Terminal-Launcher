@@ -42,16 +42,27 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     }
 
     fun mkdir(name: String, page: Int = 0): Result<HomeLayout> {
-        val error = when {
-            page !in pages.indices -> "mkdir: no such page"
-            name.isBlank() || name.any { it.isWhitespace() || it == '/' } || name.length > MAX_FOLDER_NAME ->
-                "mkdir: '$name': invalid name"
-            name.lowercase() in COMMAND_WORDS -> "mkdir: $name: reserved word"
-            folders().any { it.name.equals(name, ignoreCase = true) } -> "mkdir: $name: already exists"
-            else -> null
-        }
+        val error = if (page !in pages.indices) "mkdir: no such page" else nameError(name, "mkdir", except = null)
         return if (error != null) Result.failure(IllegalArgumentException(error))
         else Result.success(addToPage(page, Item.Folder(name, emptyList())))
+    }
+
+    /** Renames a folder in place (dock or page); a case-only change of its own name is allowed. */
+    fun renameFolder(old: String, new: String): Result<HomeLayout> {
+        val folder = folders().firstOrNull { it.name.equals(old, ignoreCase = true) }
+            ?: return Result.failure(IllegalArgumentException("mv: $old: no such folder"))
+        nameError(new, "mv", except = folder.name)?.let { return Result.failure(IllegalArgumentException(it)) }
+        fun rename(items: List<Item>) = items.map { if (it == folder) folder.copy(name = new) else it }
+        return Result.success(copy(dock = rename(dock), pages = pages.map { Page(rename(it.items)) }))
+    }
+
+    private fun nameError(name: String, cmd: String, except: String?): String? = when {
+        name.isBlank() || name.any { it.isWhitespace() || it == '/' } || name.length > MAX_FOLDER_NAME ->
+            "$cmd: '$name': invalid name"
+        name.lowercase() in COMMAND_WORDS -> "$cmd: $name: reserved word"
+        folders().any { it.name.equals(name, ignoreCase = true) && !it.name.equals(except, ignoreCase = true) } ->
+            "$cmd: $name: already exists"
+        else -> null
     }
 
     fun mv(pkg: String, folder: String): Result<HomeLayout> {

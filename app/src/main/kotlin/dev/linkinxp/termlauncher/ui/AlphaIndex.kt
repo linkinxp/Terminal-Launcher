@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,15 +23,19 @@ import androidx.compose.foundation.layout.Arrangement
 @Composable
 fun AlphaIndex(letters: List<Char>, onSelect: (Char) -> Unit, modifier: Modifier = Modifier) {
     var height by remember { mutableIntStateOf(1) }
+    // The gesture handlers below live across recompositions, so they must read the latest values.
+    val currentLetters by rememberUpdatedState(letters)
+    val currentOnSelect by rememberUpdatedState(onSelect)
     fun pick(y: Float) {
-        if (letters.isEmpty()) return
-        val i = (y / height * letters.size).toInt().coerceIn(0, letters.lastIndex)
-        onSelect(letters[i])
+        val l = currentLetters
+        if (l.isEmpty()) return
+        val i = (y / height * l.size).toInt().coerceIn(0, l.lastIndex)
+        currentOnSelect(l[i])
     }
     Column(
         modifier.fillMaxHeight().width(24.dp)
-            .pointerInput(letters) { detectTapGestures { pick(it.y) } }
-            .pointerInput(letters) { detectDragGestures(onDragStart = { pick(it.y) }) { change, _ -> pick(change.position.y) } }
+            .pointerInput(Unit) { detectTapGestures { pick(it.y) } }
+            .pointerInput(Unit) { detectDragGestures(onDragStart = { pick(it.y) }) { change, _ -> pick(change.position.y) } }
             .onSizeChanged { height = it.height },
         verticalArrangement = Arrangement.SpaceEvenly,
         horizontalAlignment = Alignment.CenterHorizontally,
