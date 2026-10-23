@@ -9,6 +9,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -25,6 +31,9 @@ const val PROMPT = "user@phone:~$"
 fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val p = ui.prompt
+    // Text lives locally so typing never waits on the async view-model round trip; the VM only clears it.
+    var value by remember { mutableStateOf(TextFieldValue(p.text)) }
+    LaunchedEffect(p.text) { if (p.text.isEmpty() && value.text.isNotEmpty()) value = TextFieldValue("") }
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         p.message?.let {
             TermText(it, Modifier.clickable { vm.dismissMessage() }, color = theme.accent.color(), maxLines = 3)
@@ -32,19 +41,19 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
         p.suggestions.forEach { app ->
             TermText(
                 "> ${app.label.lowercase()}",
-                Modifier.fillMaxWidth().clickable { vm.launch(app.pkg); vm.onPromptChange("") }.padding(vertical = 6.dp),
+                Modifier.fillMaxWidth().clickable { vm.launch(app.pkg); value = TextFieldValue(""); vm.onPromptChange("") }.padding(vertical = 6.dp),
             )
         }
         Row {
             TermText("$PROMPT ", color = theme.accent.color(), bold = true)
             BasicTextField(
-                value = p.text,
-                onValueChange = vm::onPromptChange,
+                value = value,
+                onValueChange = { value = it; vm.onPromptChange(it.text) },
                 singleLine = true,
                 textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
                 cursorBrush = SolidColor(theme.accent.color()),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(p.text) }),
+                keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(value.text) }),
                 modifier = Modifier.weight(1f),
             )
         }

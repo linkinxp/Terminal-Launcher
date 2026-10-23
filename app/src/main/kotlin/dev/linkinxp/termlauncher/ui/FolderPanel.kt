@@ -27,7 +27,7 @@ fun FolderPanel(name: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: 
     val pinned = ui.layout.dock.any { it is Item.Folder && it.name == name }
     Dialog(onDismissRequest = onDismiss) {
         Box(Modifier.padding(8.dp)) {
-            TermTheme(ui.theme) {
+            DialogSurface(ui.theme) {
                 TermPanel("~/${folder.name}", Modifier.fillMaxWidth().padding(8.dp)) {
                     val apps = folder.apps.mapNotNull { ui.apps[it] }
                     if (apps.isEmpty()) TermText("empty: mv <app> ${folder.name}", dim = true)

@@ -6,19 +6,23 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 
 /** Launchable apps from PackageManager, refreshed on package add/remove/change. Excludes this app. */
 class AppRepository(private val context: Context) {
 
-    val apps: Flow<List<AppEntry>> = callbackFlow {
-        trySend(query())
+    // Broadcasts only signal; the (slow) package scan runs on Dispatchers.Default, conflated so bursts collapse.
+    val apps: Flow<List<AppEntry>> = callbackFlow<Unit> {
+        trySend(Unit)
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, i: Intent) { trySend(query()) }
+            override fun onReceive(c: Context, i: Intent) { trySend(Unit) }
         }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -27,9 +31,9 @@ class AppRepository(private val context: Context) {
             addAction(Intent.ACTION_PACKAGE_REPLACED)
             addDataScheme("package")
         }
-        context.registerReceiver(receiver, filter)
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
         awaitClose { context.unregisterReceiver(receiver) }
-    }.flowOn(Dispatchers.Default)
+    }.conflate().map { query() }.flowOn(Dispatchers.Default)
 
     @Suppress("DEPRECATION")
     private fun query(): List<AppEntry> {

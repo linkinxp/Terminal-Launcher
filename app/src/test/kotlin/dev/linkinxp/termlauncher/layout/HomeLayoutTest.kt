@@ -153,4 +153,16 @@ class HomeLayoutTest {
         assertEquals(listOf("x"), (l.dock.single() as Item.Folder).apps)
         assertEquals(listOf(Item.App("x")), l.rmdir("a").pages[0].items)
     }
+
+    @Test fun removeShortcutDropsLooseShortcutFromPagesOnly() {
+        val l = empty.addToPage(0, Item.App("x")).addToPage(0, Item.App("y"))
+            .mkdir("a").getOrThrow().mv("z", "a").getOrThrow().pin("x")
+        val r = l.removeShortcut("x")
+        assertEquals(listOf("y", "z"), r.pages[0].items.flatMap { if (it is Item.App) listOf(it.pkg) else (it as Item.Folder).apps })
+        assertEquals(listOf(Item.App("x")), r.dock)
+    }
+
+    @Test fun removeShortcutOfAbsentAppIsUnchanged() {
+        assertEquals(empty, empty.removeShortcut("nope"))
+    }
 }

@@ -1,11 +1,12 @@
 package dev.linkinxp.termlauncher.ui
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -21,7 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,10 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.layout.Item
-import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.TextStyle
 import java.time.temporal.IsoFields
@@ -40,12 +41,22 @@ import java.util.Locale
 
 @Composable
 private fun rememberNow(): LocalDateTime {
+    val context = LocalContext.current
     var now by remember { mutableStateOf(LocalDateTime.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = LocalDateTime.now()
-            delay(60_000L - now.second * 1000L - now.nano / 1_000_000L + 50)
+    // Ticks are broadcasts (not delay()), so the clock is right again as soon as the screen wakes.
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) { now = LocalDateTime.now() }
         }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        now = LocalDateTime.now()
+        onDispose { context.unregisterReceiver(receiver) }
     }
     return now
 }
@@ -72,7 +83,7 @@ private fun ClockHeader() {
                 "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}",
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
-        TermPanel("sys", Modifier.fillMaxWidth().padding(top = 8.dp), trailing = "%02d:%02d".format(now.hour, now.minute)) {
+        TermPanel("sys", Modifier.fillMaxWidth().padding(top = 8.dp), trailing = String.format(Locale.ROOT, "%02d:%02d", now.hour, now.minute)) {
             TermText(batteryText(context))
         }
     }
@@ -112,7 +123,7 @@ fun PagerHome(
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(
                         "${if (item is Item.Folder) "" else "> "}$label",
-                        Modifier.fillMaxWidth().clickable { onItemTap(item) }.padding(vertical = 8.dp),
+                        Modifier.fillMaxWidth().combinedClickable(onClick = { onItemTap(item) }, onLongClick = { onItemLongPress(item) }).padding(vertical = 8.dp),
                     )
                 }
             }

@@ -35,6 +35,12 @@ fun TermTheme(theme: Theme, content: @Composable () -> Unit) {
     }
 }
 
+/** Dialog windows inherit [LocalTheme]; this only gives their wrapped content the theme background. */
+@Composable
+fun DialogSurface(theme: Theme, content: @Composable () -> Unit) {
+    Box(Modifier.background(theme.background.color())) { content() }
+}
+
 /** Monospace text in the current theme; [dim] uses the theme's dim color. */
 @Composable
 fun TermText(

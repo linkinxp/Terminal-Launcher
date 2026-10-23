@@ -19,7 +19,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -52,6 +57,7 @@ fun AppDrawer(
     val scope = rememberCoroutineScope()
     BackHandler { vm.closeDrawer() }
 
+    var filterValue by remember { mutableStateOf(TextFieldValue(ui.filter)) }
     val folders = ui.layout.folders()
     val showFolders = ui.filter.isBlank() && !ui.showHidden
 
@@ -63,7 +69,12 @@ fun AppDrawer(
         map
     }
 
-    Box(modifier.fillMaxSize().background(theme.background.color()).statusBarsPadding().navigationBarsPadding().imePadding()) {
+    Box(
+        modifier.fillMaxSize().background(theme.background.color())
+            // Swallow taps/long-presses the rows do not handle, so they cannot reach the home screen underneath.
+            .pointerInput(Unit) { detectTapGestures(onTap = {}, onLongPress = {}) }
+            .statusBarsPadding().navigationBarsPadding().imePadding(),
+    ) {
         Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 32.dp)) {
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -90,8 +101,8 @@ fun AppDrawer(
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 TermText("| grep ", dim = true)
                 BasicTextField(
-                    value = ui.filter,
-                    onValueChange = vm::setFilter,
+                    value = filterValue,
+                    onValueChange = { filterValue = it; vm.setFilter(it.text) },
                     singleLine = true,
                     textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
                     cursorBrush = SolidColor(theme.accent.color()),

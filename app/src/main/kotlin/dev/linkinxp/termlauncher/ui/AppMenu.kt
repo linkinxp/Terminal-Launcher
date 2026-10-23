@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
+import dev.linkinxp.termlauncher.layout.Item
 
 @Composable
 private fun MenuLine(text: String, onClick: () -> Unit) {
@@ -25,10 +26,11 @@ private fun MenuLine(text: String, onClick: () -> Unit) {
 fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
     val app = ui.apps[pkg] ?: return
     var pickingFolder by remember { mutableStateOf(false) }
-    val pinned = ui.layout.dock.any { it == dev.linkinxp.termlauncher.layout.Item.App(pkg) }
+    val pinned = ui.layout.dock.any { it == Item.App(pkg) }
+    val onHome = ui.layout.pages.any { p -> p.items.contains(Item.App(pkg)) }
     Dialog(onDismissRequest = onDismiss) {
         Box(Modifier.padding(8.dp)) {
-            TermTheme(ui.theme) {
+            DialogSurface(ui.theme) {
                 TermPanel(app.label.lowercase(), Modifier.fillMaxWidth().padding(8.dp)) {
                     if (pickingFolder) {
                         val folders = ui.layout.folders()
@@ -40,6 +42,7 @@ fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () ->
                         MenuLine(if (pinned) "unpin from dock" else "pin to dock") {
                             if (pinned) vm.unpin(pkg) else vm.pin(pkg); onDismiss()
                         }
+                        if (onHome) MenuLine("remove from home") { vm.removeShortcut(pkg); onDismiss() }
                         MenuLine("add to folder") { pickingFolder = true }
                         MenuLine(if (pkg in ui.hidden) "unhide" else "hide") { vm.toggleHidden(pkg); onDismiss() }
                         MenuLine("app info") { vm.appInfo(pkg); onDismiss() }

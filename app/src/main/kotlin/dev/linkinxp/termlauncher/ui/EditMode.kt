@@ -49,7 +49,7 @@ fun EditMode(ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
     val pages = ui.layout.pages
     Dialog(onDismissRequest = onDismiss) {
         Box(Modifier.padding(8.dp)) {
-            TermTheme(theme) {
+            DialogSurface(theme) {
                 TermPanel("edit pages", Modifier.fillMaxWidth().padding(8.dp), trailing = "[done]") {
                     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                         ui.prompt.message?.let { TermText(it, color = theme.accent.color(), maxLines = 3) }

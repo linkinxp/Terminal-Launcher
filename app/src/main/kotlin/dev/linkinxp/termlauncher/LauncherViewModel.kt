@@ -104,18 +104,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             is Command.Theme -> ThemeRegistry.byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
                 ?: "theme: ${cmd.name}: no such theme (${ThemeRegistry.all.joinToString(" ") { it.name }})"
             is Command.Pin -> withApp(cmd.app, cur) { app ->
-                val next = cur.layout.pin(app.pkg)
-                if (next == cur.layout) "pin: ${app.label}: dock full or already pinned" else { saveLayout(next); null }
+                applyLayout { l ->
+                    val next = l.pin(app.pkg)
+                    if (next == l) Result.failure(IllegalStateException("pin: ${app.label}: dock full or already pinned"))
+                    else Result.success(next)
+                }
+                null
             }
             is Command.Hide -> withApp(cmd.app, cur) { app ->
                 val set = if (app.pkg in cur.hidden) cur.hidden - app.pkg else cur.hidden + app.pkg
                 viewModelScope.launch { prefs.setHidden(set) }; null
             }
-            is Command.Mkdir -> layoutResult(cur.layout.mkdir(cmd.folder))
-            is Command.Mv -> withApp(cmd.app, cur) { app -> layoutResult(cur.layout.mv(app.pkg, cmd.folder)) }
+            is Command.Mkdir -> { applyLayout { it.mkdir(cmd.folder) }; null }
+            is Command.Mv -> withApp(cmd.app, cur) { app -> applyLayout { it.mv(app.pkg, cmd.folder) }; null }
             is Command.Rmdir -> {
-                if (cur.layout.folders().none { it.name.equals(cmd.folder, true) }) "rmdir: ${cmd.folder}: no such folder"
-                else { saveLayout(cur.layout.rmdir(cmd.folder)); null }
+                applyLayout { l ->
+                    if (l.folders().none { it.name.equals(cmd.folder, true) }) Result.failure(IllegalArgumentException("rmdir: ${cmd.folder}: no such folder"))
+                    else Result.success(l.rmdir(cmd.folder))
+                }
+                null
             }
             is Command.Ls -> { openDrawer(cmd.hidden); null }
             is Command.Query -> when {
@@ -163,23 +170,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun unfile(pkg: String) = edit { it.unfile(pkg) }
     fun pinFolder(name: String) = edit { it.pinFolder(name) }
     fun unpinFolder(name: String) = edit { it.unpinFolder(name) }
-    fun mkdirOnPage(name: String, page: Int) {
-        val message = layoutResult(ui.value.layout.mkdir(name, page))
-        eph.update { it.withPrompt(PromptState("", emptyList(), message)) }
-    }
-    fun mv(pkg: String, folder: String) {
-        val r = ui.value.layout.mv(pkg, folder)
-        r.onSuccess { saveLayout(it) }
-        r.onFailure { m -> eph.update { it.withPrompt(PromptState("", emptyList(), m.message)) } }
-    }
+    fun mkdirOnPage(name: String, page: Int) = applyLayout { it.mkdir(name, page) }
+    fun removeShortcut(pkg: String) = edit { it.removeShortcut(pkg) }
+    fun mv(pkg: String, folder: String) = applyLayout { it.mv(pkg, folder) }
 
     // ---- helpers ----
 
-    private fun edit(op: (HomeLayout) -> HomeLayout) = saveLayout(op(ui.value.layout))
-    private fun saveLayout(l: HomeLayout) { viewModelScope.launch { prefs.setLayout(l) } }
+    /** Applies [op] to the stored layout atomically; a failure's message is shown in the prompt area. */
+    private fun applyLayout(op: (HomeLayout) -> Result<HomeLayout>) {
+        viewModelScope.launch {
+            prefs.editLayout(op).exceptionOrNull()?.message?.let { m ->
+                eph.update { it.withPrompt(it.prompt.copy(message = m)) }
+            }
+        }
+    }
 
-    private fun layoutResult(r: Result<HomeLayout>): String? =
-        r.fold(onSuccess = { saveLayout(it); null }, onFailure = { it.message })
+    private fun edit(op: (HomeLayout) -> HomeLayout) = applyLayout { Result.success(op(it)) }
 
     private fun withApp(name: String, cur: LauncherUi, block: (AppEntry) -> String?): String? {
         val all = cur.apps.values.toList()

@@ -77,6 +77,10 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         return copy(dock = clean(dock), pages = pages.map { Page(clean(it.items)) }).addToPage(0, Item.App(pkg))
     }
 
+    /** Removes the plain shortcut for [pkg] from every page (the dock and folders are untouched). */
+    fun removeShortcut(pkg: String): HomeLayout =
+        copy(pages = pages.map { p -> Page(p.items.filterNot { it == Item.App(pkg) }) })
+
     fun pinFolder(name: String): HomeLayout {
         val folder = pages.flatMap { it.items }.filterIsInstance<Item.Folder>()
             .firstOrNull { it.name.equals(name, ignoreCase = true) } ?: return this

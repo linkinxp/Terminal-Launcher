@@ -20,7 +20,7 @@ private val DIGITS = listOf(
 @Composable
 fun PixelClock(time: LocalTime, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
-    val digits = "%02d%02d".format(time.hour, time.minute).map { it - '0' }
+    val digits = clockDigits(time.hour, time.minute)
     Canvas(modifier.fillMaxWidth().height(120.dp)) {
         // 4 digits of 3 cells, 1-cell gaps between digits, 2-cell gap between the pairs.
         val totalCells = 4 * 3 + 2 + 2
@@ -40,3 +40,6 @@ fun PixelClock(time: LocalTime, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** The four clock digits as 0-9, computed arithmetically so a non-Latin-digit locale cannot break them. */
+fun clockDigits(hour: Int, minute: Int): List<Int> = listOf(hour / 10, hour % 10, minute / 10, minute % 10)
