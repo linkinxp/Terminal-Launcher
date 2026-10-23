@@ -9,11 +9,14 @@ android {
     compileSdk = 37
     defaultConfig {
         applicationId = "dev.linkinxp.termlauncher"
-        minSdk = 31
+        // 34+: androidx.graphics.path then uses the framework PathIterator, so its native lib (not 16 KB
+        // aligned, even in 1.1.0) is never loaded and is left out of the APK.
+        minSdk = 34
         targetSdk = 36
         versionCode = 1
         versionName = "0.3.0"
     }
+    packaging { jniLibs { excludes += "**/libandroidx.graphics.path.so" } }
     buildFeatures { compose = true }
     testOptions { unitTests { isIncludeAndroidResources = true } }
 }
@@ -24,7 +27,9 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
-    implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
+    // Pinned above the version Compose pulls in: 1.0.1 ships a native lib whose RELRO is not 16 KB aligned.
+    implementation("androidx.graphics:graphics-path:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
