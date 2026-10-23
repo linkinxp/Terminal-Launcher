@@ -123,6 +123,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 null
             }
             is Command.Ls -> { openDrawer(cmd.hidden); null }
+            // Parsed but not wired yet: implemented in the prompt-wiring and effects tasks.
+            is Command.Fx, is Command.Sudo, Command.History, Command.Neofetch, Command.Whoami,
+            Command.Uptime, Command.Date, Command.Fortune, Command.Clear, Command.Matrix -> null
             is Command.Query -> when {
                 cmd.text.isBlank() -> null
                 else -> rank(cmd.text, cur).firstOrNull()?.let { launch(it.pkg); null } ?: "no match: ${cmd.text}"

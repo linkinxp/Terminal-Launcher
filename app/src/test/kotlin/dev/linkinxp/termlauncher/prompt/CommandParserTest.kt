@@ -46,4 +46,33 @@ class CommandParserTest {
         assertEquals(Command.Query(""), parseCommand(""))
         assertEquals(Command.Query(""), parseCommand("   "))
     }
+
+    @Test fun fxVariants() {
+        assertEquals(Command.Fx(null, null), parseCommand("fx"))
+        assertEquals(Command.Fx("scanlines", true), parseCommand("fx scanlines on"))
+        assertEquals(Command.Fx("scanlines", false), parseCommand("FX Scanlines OFF"))
+        assertEquals(Command.Fx("scanlines", null), parseCommand("fx scanlines"))
+        assertEquals(Command.Fx("scanlines", null), parseCommand("fx scanlines maybe"))
+    }
+
+    @Test fun argumentlessCommands() {
+        assertEquals(Command.History, parseCommand("history"))
+        assertEquals(Command.Neofetch, parseCommand("neofetch"))
+        assertEquals(Command.Whoami, parseCommand("whoami"))
+        assertEquals(Command.Uptime, parseCommand("uptime"))
+        assertEquals(Command.Date, parseCommand("date"))
+        assertEquals(Command.Fortune, parseCommand("fortune"))
+        assertEquals(Command.Clear, parseCommand("clear"))
+        assertEquals(Command.Matrix, parseCommand("matrix"))
+    }
+
+    @Test fun extraArgumentsMakeThemQueries() {
+        assertEquals(Command.Query("date now"), parseCommand("date now"))
+        assertEquals(Command.Query("clear all"), parseCommand("clear all"))
+    }
+
+    @Test fun sudoKeepsTheRestOfTheLine() {
+        assertEquals(Command.Sudo("rm -rf /"), parseCommand("sudo rm -rf /"))
+        assertEquals(Command.Query("sudo"), parseCommand("sudo"))
+    }
 }
