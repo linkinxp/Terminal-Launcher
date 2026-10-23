@@ -160,6 +160,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun movePage(from: Int, to: Int) = edit { it.movePage(from, to) }
     fun addToPage(page: Int, item: Item) = edit { it.addToPage(page, item) }
     fun rmdir(name: String) = edit { it.rmdir(name) }
+    fun unfile(pkg: String) = edit { it.unfile(pkg) }
+    fun pinFolder(name: String) = edit { it.pinFolder(name) }
+    fun unpinFolder(name: String) = edit { it.unpinFolder(name) }
+    fun mkdirOnPage(name: String, page: Int) {
+        val message = layoutResult(ui.value.layout.mkdir(name, page))
+        eph.update { it.withPrompt(PromptState("", emptyList(), message)) }
+    }
     fun mv(pkg: String, folder: String) {
         val r = ui.value.layout.mv(pkg, folder)
         r.onSuccess { saveLayout(it) }

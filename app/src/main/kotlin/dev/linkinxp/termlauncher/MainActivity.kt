@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.ui.AppDrawer
 import dev.linkinxp.termlauncher.ui.AppMenu
+import dev.linkinxp.termlauncher.ui.EditMode
+import dev.linkinxp.termlauncher.ui.FolderPanel
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.TermTheme
 
@@ -26,16 +28,34 @@ class MainActivity : ComponentActivity() {
         setContent {
             val ui by vm.ui.collectAsState()
             var menuPkg by remember { mutableStateOf<String?>(null) }
+            var folderName by remember { mutableStateOf<String?>(null) }
+            var editing by remember { mutableStateOf(false) }
             BackHandler { /* a launcher stays home */ }
             TermTheme(ui.theme) {
+                val tap = { item: Item ->
+                    when (item) {
+                        is Item.App -> vm.launch(item.pkg)
+                        is Item.Folder -> folderName = item.name
+                    }
+                }
                 PagerHome(
                     ui, vm,
-                    onItemTap = { item -> if (item is Item.App) vm.launch(item.pkg) },
-                    onItemLongPress = { item -> if (item is Item.App) menuPkg = item.pkg },
+                    onItemTap = tap,
+                    onItemLongPress = { item ->
+                        when (item) {
+                            is Item.App -> menuPkg = item.pkg
+                            is Item.Folder -> folderName = item.name
+                        }
+                    },
                     onSwipeUp = { vm.openDrawer() },
+                    onEdit = { editing = true },
                 )
-                if (ui.drawerOpen) AppDrawer(ui, vm, onAppLongPress = { menuPkg = it })
+                if (ui.drawerOpen) {
+                    AppDrawer(ui, vm, onAppLongPress = { menuPkg = it }, onFolderTap = { folderName = it })
+                }
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
+                folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
+                if (editing) EditMode(ui, vm) { editing = false }
             }
         }
     }

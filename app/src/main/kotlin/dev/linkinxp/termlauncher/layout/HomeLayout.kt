@@ -41,8 +41,9 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         return copy(pages = pages.mapIndexed { i, p -> if (i == page) Page(p.items + item) else p })
     }
 
-    fun mkdir(name: String): Result<HomeLayout> {
+    fun mkdir(name: String, page: Int = 0): Result<HomeLayout> {
         val error = when {
+            page !in pages.indices -> "mkdir: no such page"
             name.isBlank() || name.any { it.isWhitespace() || it == '/' } || name.length > MAX_FOLDER_NAME ->
                 "mkdir: '$name': invalid name"
             name.lowercase() in COMMAND_WORDS -> "mkdir: $name: reserved word"
@@ -50,7 +51,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
             else -> null
         }
         return if (error != null) Result.failure(IllegalArgumentException(error))
-        else Result.success(addToPage(0, Item.Folder(name, emptyList())))
+        else Result.success(addToPage(page, Item.Folder(name, emptyList())))
     }
 
     fun mv(pkg: String, folder: String): Result<HomeLayout> {
@@ -67,6 +68,25 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
             }
         }
         return Result.success(copy(dock = clean(dock, dropLoose = false), pages = pages.map { Page(clean(it.items, true)) }))
+    }
+
+    /** Takes [pkg] out of whichever folder holds it and puts it on the first page as a plain shortcut. */
+    fun unfile(pkg: String): HomeLayout {
+        if (folders().none { pkg in it.apps }) return this
+        fun clean(items: List<Item>) = items.map { if (it is Item.Folder) it.copy(apps = it.apps - pkg) else it }
+        return copy(dock = clean(dock), pages = pages.map { Page(clean(it.items)) }).addToPage(0, Item.App(pkg))
+    }
+
+    fun pinFolder(name: String): HomeLayout {
+        val folder = pages.flatMap { it.items }.filterIsInstance<Item.Folder>()
+            .firstOrNull { it.name.equals(name, ignoreCase = true) } ?: return this
+        if (dock.size >= MAX_DOCK) return this
+        return copy(dock = dock + folder, pages = pages.map { p -> Page(p.items.filterNot { it == folder }) })
+    }
+
+    fun unpinFolder(name: String): HomeLayout {
+        val folder = dock.filterIsInstance<Item.Folder>().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: return this
+        return copy(dock = dock.filterNot { it == folder }).addToPage(0, folder)
     }
 
     fun rmdir(name: String): HomeLayout {

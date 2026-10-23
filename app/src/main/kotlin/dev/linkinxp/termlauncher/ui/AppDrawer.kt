@@ -43,6 +43,7 @@ fun AppDrawer(
     ui: LauncherUi,
     vm: LauncherViewModel,
     onAppLongPress: (String) -> Unit,
+    onFolderTap: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalTheme.current
@@ -51,10 +52,13 @@ fun AppDrawer(
     val scope = rememberCoroutineScope()
     BackHandler { vm.closeDrawer() }
 
+    val folders = ui.layout.folders()
+    val showFolders = ui.filter.isBlank() && !ui.showHidden
+
     // Item positions of each section header, for the fast-scroll rail.
     val headerIndex = remember(d) {
         val map = LinkedHashMap<Char, Int>()
-        var i = if (d.recent.isEmpty()) 0 else 1 + d.recent.size
+        var i = (if (showFolders) folders.size else 0) + (if (d.recent.isEmpty()) 0 else 1 + d.recent.size)
         d.sections.forEach { map[it.letter] = i; i += 1 + it.apps.size }
         map
     }
@@ -96,6 +100,10 @@ fun AppDrawer(
                 )
             }
             LazyColumn(Modifier.weight(1f), state = listState) {
+                if (showFolders) items(folders.size, key = { "f-${folders[it].name}" }) { i ->
+                    val f = folders[i]
+                    TermText("~/${f.name} (${f.apps.size})", Modifier.fillMaxWidth().clickable { onFolderTap(f.name) }.padding(vertical = 8.dp), color = theme.accent.color())
+                }
                 if (d.recent.isNotEmpty()) {
                     item(key = "h-recent") { TermText("recent", color = theme.accent.color(), bold = true, modifier = Modifier.padding(top = 4.dp)) }
                     items(d.recent.size, key = { "r-${d.recent[it].pkg}" }) { i ->

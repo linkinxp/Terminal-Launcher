@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +87,7 @@ fun PagerHome(
     onItemTap: (Item) -> Unit,
     onItemLongPress: (Item) -> Unit,
     onSwipeUp: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
@@ -101,7 +103,10 @@ fun PagerHome(
             },
     ) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
-            Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp)
+                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
+            ) {
                 if (index == 0) ClockHeader()
                 ui.layout.pages[index].items.forEach { item ->
                     val label = itemLabel(item, ui) ?: return@forEach

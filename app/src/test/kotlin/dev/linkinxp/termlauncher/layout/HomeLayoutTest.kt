@@ -111,4 +111,46 @@ class HomeLayoutTest {
             .addPage().addToPage(1, Item.App("c"))
         assertEquals(l, HomeLayout.decode(l.encode()))
     }
+
+    @Test fun unfileMovesAppFromFolderToFirstPage() {
+        val l = empty.mkdir("a").getOrThrow().mv("x", "a").getOrThrow().unfile("x")
+        assertEquals(listOf("x"), apps(l))
+        assertTrue(l.folders().single().apps.isEmpty())
+        assertEquals(Item.App("x"), l.pages[0].items.last())
+    }
+
+    @Test fun unfileOfAppNotInAFolderIsUnchanged() {
+        val l = empty.addToPage(0, Item.App("x"))
+        assertEquals(l, l.unfile("x"))
+    }
+
+    @Test fun mkdirOnASpecificPage() {
+        val l = empty.addPage().mkdir("a", page = 1).getOrThrow()
+        assertEquals(listOf(Item.Folder("a", emptyList())), l.pages[1].items)
+        assertTrue(l.pages[0].items.isEmpty())
+    }
+
+    @Test fun mkdirOnMissingPageFails() {
+        assertTrue(empty.mkdir("a", page = 3).isFailure)
+    }
+
+    @Test fun pinFolderMovesItFromPageToDockAndBack() {
+        val pinned = empty.mkdir("a").getOrThrow().pinFolder("A")
+        assertEquals(listOf(Item.Folder("a", emptyList())), pinned.dock)
+        assertTrue(pinned.pages[0].items.isEmpty())
+        val back = pinned.unpinFolder("a")
+        assertTrue(back.dock.isEmpty())
+        assertEquals(listOf(Item.Folder("a", emptyList())), back.pages[0].items)
+    }
+
+    @Test fun pinFolderWithFullDockIsUnchanged() {
+        val full = (1..5).fold(empty.mkdir("a").getOrThrow()) { l, i -> l.pin("p$i") }
+        assertEquals(full, full.pinFolder("a"))
+    }
+
+    @Test fun pinnedFolderStillAcceptsMvAndRmdir() {
+        val l = empty.mkdir("a").getOrThrow().pinFolder("a").mv("x", "a").getOrThrow()
+        assertEquals(listOf("x"), (l.dock.single() as Item.Folder).apps)
+        assertEquals(listOf(Item.App("x")), l.rmdir("a").pages[0].items)
+    }
 }
