@@ -1,6 +1,5 @@
 package dev.linkinxp.termlauncher.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -8,6 +7,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -31,9 +40,18 @@ fun TermPanel(
 ) {
     val theme = LocalTheme.current
     val stroke = theme.dim.color()
+    // Title/trailing sizes: a real gap is cut into the border behind them (no opaque label background),
+    // so the panel also looks right over a wallpaper.
+    var titleSize by remember { mutableStateOf(IntSize.Zero) }
+    var trailSize by remember { mutableStateOf(IntSize.Zero) }
     Box(modifier.padding(top = 9.dp)) {
         Column(
             Modifier
+                // The border gap needs an offscreen layer; bracket ticks never overlap the labels, so skip it there.
+                .then(
+                    if (theme.border == BorderStyle.BRACKET) Modifier
+                    else Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+                )
                 .fillMaxWidth()
                 .drawBehind {
                     if (theme.border == BorderStyle.BRACKET) {
@@ -61,6 +79,21 @@ fun TermPanel(
                     )
                     rect(w / 2)
                     if (theme.border == BorderStyle.DOUBLE) rect(w / 2 + 3.dp.toPx())
+                    val below = 9.dp.toPx() // the labels sit 9 dp above the panel's top edge
+                    if (titleSize.width > 0) {
+                        drawRect(
+                            Color.Black, Offset(12.dp.toPx(), 0f),
+                            Size(titleSize.width.toFloat(), (titleSize.height - below).coerceAtLeast(0f)),
+                            blendMode = BlendMode.Clear,
+                        )
+                    }
+                    if (trailing != null && trailSize.width > 0) {
+                        drawRect(
+                            Color.Black, Offset(size.width - 12.dp.toPx() - trailSize.width, 0f),
+                            Size(trailSize.width.toFloat(), (trailSize.height - below).coerceAtLeast(0f)),
+                            blendMode = BlendMode.Clear,
+                        )
+                    }
                 }
                 .padding(horizontal = 12.dp, vertical = 12.dp),
             content = content,
@@ -68,14 +101,14 @@ fun TermPanel(
         TermText(
             title,
             Modifier.align(Alignment.TopStart).offset(x = 12.dp, y = (-9).dp)
-                .background(theme.background.color()).padding(horizontal = 4.dp),
+                .onSizeChanged { titleSize = it }.padding(horizontal = 4.dp),
             color = theme.accent.color(), bold = true,
         )
         if (trailing != null) {
             TermText(
                 trailing,
                 Modifier.align(Alignment.TopEnd).offset(x = (-12).dp, y = (-9).dp)
-                    .background(theme.background.color()).padding(horizontal = 4.dp),
+                    .onSizeChanged { trailSize = it }.padding(horizontal = 4.dp),
                 dim = true,
             )
         }

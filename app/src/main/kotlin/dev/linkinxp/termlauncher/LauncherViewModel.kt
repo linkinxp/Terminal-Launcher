@@ -290,7 +290,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun Ephemeral.withPrompt(p: PromptState) = copy(prompt = p)
 
     companion object {
-        const val LAUNCHER_VERSION = "0.2.0"
+        const val LAUNCHER_VERSION = "0.3.0"
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
