@@ -5,6 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.os.SystemClock
+import androidx.lifecycle.Lifecycle
+import dev.linkinxp.termlauncher.sys.bootWindowOpen
+import dev.linkinxp.termlauncher.ui.isReduceMotion
 import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -31,10 +35,27 @@ import dev.linkinxp.termlauncher.ui.TermTheme
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
 
+    private var unlockAt = 0L
+
     private val unlockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (vm.ui.value.fx.boot) vm.startBoot()
+            unlockAt = SystemClock.elapsedRealtime()
+            maybeBoot()
         }
+    }
+
+    /** Plays the boot log only if the launcher is on screen right after an unlock (never a stale one later). */
+    private fun maybeBoot() {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (bootWindowOpen(SystemClock.elapsedRealtime(), unlockAt) && vm.ui.value.fx.boot && !isReduceMotion(this)) {
+            unlockAt = 0
+            vm.startBoot()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        maybeBoot() // unlock broadcast may arrive before the activity is resumed
     }
 
     override fun onPause() {

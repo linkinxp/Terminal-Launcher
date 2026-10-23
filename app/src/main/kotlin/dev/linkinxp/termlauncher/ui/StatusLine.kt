@@ -15,8 +15,11 @@ import java.util.Locale
 private val PAGE_NAMES = listOf("home", "two", "three", "four", "five")
 
 /** `1:home`, `2:two` ... `5:five`; later pages are just their number. */
-fun pageLabel(index: Int): String =
-    if (index in PAGE_NAMES.indices) "${index + 1}:${PAGE_NAMES[index]}" else "${index + 1}"
+fun pageLabel(index: Int, compact: Boolean = false): String =
+    if (!compact && index in PAGE_NAMES.indices) "${index + 1}:${PAGE_NAMES[index]}" else "${index + 1}"
+
+/** From three pages on the names would push the battery and clock off a phone-width line. */
+fun compactPageLabels(pageCount: Int): Boolean = pageCount > 2
 
 /** Right half of the status line: `bat 66%+ │ 21:08` (`bat ?` when the level is unknown). */
 fun statusTail(batteryPct: Int?, charging: Boolean, hour: Int, minute: Int): String =
@@ -37,7 +40,7 @@ fun StatusLine(
         TermText("[0] ", dim = true)
         (0 until pageCount).forEach { i ->
             TermText(
-                pageLabel(i) + if (i == current) "*" else "",
+                pageLabel(i, compactPageLabels(pageCount)) + if (i == current) "*" else "",
                 Modifier.clickable { onPage(i) }.padding(end = 8.dp),
                 bold = i == current,
                 dim = i != current,

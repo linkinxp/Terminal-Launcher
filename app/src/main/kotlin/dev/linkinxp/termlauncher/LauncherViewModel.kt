@@ -181,8 +181,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** Tab-completion over command words and lowercase app labels (never shortens the input). */
-    fun complete(input: String): String =
-        completeInput(input, COMMANDS + ui.value.apps.values.map { it.label.lowercase() })
+    fun complete(input: String): String {
+        val cur = ui.value
+        return completeInput(input, COMMANDS + cur.apps.values.filter { it.pkg !in cur.hidden }.map { it.label.lowercase() })
+    }
 
     fun startBoot() = eph.update { it.copy(boot = true) }
     fun endBoot() = eph.update { it.copy(boot = false) }

@@ -40,6 +40,8 @@ fun MatrixRain(onDone: () -> Unit) {
     val measurer = rememberTextMeasurer()
     val color = theme.foreground.color()
     val style = TextStyle(fontFamily = TermFont, fontSize = 14.sp)
+    // Each glyph is laid out once; frames only draw the cached layouts (tinted/alpha per cell).
+    val glyphs = remember(measurer) { GLYPHS.map { measurer.measure(it.toString(), style) } }
     Canvas(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.93f))
             .pointerInput(Unit) { detectTapGestures { onDone() } },
@@ -54,9 +56,9 @@ fun MatrixRain(onDone: () -> Unit) {
             for (trail in 0 until 12) {
                 val row = head - trail
                 if (row !in 0 until rows) continue
-                val ch = GLYPHS[((c * 31 + row * 17 + tick / 3) % GLYPHS.length).toInt().coerceAtLeast(0)].toString()
+                val glyph = glyphs[((c * 31 + row * 17 + tick / 3) % glyphs.size).toInt().coerceAtLeast(0)]
                 val alpha = if (trail == 0) 1f else (1f - trail / 12f) * 0.8f
-                drawText(measurer, ch, Offset(c * cell, row * cell), style.copy(color = color.copy(alpha = alpha)))
+                drawText(glyph, color = color, topLeft = Offset(c * cell, row * cell), alpha = alpha)
             }
         }
     }

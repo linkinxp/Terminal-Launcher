@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.sys
 
+import dev.linkinxp.termlauncher.ui.compactPageLabels
 import dev.linkinxp.termlauncher.ui.pageLabel
 import dev.linkinxp.termlauncher.ui.statusTail
 import org.junit.Assert.assertEquals
@@ -41,5 +42,17 @@ class FormatTest {
         assertEquals("bat 66% │ 21:08", statusTail(66, false, 21, 8))
         assertEquals("bat 66%+ │ 09:05", statusTail(66, true, 9, 5))
         assertEquals("bat ? │ 00:00", statusTail(null, false, 0, 0))
+    }
+
+    @Test fun compactPageLabelsAreJustNumbers() {
+        assertEquals("1", pageLabel(0, compact = true))
+        assertEquals("3", pageLabel(2, compact = true))
+    }
+
+    @Test fun statusLineUsesCompactLabelsFromThreePages() {
+        assertEquals(false, compactPageLabels(1))
+        assertEquals(false, compactPageLabels(2))
+        assertEquals(true, compactPageLabels(3))
+        assertEquals(true, compactPageLabels(5))
     }
 }

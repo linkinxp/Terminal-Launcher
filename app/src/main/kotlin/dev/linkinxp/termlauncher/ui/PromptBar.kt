@@ -30,6 +30,15 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 
 const val PROMPT = "user@phone:~$"
 
+private const val MAX_BLOCK_CHARS = 28
+
+/**
+ * The drawn block cursor is only accurate for short text with the caret at the end; otherwise the real
+ * (visible) field is used so long input and mid-text edits are never hidden.
+ */
+fun useBlockCursor(enabled: Boolean, textLength: Int, selStart: Int, selEnd: Int): Boolean =
+    enabled && selStart == selEnd && selEnd == textLength && textLength <= MAX_BLOCK_CHARS
+
 /** Message line, suggestion rows and the `user@phone:~$` input. */
 @Composable
 fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifier) {
@@ -60,7 +69,7 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
         Row {
             TermText("$PROMPT ", color = theme.accent.color(), bold = true)
             Box(Modifier.weight(1f)) {
-                val blockCursor = ui.fx.cursor
+                val blockCursor = useBlockCursor(ui.fx.cursor, value.text.length, value.selection.start, value.selection.end)
                 BasicTextField(
                     value = value,
                     onValueChange = { value = it; vm.onPromptChange(it.text) },
