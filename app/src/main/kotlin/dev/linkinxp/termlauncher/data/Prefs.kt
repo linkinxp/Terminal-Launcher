@@ -5,7 +5,9 @@ import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -17,6 +19,7 @@ import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.theme.Theme
+import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import java.io.IOException
@@ -48,6 +51,12 @@ class Prefs(private val context: Context) {
     private val wallSeedKey = intPreferencesKey("wall_seed")
     private val wallDimKey = intPreferencesKey("wall_dim")
     private val wallAnimateKey = booleanPreferencesKey("wall_animate")
+    private val wxCityKey = stringPreferencesKey("wx_city")
+    private val wxLatKey = doublePreferencesKey("wx_lat")
+    private val wxLonKey = doublePreferencesKey("wx_lon")
+    private val wxFahrenheitKey = booleanPreferencesKey("wx_fahrenheit")
+    private val wxCacheKey = stringPreferencesKey("wx_cache")
+    private val wxCacheAtKey = longPreferencesKey("wx_cache_at")
     private val panelCalKey = booleanPreferencesKey("panel_cal")
     private val panelWxKey = booleanPreferencesKey("panel_wx")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
@@ -83,6 +92,15 @@ class Prefs(private val context: Context) {
             animate = p[wallAnimateKey] ?: d.animate,
         )
     }
+    val wx: Flow<WxSettings> = data.map { p ->
+        WxSettings(p[wxCityKey], p[wxLatKey], p[wxLonKey], p[wxFahrenheitKey] ?: false)
+    }
+    /** Last good forecast body and when it was fetched, or null. */
+    val wxCache: Flow<Pair<String, Long>?> = data.map { p ->
+        val json = p[wxCacheKey]
+        val at = p[wxCacheAtKey]
+        if (json != null && at != null) json to at else null
+    }
     val panels: Flow<PanelSettings> = data.map { p -> PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false) }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
@@ -116,6 +134,23 @@ class Prefs(private val context: Context) {
             p[wallDimKey] = w.dim
             p[wallAnimateKey] = w.animate
         }
+    }
+
+    suspend fun setWx(wx: WxSettings) {
+        safeEdit { p ->
+            wx.city?.let { p[wxCityKey] = it } ?: p.remove(wxCityKey)
+            wx.lat?.let { p[wxLatKey] = it } ?: p.remove(wxLatKey)
+            wx.lon?.let { p[wxLonKey] = it } ?: p.remove(wxLonKey)
+            p[wxFahrenheitKey] = wx.fahrenheit
+        }
+    }
+
+    suspend fun setWxCache(json: String, at: Long) {
+        safeEdit { p -> p[wxCacheKey] = json; p[wxCacheAtKey] = at }
+    }
+
+    suspend fun clearWxCache() {
+        safeEdit { p -> p.remove(wxCacheKey); p.remove(wxCacheAtKey) }
     }
 
     suspend fun setPanels(panels: PanelSettings) {

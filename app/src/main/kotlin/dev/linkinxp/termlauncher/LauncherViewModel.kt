@@ -25,7 +25,14 @@ import dev.linkinxp.termlauncher.calendar.formatAgenda
 import dev.linkinxp.termlauncher.panel.PanelData
 import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.panel.applyPanel
+import dev.linkinxp.termlauncher.weather.WeatherRepository
+import dev.linkinxp.termlauncher.weather.WxAction
+import dev.linkinxp.termlauncher.weather.formatWeather
+import dev.linkinxp.termlauncher.weather.parseForecast
+import dev.linkinxp.termlauncher.weather.parseWxAction
 import java.time.ZoneId
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -80,6 +87,7 @@ data class LauncherUi(
     val wall: WallSettings = WallSettings(),
     val panels: PanelSettings = PanelSettings(),
     val calendar: PanelData = PanelData.Off,
+    val weather: PanelData = PanelData.Off,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -94,6 +102,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val matrix: Boolean = false,
         val boot: Boolean = false,
         val calendar: PanelData = PanelData.Off,
+        val weather: PanelData = PanelData.Off,
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -139,6 +148,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             wall = p.wall,
             panels = p.panels,
             calendar = if (p.panels.cal) e.calendar else PanelData.Off,
+            weather = if (p.panels.wx) e.weather else PanelData.Off,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
@@ -150,12 +160,74 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Runtime permissions the UI should ask for (currently READ_CALENDAR when `panel cal on` needs it). */
     val permissionRequests: SharedFlow<String> = _permissionRequests.asSharedFlow()
 
-    init {
-        // Whenever the panel switches change (including the first load), refresh the panels.
-        viewModelScope.launch { prefs.panels.distinctUntilChanged().collect { refreshPanels() } }
+    fun onCalendarPermission(granted: Boolean) = refreshPanels()
+
+    // ---- weather ----
+
+    private val weatherRepo = WeatherRepository()
+    private val weatherMutex = Mutex()
+
+    private fun say(message: String) = eph.update { it.withPrompt(it.prompt.copy(message = message)) }
+
+    private fun handleWx(action: WxAction) {
+        viewModelScope.launch {
+            when (action) {
+                WxAction.Refresh -> say(refreshWeather(force = true) ?: "wx: ok")
+                is WxAction.Units -> {
+                    prefs.setWx(prefs.wx.first().copy(fahrenheit = action.fahrenheit))
+                    prefs.clearWxCache() // cached values are in the old unit
+                    refreshWeather(force = true)?.let(::say)
+                }
+                is WxAction.City -> weatherRepo.geocode(action.name).fold(
+                    onSuccess = { geo ->
+                        prefs.setWx(prefs.wx.first().copy(city = geo.name, lat = geo.lat, lon = geo.lon))
+                        prefs.setPanels(prefs.panels.first().copy(wx = true))
+                        prefs.clearWxCache()
+                        refreshWeather(force = true)?.let(::say)
+                    },
+                    onFailure = { e ->
+                        say(if (e.message == "not found") "wx: city ${action.name}: not found" else "wx: offline")
+                    },
+                )
+            }
+        }
     }
 
-    fun onCalendarPermission(granted: Boolean) = refreshPanels()
+    /**
+     * Updates the weather panel from the cache and fetches when it is older than 30 minutes (or [force]).
+     * Returns an error message for the output panel, or null. A failed fetch keeps the cached forecast.
+     */
+    private suspend fun refreshWeather(force: Boolean): String? = weatherMutex.withLock {
+        if (!prefs.panels.first().wx) { eph.update { it.copy(weather = PanelData.Off) }; return@withLock null }
+        val wx = prefs.wx.first()
+        val lat = wx.lat
+        val lon = wx.lon
+        if (wx.city == null || lat == null || lon == null) {
+            eph.update { it.copy(weather = PanelData.Message("wx: set a city: wx city <name>")) }
+            return@withLock null
+        }
+        fun show(json: String, at: Long): Boolean = parseForecast(json, at).fold(
+            onSuccess = { f ->
+                eph.update { it.copy(weather = PanelData.Lines(formatWeather(wx.city, f, wx.fahrenheit, System.currentTimeMillis()))) }
+                true
+            },
+            onFailure = { false },
+        )
+        val cache = prefs.wxCache.first()
+        val shown = cache?.let { (json, at) -> show(json, at) } ?: false
+        val now = System.currentTimeMillis()
+        if (!force && shown && now - cache!!.second < WEATHER_STALE_MS) return@withLock null
+        weatherRepo.fetch(lat, lon, wx.fahrenheit).fold(
+            onSuccess = { body ->
+                if (show(body, now)) { prefs.setWxCache(body, now); null }
+                else { if (!shown) eph.update { it.copy(weather = PanelData.Message("wx: bad data")) }; "wx: bad data" }
+            },
+            onFailure = { e ->
+                if (!shown) eph.update { it.copy(weather = PanelData.Message("wx: offline")) }
+                e.message ?: "wx: offline"
+            },
+        )
+    }
 
     /** Recomputes the calendar panel (cheap; called on the minute tick, on resume and when settings change). */
     fun refreshPanels() {
@@ -170,6 +242,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             eph.update { it.copy(calendar = data) }
+            refreshWeather(force = false)
         }
     }
 
@@ -229,7 +302,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     },
                     onFailure = { it.message },
                 )
-            is Command.Wx -> null // wired in the weather task
+            is Command.Wx -> parseWxAction(cmd.sub, cmd.arg).fold(
+                onSuccess = { action -> handleWx(action); null },
+                onFailure = { it.message },
+            )
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
                 else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
@@ -352,8 +428,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun Ephemeral.withPrompt(p: PromptState) = copy(prompt = p)
 
+    // Kept last on purpose: the coroutine below may run at once and must find every property above initialized.
+    init {
+        // Whenever the panel switches change (including the first load), refresh the panels.
+        viewModelScope.launch { prefs.panels.distinctUntilChanged().collect { refreshPanels() } }
+    }
+
     companion object {
         const val LAUNCHER_VERSION = "0.3.0"
+        private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 7L
         private const val DAY_MS = 24L * 60 * 60 * 1000
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
