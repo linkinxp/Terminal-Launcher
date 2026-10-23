@@ -8,6 +8,20 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.PromptState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import dev.linkinxp.termlauncher.calendar.AgendaEvent
+import dev.linkinxp.termlauncher.calendar.formatAgenda
+import dev.linkinxp.termlauncher.panel.PanelData
+import dev.linkinxp.termlauncher.ui.TermPanel
+import dev.linkinxp.termlauncher.weather.Forecast
+import dev.linkinxp.termlauncher.weather.HourPoint
+import dev.linkinxp.termlauncher.weather.formatWeather
+import java.time.Instant
+import java.time.ZoneOffset
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +78,8 @@ class ScreenshotsTest {
         fx: FxSettings = FxSettings(),
         wall: WallSettings = WallSettings(),
         filter: String = "",
+        calendar: PanelData = PanelData.Off,
+        weather: PanelData = PanelData.Off,
     ): LauncherUi {
         val layout = HomeLayout(
             dock = listOf("Phone", "Messages", "Chrome", "Camera").map { Item.App(pkg(it)) },
@@ -79,6 +95,8 @@ class ScreenshotsTest {
             apps = appList.associateBy { it.pkg },
             drawer = buildDrawer(appList, emptySet(), stats, DrawerSort.AZ, filter, false),
             filter = filter,
+            calendar = calendar,
+            weather = weather,
             drawerOpen = drawer,
             prompt = prompt,
             fx = fx,
@@ -94,11 +112,13 @@ class ScreenshotsTest {
         prompt: PromptState = PromptState(),
         fx: FxSettings = FxSettings(),
         wall: WallSettings = WallSettings(),
+        calendar: PanelData = PanelData.Off,
+        weather: PanelData = PanelData.Off,
     ) {
         val vm = vm()
         rule.setContent {
             TermTheme(theme, wall) {
-                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall)
+                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall, calendar = calendar, weather = weather)
                 PagerHome(ui, vm, {}, {}, {}, {})
                 EffectsOverlay(ui.fx, theme, reduceMotion = true)
             }
@@ -195,5 +215,63 @@ class ScreenshotsTest {
         val theme = ThemeRegistry.byName("neon-city")!!
         rule.setContent { TermTheme(theme) { AppDrawer(ui(theme, drawer = true, filter = "c"), vm, {}, {}) } }
         rule.onRoot().captureRoboImage("build/shots/drawer-search.png")
+    }
+
+    // ---- panels ----
+
+    private val nowMs = Instant.parse("2026-10-23T09:00:00Z").toEpochMilli()
+
+    private fun agenda(): PanelData = PanelData.Lines(
+        formatAgenda(
+            listOf(
+                AgendaEvent("Cloud Infra Standup", Instant.parse("2026-10-23T10:05:00Z").toEpochMilli(), Instant.parse("2026-10-23T10:35:00Z").toEpochMilli(), false),
+                AgendaEvent("Trivia with #erg_seasons on Slack", Instant.parse("2026-10-23T12:00:00Z").toEpochMilli(), Instant.parse("2026-10-23T13:00:00Z").toEpochMilli(), false),
+                AgendaEvent("Holiday", Instant.parse("2026-10-24T00:00:00Z").toEpochMilli(), Instant.parse("2026-10-25T00:00:00Z").toEpochMilli(), true),
+                AgendaEvent("Climbing at 8", Instant.parse("2026-10-27T18:30:00Z").toEpochMilli(), Instant.parse("2026-10-27T20:00:00Z").toEpochMilli(), false),
+            ),
+            nowMs, ZoneOffset.UTC,
+        ),
+    )
+
+    private fun weather(code: Int, isDay: Boolean, temp: Double = 10.0): PanelData = PanelData.Lines(
+        formatWeather(
+            "Zagreb",
+            Forecast(
+                temp, 93, code, 3.2, 135, isDay, 13.2, 6.0,
+                listOf(HourPoint(0, 8.6, 1), HourPoint(3, 7.0, 3), HourPoint(6, 6.4, 3), HourPoint(9, 8.0, 0), HourPoint(12, 12.0, 0)),
+                nowMs - 12 * 60_000L,
+            ),
+            false, nowMs,
+        ),
+    )
+
+    @Test fun panelsCalNeonCity() = home("panels-cal-neon-city", ThemeRegistry.byName("neon-city")!!, calendar = agenda())
+
+    @Test fun panelsCalPermissionMessage() =
+        home("panels-cal-no-permission", ThemeRegistry.byName("matrix")!!, calendar = PanelData.Message("cal: no permission (grant in Settings)"))
+
+    @Test fun panelsWxClearDay() = home("panels-wx-clear-day", ThemeRegistry.byName("amber")!!, weather = weather(0, true))
+    @Test fun panelsWxPartlyNight() = home("panels-wx-partly-night", ThemeRegistry.byName("neon-city")!!, weather = weather(1, false))
+    @Test fun panelsWxRain() = home("panels-wx-rain", ThemeRegistry.byName("blade-runner")!!, weather = weather(63, true, 7.0))
+    @Test fun panelsWxThunder() = home("panels-wx-thunder", ThemeRegistry.byName("glitch-red")!!, weather = weather(95, false, 18.0))
+
+    @Test fun panelsBothOverAsciiWall() = home(
+        "panels-both-ascii", ThemeRegistry.byName("synthwave")!!, wall = ascii(AsciiStyle.CONTOUR),
+        calendar = agenda(), weather = weather(61, true, 9.0),
+    )
+
+    @Test fun widgetStandIn() {
+        val theme = ThemeRegistry.byName("neon-city")!!
+        rule.setContent {
+            TermTheme(theme) {
+                Column(Modifier.padding(16.dp)) {
+                    TermPanel("garmin connect", Modifier.fillMaxWidth()) {
+                        // Stand-in for a hosted widget, which the JVM cannot render.
+                        Box(Modifier.fillMaxWidth().height(192.dp).background(Color(0xFF2B3A55)))
+                    }
+                }
+            }
+        }
+        rule.onRoot().captureRoboImage("build/shots/panels-widget-standin.png")
     }
 }

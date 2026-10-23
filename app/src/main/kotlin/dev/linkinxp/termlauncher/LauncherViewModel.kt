@@ -464,7 +464,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "0.3.0"
+        const val LAUNCHER_VERSION = "0.4.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 7L
         private const val DAY_MS = 24L * 60 * 60 * 1000
