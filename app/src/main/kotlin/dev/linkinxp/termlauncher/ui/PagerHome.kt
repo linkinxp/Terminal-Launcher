@@ -6,6 +6,8 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -83,11 +85,21 @@ fun PagerHome(
     vm: LauncherViewModel,
     onItemTap: (Item) -> Unit,
     onItemLongPress: (Item) -> Unit,
+    onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
     val pager = rememberPagerState { pageCount }
-    Column(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+    Column(
+        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+            .pointerInput(Unit) {
+                var total = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { total = 0f },
+                    onDragEnd = { if (total < -120f) onSwipeUp() },
+                ) { _, dy -> total += dy }
+            },
+    ) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                 if (index == 0) ClockHeader()
