@@ -63,6 +63,7 @@ class ScreenshotsTest {
         prompt: PromptState = PromptState(),
         fx: FxSettings = FxSettings(),
         wall: WallSettings = WallSettings(),
+        filter: String = "",
     ): LauncherUi {
         val layout = HomeLayout(
             dock = listOf("Phone", "Messages", "Chrome", "Camera").map { Item.App(pkg(it)) },
@@ -76,7 +77,8 @@ class ScreenshotsTest {
             theme = theme,
             layout = layout,
             apps = appList.associateBy { it.pkg },
-            drawer = buildDrawer(appList, emptySet(), stats, DrawerSort.AZ, "", false),
+            drawer = buildDrawer(appList, emptySet(), stats, DrawerSort.AZ, filter, false),
+            filter = filter,
             drawerOpen = drawer,
             prompt = prompt,
             fx = fx,
@@ -186,5 +188,12 @@ class ScreenshotsTest {
             }
         }
         rule.onRoot().captureRoboImage("build/shots/wall-drawer-ascii.png")
+    }
+
+    @Test fun drawerSearchResults() {
+        val vm = vm()
+        val theme = ThemeRegistry.byName("neon-city")!!
+        rule.setContent { TermTheme(theme) { AppDrawer(ui(theme, drawer = true, filter = "c"), vm, {}, {}) } }
+        rule.onRoot().captureRoboImage("build/shots/drawer-search.png")
     }
 }

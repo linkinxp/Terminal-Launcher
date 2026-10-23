@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.apps
 
+import dev.linkinxp.termlauncher.layout.Item
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,5 +72,36 @@ class DrawerModelTest {
     @Test fun emptyLabelGoesUnderHash() {
         val d = build(apps = listOf(app("e", "")))
         assertEquals(listOf('#'), d.sections.map { it.letter })
+    }
+
+    @Test fun resultsAreOrderedByRelevanceNotAlphabet() {
+        val apps = listOf(app("a", "Smart Tube"), app("b", "Material Tool"), app("c", "Mt Everest"))
+        val labels = build(apps = apps, filter = "mt").results.map { it.label }
+        assertEquals(listOf("Mt Everest", "Material Tool", "Smart Tube"), labels)
+    }
+
+    @Test fun resultsAreEmptyWithoutAFilter() {
+        assertTrue(build().results.isEmpty())
+        assertTrue(build(filter = "   ").results.isEmpty())
+    }
+
+    @Test fun resultsRespectHiddenAndShowHidden() {
+        assertEquals(listOf("c"), build(hidden = setOf("f"), filter = "c").results.map { it.pkg }.filter { it == "c" })
+        assertTrue(build(hidden = setOf("f"), filter = "files").results.isEmpty())
+        assertEquals(listOf("f"), build(hidden = setOf("f"), filter = "files", showHidden = true).results.map { it.pkg })
+    }
+
+    @Test fun sectionsStayAlphabeticalWhileFiltering() {
+        val d = build(filter = "c")
+        assertEquals(d.results.map { it.pkg }.toSet(), d.pkgs().toSet())
+    }
+
+    @Test fun folderFilterMatchesFuzzyAndIgnoresCase() {
+        val folders = listOf(Item.Folder("media", emptyList()), Item.Folder("Games", emptyList()))
+        assertEquals(folders, filterFolders("", folders))
+        assertEquals(folders, filterFolders("  ", folders))
+        assertEquals(listOf("media"), filterFolders("MED", folders).map { it.name })
+        assertEquals(listOf("Games"), filterFolders("gm", folders).map { it.name })
+        assertTrue(filterFolders("zzz", folders).isEmpty())
     }
 }

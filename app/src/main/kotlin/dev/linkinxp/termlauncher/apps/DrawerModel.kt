@@ -1,8 +1,15 @@
 package dev.linkinxp.termlauncher.apps
 
+import dev.linkinxp.termlauncher.layout.Item
+
 data class DrawerSection(val letter: Char, val apps: List<AppEntry>)
 
-data class DrawerState(val recent: List<AppEntry>, val sections: List<DrawerSection>)
+/** [results] is non-empty only while filtering: the matches in relevance order (best first). */
+data class DrawerState(
+    val recent: List<AppEntry>,
+    val sections: List<DrawerSection>,
+    val results: List<AppEntry> = emptyList(),
+)
 
 private const val RECENT_COUNT = 4
 
@@ -32,5 +39,10 @@ fun buildDrawer(
             .sortedByDescending { stats.getValue(it.pkg).lastUsed }
             .take(RECENT_COUNT)
     } else emptyList()
-    return DrawerState(recent, sections)
+    val results = if (filter.isBlank()) emptyList() else matched
+    return DrawerState(recent, sections, results)
 }
+
+/** Folders whose name fuzzy-matches [filter] (all of them when it is blank), best match first. */
+fun filterFolders(filter: String, folders: List<Item.Folder>): List<Item.Folder> =
+    if (filter.isBlank()) folders else fuzzyRank(filter, folders.map { it.name }).map { folders[it] }

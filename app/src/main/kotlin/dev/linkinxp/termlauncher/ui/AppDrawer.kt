@@ -17,6 +17,16 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import dev.linkinxp.termlauncher.apps.filterFolders
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,8 +71,22 @@ fun AppDrawer(
     var filterValue by remember { mutableStateOf(TextFieldValue(ui.filter)) }
     // Solid: opaque as before. Otherwise the wall shows through with a fixed 35% readability layer.
     val drawerBg = theme.background.color().let { if (ui.wall.mode == WallMode.SOLID) it else it.copy(alpha = 0.35f) }
-    val folders = ui.layout.folders()
-    val showFolders = ui.filter.isBlank() && !ui.showHidden
+    val filtering = ui.filter.isNotBlank()
+    val folders = if (ui.showHidden) emptyList() else filterFolders(ui.filter, ui.layout.folders())
+    val showFolders = folders.isNotEmpty()
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = remember { FocusRequester() }
+    // Opening the drawer puts the cursor in the search field with the keyboard up: just start typing.
+    LaunchedEffect(Unit) { focus.requestFocus(); keyboard?.show() }
+    // Scrolling the list tucks the keyboard away.
+    val hideKeyboardOnScroll = remember(keyboard) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y != 0f) keyboard?.hide()
+                return Offset.Zero
+            }
+        }
+    }
 
     // Item positions of each section header, for the fast-scroll rail.
     val headerIndex = remember(d, folders.size, showFolders) {
@@ -110,22 +134,38 @@ fun AppDrawer(
                     textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
                     cursorBrush = SolidColor(theme.accent.color()),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    modifier = Modifier.weight(1f),
+                    // Search key: launch the best match (or open the best matching folder).
+                    keyboardActions = KeyboardActions(onSearch = {
+                        val top = d.results.firstOrNull()
+                        if (top != null) { vm.launch(top.pkg); vm.closeDrawer() }
+                        else if (filtering) folders.firstOrNull()?.let { onFolderTap(it.name) }
+                    }),
+                    modifier = Modifier.weight(1f).focusRequester(focus),
                 )
+                if (filterValue.text.isNotEmpty()) {
+                    TermText("[clr]", Modifier.clickable { filterValue = TextFieldValue(""); vm.setFilter("") }.padding(start = 8.dp), dim = true)
+                }
             }
-            LazyColumn(Modifier.weight(1f), state = listState) {
+            LazyColumn(Modifier.weight(1f).nestedScroll(hideKeyboardOnScroll), state = listState) {
                 if (showFolders) items(folders.size, key = { "f-${folders[it].name}" }) { i ->
                     val f = folders[i]
                     TermText("~/${f.name} (${f.apps.size})", Modifier.fillMaxWidth().clickable { onFolderTap(f.name) }.padding(vertical = 8.dp), color = theme.accent.color())
                 }
-                if (d.recent.isNotEmpty()) {
+                if (filtering) {
+                    // Flat list, best match first (no letter headers while searching).
+                    items(d.results.size, key = { "s-${d.results[it].pkg}" }) { i ->
+                        val app = d.results[i]
+                        AppRow(app, ui.iconMode, { vm.launch(app.pkg); vm.closeDrawer() }, { onAppLongPress(app.pkg) })
+                    }
+                    if (d.results.isEmpty() && folders.isEmpty()) item { TermText("no match", dim = true) }
+                } else if (d.recent.isNotEmpty()) {
                     item(key = "h-recent") { TermText("recent", color = theme.accent.color(), bold = true, modifier = Modifier.padding(top = 4.dp)) }
                     items(d.recent.size, key = { "r-${d.recent[it].pkg}" }) { i ->
                         val app = d.recent[i]
                         AppRow(app, ui.iconMode, { vm.launch(app.pkg); vm.closeDrawer() }, { onAppLongPress(app.pkg) })
                     }
                 }
-                d.sections.forEach { section ->
+                if (!filtering) d.sections.forEach { section ->
                     item(key = "h-${section.letter}") {
                         TermText("-- ${section.letter} --", color = theme.accent.color(), bold = true, modifier = Modifier.padding(top = 8.dp))
                     }
@@ -134,13 +174,15 @@ fun AppDrawer(
                         AppRow(app, ui.iconMode, { vm.launch(app.pkg); vm.closeDrawer() }, { onAppLongPress(app.pkg) })
                     }
                 }
-                if (d.sections.isEmpty()) item { TermText("no match", dim = true) }
+                if (!filtering && d.sections.isEmpty()) item { TermText("no match", dim = true) }
             }
         }
-        AlphaIndex(
-            letters = headerIndex.keys.toList(),
-            onSelect = { c -> headerIndex[c]?.let { scope.launch { listState.scrollToItem(it) } } },
-            modifier = Modifier.align(androidx.compose.ui.Alignment.CenterEnd).padding(vertical = 64.dp),
-        )
+        if (!filtering) {
+            AlphaIndex(
+                letters = headerIndex.keys.toList(),
+                onSelect = { c -> headerIndex[c]?.let { scope.launch { listState.scrollToItem(it) } } },
+                modifier = Modifier.align(androidx.compose.ui.Alignment.CenterEnd).padding(vertical = 64.dp),
+            )
+        }
     }
 }
