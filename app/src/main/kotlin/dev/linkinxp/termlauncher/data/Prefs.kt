@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dev.linkinxp.termlauncher.apps.AppStat
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import java.io.IOException
@@ -36,6 +37,7 @@ class Prefs(private val context: Context) {
     private val sortKey = stringPreferencesKey("sort")
     private val iconKey = stringPreferencesKey("icons")
     private val statsKey = stringPreferencesKey("stats")
+    private val historyKey = stringPreferencesKey("history")
     private val statsSerializer = MapSerializer(String.serializer(), AppStat.serializer())
 
     private val data: Flow<Preferences> get() = context.store.data.catch { e ->
@@ -47,6 +49,7 @@ class Prefs(private val context: Context) {
     val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }
     val sort: Flow<DrawerSort> = data.map { p -> enumOr(p[sortKey], DrawerSort.AZ) }
     val iconMode: Flow<IconMode> = data.map { p -> enumOr(p[iconKey], IconMode.TEXT) }
+    val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
     suspend fun setTheme(name: String) { safeEdit { it[themeKey] = name } }
@@ -69,6 +72,15 @@ class Prefs(private val context: Context) {
     suspend fun setHidden(hidden: Set<String>) { safeEdit { it[hiddenKey] = hidden } }
     suspend fun setSort(sort: DrawerSort) { safeEdit { it[sortKey] = sort.name } }
     suspend fun setIconMode(mode: IconMode) { safeEdit { it[iconKey] = mode.name } }
+
+    /** Appends [line] to the persisted command history (atomic; blanks and consecutive duplicates are dropped). */
+    suspend fun addHistory(line: String) {
+        safeEdit { p ->
+            val h = CommandHistory.decode(p[historyKey])
+            h.add(line)
+            p[historyKey] = h.encode()
+        }
+    }
 
     suspend fun recordLaunch(pkg: String, now: Long = System.currentTimeMillis()) {
         safeEdit { p ->

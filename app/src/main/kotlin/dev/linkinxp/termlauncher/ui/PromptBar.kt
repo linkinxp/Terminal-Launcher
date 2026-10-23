@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -35,14 +36,23 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
     var value by remember { mutableStateOf(TextFieldValue(p.text)) }
     LaunchedEffect(p.text) { if (p.text.isEmpty() && value.text.isNotEmpty()) value = TextFieldValue("") }
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        p.message?.let {
-            TermText(it, Modifier.clickable { vm.dismissMessage() }, color = theme.accent.color(), maxLines = 3)
-        }
+        p.message?.let { OutputPanel(it, onDismiss = vm::dismissMessage, modifier = Modifier.padding(bottom = 6.dp)) }
         p.suggestions.forEach { app ->
             TermText(
                 "> ${app.label.lowercase()}",
                 Modifier.fillMaxWidth().clickable { vm.launch(app.pkg); value = TextFieldValue(""); vm.onPromptChange("") }.padding(vertical = 6.dp),
             )
+        }
+        if (value.text.isEmpty() && p.suggestions.isEmpty()) {
+            p.history.forEach { line ->
+                TermText(
+                    "^ $line",
+                    Modifier.fillMaxWidth().clickable {
+                        value = TextFieldValue(line, TextRange(line.length)); vm.onPromptChange(line)
+                    }.padding(vertical = 4.dp),
+                    dim = true,
+                )
+            }
         }
         Row {
             TermText("$PROMPT ", color = theme.accent.color(), bold = true)
@@ -55,6 +65,14 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(value.text) }),
                 modifier = Modifier.weight(1f),
+            )
+            TermText(
+                "⇥",
+                Modifier.clickable {
+                    val done = vm.complete(value.text)
+                    value = TextFieldValue(done, TextRange(done.length)); vm.onPromptChange(done)
+                }.padding(start = 10.dp),
+                bold = true,
             )
         }
     }

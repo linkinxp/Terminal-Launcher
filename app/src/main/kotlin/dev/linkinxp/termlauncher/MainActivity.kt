@@ -16,11 +16,17 @@ import dev.linkinxp.termlauncher.ui.AppDrawer
 import dev.linkinxp.termlauncher.ui.AppMenu
 import dev.linkinxp.termlauncher.ui.EditMode
 import dev.linkinxp.termlauncher.ui.FolderPanel
+import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.TermTheme
 
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
+
+    override fun onPause() {
+        vm.stopMatrix() // overlays never outlive the screen
+        super.onPause()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
                 if (editing) EditMode(ui, vm) { editing = false }
+                if (ui.matrix) MatrixRain(onDone = vm::stopMatrix)
             }
         }
     }

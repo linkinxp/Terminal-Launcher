@@ -14,6 +14,17 @@ import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import android.os.Build
+import dev.linkinxp.termlauncher.prompt.DeviceInfo
+import dev.linkinxp.termlauncher.prompt.capLines
+import dev.linkinxp.termlauncher.prompt.complete as completeInput
+import dev.linkinxp.termlauncher.prompt.fortune
+import dev.linkinxp.termlauncher.prompt.neofetch
+import dev.linkinxp.termlauncher.sys.formatUptime
+import dev.linkinxp.termlauncher.sys.readSystemStats
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import dev.linkinxp.termlauncher.prompt.Command
 import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
@@ -30,6 +41,8 @@ data class PromptState(
     val text: String = "",
     val suggestions: List<AppEntry> = emptyList(),
     val message: String? = null,
+    /** Last 5 submitted lines, newest first (offered when the prompt is empty). */
+    val history: List<String> = emptyList(),
 )
 
 data class LauncherUi(
@@ -44,17 +57,20 @@ data class LauncherUi(
     val showHidden: Boolean = false,
     val filter: String = "",
     val prompt: PromptState = PromptState(),
+    val historyAll: List<String> = emptyList(),
+    val matrix: Boolean = false,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = Prefs(application)
     private val repo = AppRepository(application)
 
-    private class Ephemeral(
+    private data class Ephemeral(
         val drawerOpen: Boolean = false,
         val showHidden: Boolean = false,
         val filter: String = "",
         val prompt: PromptState = PromptState(),
+        val matrix: Boolean = false,
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -62,14 +78,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private class Persisted(
         val theme: Theme, val layout: HomeLayout, val hidden: Set<String>,
         val sort: DrawerSort, val icons: IconMode, val stats: Map<String, AppStat>,
+        val history: List<String>,
     )
 
     private val persisted = combine(
         prefs.theme, prefs.layout, prefs.hidden, prefs.sort, prefs.iconMode,
     ) { t, l, h, s, i -> arrayOf(t, l, h, s, i) }
-        .combine(prefs.stats) { a, st ->
+        .combine(prefs.stats) { a, st -> a to st }
+        .combine(prefs.history) { (a, st), h ->
             @Suppress("UNCHECKED_CAST")
-            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st)
+            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all())
         }
 
     val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph) { p, apps, e ->
@@ -85,7 +103,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             drawerOpen = e.drawerOpen,
             showHidden = e.showHidden,
             filter = e.filter,
-            prompt = e.prompt,
+            prompt = e.prompt.copy(history = p.history.asReversed().take(5)),
+            historyAll = p.history,
+            matrix = e.matrix,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
@@ -123,15 +143,40 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 null
             }
             is Command.Ls -> { openDrawer(cmd.hidden); null }
-            // Parsed but not wired yet: implemented in the prompt-wiring and effects tasks.
-            is Command.Fx, is Command.Sudo, Command.History, Command.Neofetch, Command.Whoami,
-            Command.Uptime, Command.Date, Command.Fortune, Command.Clear, Command.Matrix -> null
+            is Command.Fx -> null // wired in the effects task
+            is Command.Sudo -> "user is not in the sudoers file. This incident will be reported."
+            is Command.History ->
+                if (cur.historyAll.isEmpty()) "history: empty"
+                else cur.historyAll.mapIndexed { i, l -> "${i + 1}  $l" }.joinToString("\n")
+            is Command.Neofetch -> neofetch(deviceInfo(cur))
+            is Command.Whoami -> "user"
+            is Command.Uptime -> "up ${formatUptime(readSystemStats(getApplication()).uptimeMs)}"
+            is Command.Date -> DATE_FORMAT.format(LocalDateTime.now()).lowercase()
+            is Command.Fortune -> fortune(System.nanoTime().toInt())
+            is Command.Clear -> null
+            is Command.Matrix -> { startMatrix(); null }
             is Command.Query -> when {
                 cmd.text.isBlank() -> null
                 else -> rank(cmd.text, cur).firstOrNull()?.let { launch(it.pkg); null } ?: "no match: ${cmd.text}"
             }
         }
-        eph.update { it.withPrompt(PromptState("", emptyList(), message)) }
+        if (text.isNotBlank()) viewModelScope.launch { prefs.addHistory(text) }
+        eph.update { it.withPrompt(PromptState("", emptyList(), message?.let { m -> capLines(m) }?.ifEmpty { null })) }
+    }
+
+    /** Tab-completion over command words and lowercase app labels (never shortens the input). */
+    fun complete(input: String): String =
+        completeInput(input, COMMANDS + ui.value.apps.values.map { it.label.lowercase() })
+
+    fun startMatrix() = eph.update { it.copy(matrix = true) }
+    fun stopMatrix() = eph.update { it.copy(matrix = false) }
+
+    private fun deviceInfo(cur: LauncherUi): DeviceInfo {
+        val stats = readSystemStats(getApplication())
+        return DeviceInfo(
+            model = Build.MODEL, android = Build.VERSION.RELEASE, launcher = LAUNCHER_VERSION,
+            uptime = formatUptime(stats.uptimeMs), theme = cur.theme.name, apps = cur.apps.size, ramPct = stats.ramPct,
+        )
     }
 
     // ---- actions ----
@@ -149,11 +194,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun appInfo(pkg: String) = repo.appInfo(pkg)
 
     fun openDrawer(showHidden: Boolean = false) =
-        eph.update { Ephemeral(drawerOpen = true, showHidden = showHidden, prompt = it.prompt) }
-    fun closeDrawer() = eph.update { Ephemeral(prompt = it.prompt) }
-    fun setFilter(filter: String) = eph.update {
-        Ephemeral(it.drawerOpen, it.showHidden, filter, it.prompt)
-    }
+        eph.update { it.copy(drawerOpen = true, showHidden = showHidden, filter = "") }
+    fun closeDrawer() = eph.update { it.copy(drawerOpen = false, showHidden = false, filter = "") }
+    fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setIconMode(mode: IconMode) { viewModelScope.launch { prefs.setIconMode(mode) } }
     fun toggleHidden(pkg: String) {
@@ -211,9 +254,27 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return fuzzyRank(query, visible.map { it.label }).map { visible[it] }
     }
 
-    private fun Ephemeral.withPrompt(p: PromptState) = Ephemeral(drawerOpen, showHidden, filter, p)
+    private fun Ephemeral.withPrompt(p: PromptState) = copy(prompt = p)
 
     private companion object {
-        const val HELP = "theme <name> | pin <app> | hide <app> | mkdir <f> | mv <app> <f> | mv <f> <new> | rmdir <f> | ls [-a] | help"
+        const val LAUNCHER_VERSION = "0.2.0"
+        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
+        val COMMANDS = listOf(
+            "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix",
+        )
+        val HELP = listOf(
+            "theme <name>       change theme",
+            "pin <app>          pin to dock",
+            "hide <app>         hide / unhide",
+            "mkdir <f>          new folder",
+            "mv <app> <f>       file app",
+            "mv <f> <new>       rename folder",
+            "rmdir <f>          remove folder",
+            "ls [-a]            drawer / hidden",
+            "fx [name on|off]   effects",
+            "history neofetch whoami uptime date",
+            "fortune clear sudo matrix help",
+        ).joinToString("\n")
     }
 }
