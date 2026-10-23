@@ -93,4 +93,21 @@ class AgendaTest {
             assertTrue("no dangling surrogate", !Character.isHighSurrogate(line.last()))
         }
     }
+
+    @Test fun queryWindowStartsAtTheStartOfYesterdayInTheLocalZone() {
+        val la = ZoneId.of("America/Los_Angeles")
+        val (from, to) = calendarQueryWindow(now, la, 7)
+        // now is 02:00 PDT on Oct 23, so yesterday starts at Oct 22 00:00 PDT = 07:00 UTC.
+        assertEquals(at("2026-10-22T07:00:00Z"), from)
+        assertEquals(now + 7 * 24 * 3_600_000L, to)
+    }
+
+    @Test fun windowStillContainsTodaysAllDayEventInAWesternEvening() {
+        val la = ZoneId.of("America/Los_Angeles")
+        val evening = at("2026-12-12T01:00:00Z") // 17:00 PST on Dec 11
+        val holiday = allDay("Today only", "2026-12-11T00:00:00Z", "2026-12-12T00:00:00Z")
+        val (from, _) = calendarQueryWindow(evening, la, 7)
+        assertTrue("the provider only returns rows ending at or after the window start", holiday.endMs >= from)
+        assertEquals(listOf("today all day  Today only"), formatAgenda(listOf(holiday), evening, la))
+    }
 }

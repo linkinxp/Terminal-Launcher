@@ -21,6 +21,7 @@ import dev.linkinxp.termlauncher.layout.Item
 import android.Manifest
 import android.os.Build
 import dev.linkinxp.termlauncher.calendar.CalendarRepository
+import dev.linkinxp.termlauncher.calendar.calendarQueryWindow
 import dev.linkinxp.termlauncher.calendar.formatAgenda
 import dev.linkinxp.termlauncher.panel.PanelData
 import dev.linkinxp.termlauncher.panel.PanelSettings
@@ -29,6 +30,7 @@ import dev.linkinxp.termlauncher.weather.WeatherRepository
 import dev.linkinxp.termlauncher.weather.WxAction
 import dev.linkinxp.termlauncher.weather.formatWeather
 import dev.linkinxp.termlauncher.weather.parseForecast
+import dev.linkinxp.termlauncher.weather.shouldFetchWeather
 import dev.linkinxp.termlauncher.weather.parseWxAction
 import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.widgets.WidgetHostController
@@ -62,6 +64,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** A widget the user is adding: where, which provider, and the host id allocated for it. */
+data class PendingWidget(val page: Int, val provider: String, val id: Int)
 
 data class PromptState(
     val text: String = "",
@@ -170,7 +175,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Host for real Android widgets; the Activity starts/stops it and drives bind/configure results. */
     val widgets = WidgetHostController(application)
 
-    fun addWidget(page: Int, widget: Item.Widget) = edit { it.addWidget(page, widget) }
+    /** A widget being added (host id already allocated). Lives here so it survives rotation of the Activity. */
+    var pendingWidget: PendingWidget? = null
+
+    /**
+     * Adds [widget] to [page]. If the page vanished meanwhile (or the id is already used) the layout is left alone,
+     * the freshly allocated host id is deleted so it does not leak, and the user gets a message.
+     */
+    fun addWidgetOrDelete(page: Int, widget: Item.Widget) {
+        viewModelScope.launch {
+            val result = prefs.editLayout { l ->
+                if (page !in l.pages.indices || widget.id in l.widgetIds()) {
+                    Result.failure(IllegalStateException("widget: not added (the page changed)"))
+                } else {
+                    Result.success(l.addWidget(page, widget))
+                }
+            }
+            result.exceptionOrNull()?.let { widgets.delete(widget.id); say(it.message ?: "widget: not added") }
+        }
+    }
     fun removeWidget(id: Int) = edit { it.removeWidget(id) }
     fun resizeWidget(id: Int, size: WidgetSize) = edit { it.resizeWidget(id, size) }
     fun showMessage(text: String) = say(text)
@@ -186,6 +209,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val weatherRepo = WeatherRepository()
     private val weatherMutex = Mutex()
+    private var lastWeatherAttemptMs: Long? = null
 
     private fun say(message: String) = eph.update { it.withPrompt(it.prompt.copy(message = message)) }
 
@@ -236,7 +260,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val cache = prefs.wxCache.first()
         val shown = cache?.let { (json, at) -> show(json, at) } ?: false
         val now = System.currentTimeMillis()
-        if (!force && shown && now - cache!!.second < WEATHER_STALE_MS) return@withLock null
+        val fresh = shown && cache != null && now - cache.second < WEATHER_STALE_MS
+        if (!shouldFetchWeather(force, fresh, now, lastWeatherAttemptMs)) return@withLock null
+        lastWeatherAttemptMs = now
         weatherRepo.fetch(lat, lon, wx.fahrenheit).fold(
             onSuccess = { body ->
                 if (show(body, now)) { prefs.setWxCache(body, now); null }
@@ -258,7 +284,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 !calendarRepo.hasPermission() -> PanelData.Message("cal: no permission (grant in Settings)")
                 else -> {
                     val now = System.currentTimeMillis()
-                    PanelData.Lines(formatAgenda(calendarRepo.events(now, now + CAL_DAYS * DAY_MS), now, ZoneId.systemDefault()))
+                    val zone = ZoneId.systemDefault()
+                    val (from, to) = calendarQueryWindow(now, zone, CAL_DAYS)
+                    PanelData.Lines(formatAgenda(calendarRepo.events(from, to), now, zone))
                 }
             }
             eph.update { it.copy(calendar = data) }
@@ -467,7 +495,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         const val LAUNCHER_VERSION = "0.4.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 7L
-        private const val DAY_MS = 24L * 60 * 60 * 1000
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",

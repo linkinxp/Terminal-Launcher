@@ -49,11 +49,6 @@ class MainActivity : ComponentActivity() {
         vm.onCalendarPermission(granted)
     }
 
-    /** A widget being added: its host id is allocated, and deleted again if the user cancels or anything fails. */
-    private data class PendingWidget(val page: Int, val provider: String, val id: Int)
-
-    private var pendingWidget: PendingWidget? = null
-
     private val bindLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) afterBind() else cancelPendingWidget()
     }
@@ -62,12 +57,12 @@ class MainActivity : ComponentActivity() {
     private fun beginAddWidget(page: Int, provider: String) {
         cancelPendingWidget() // never leave an earlier allocation behind
         val id = vm.widgets.allocate()
-        pendingWidget = PendingWidget(page, provider, id)
+        vm.pendingWidget = PendingWidget(page, provider, id)
         if (vm.widgets.bindIfAllowed(id, provider)) afterBind() else bindLauncher.launch(vm.widgets.bindIntent(id, provider))
     }
 
     private fun afterBind() {
-        val p = pendingWidget ?: return
+        val p = vm.pendingWidget ?: return
         if (vm.widgets.needsConfigure(p.provider)) {
             if (!vm.widgets.configure(this, p.id, REQ_CONFIGURE)) cancelPendingWidget()
         } else {
@@ -76,14 +71,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun finishAddWidget() {
-        val p = pendingWidget ?: return
-        pendingWidget = null
-        vm.addWidget(p.page, Item.Widget(p.id, p.provider, WidgetSize.MEDIUM))
+        val p = vm.pendingWidget ?: return
+        vm.pendingWidget = null
+        vm.addWidgetOrDelete(p.page, Item.Widget(p.id, p.provider, WidgetSize.MEDIUM))
     }
 
     private fun cancelPendingWidget() {
-        val p = pendingWidget ?: return
-        pendingWidget = null
+        val p = vm.pendingWidget ?: return
+        vm.pendingWidget = null
         vm.widgets.delete(p.id)
         val label = vm.widgets.providers().firstOrNull { it.provider == p.provider }?.label ?: "widget"
         vm.showMessage("widget: ${label.lowercase()}: not added")

@@ -64,3 +64,13 @@ private fun fit(prefix: String, title: String, width: Int): String {
 
 private fun String.dropDanglingSurrogate(): String =
     if (isNotEmpty() && Character.isHighSurrogate(last())) dropLast(1) else this
+
+/**
+ * The `[from, to]` range to query the calendar for: from the start of the previous local day (all-day events end
+ * at a UTC midnight, so in western zones today's one ends "in the past" by the evening and a window starting
+ * at [nowMs] would miss it; [formatAgenda] drops what has really ended) to [days] days after [nowMs].
+ */
+fun calendarQueryWindow(nowMs: Long, zone: ZoneId, days: Long): Pair<Long, Long> {
+    val yesterday = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate().minusDays(1)
+    return yesterday.atStartOfDay(zone).toInstant().toEpochMilli() to nowMs + days * 24 * 3_600_000L
+}

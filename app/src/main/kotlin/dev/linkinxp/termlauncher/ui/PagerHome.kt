@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -129,7 +130,7 @@ fun PagerHome(
             ) {
                 if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather)
                 ui.layout.pages[index].items.forEach { item ->
-                    if (item is Item.Widget) { WidgetPanel(item, vm); return@forEach }
+                    if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(
                         "${if (item is Item.Folder) "" else "> "}$label",
