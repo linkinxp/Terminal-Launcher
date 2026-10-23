@@ -200,4 +200,9 @@ class HomeLayoutTest {
     @Test fun mkdirRejectsWall() {
         assertTrue(empty.mkdir("wall").isFailure)
     }
+
+    @Test fun mkdirRejectsPanelAndWx() {
+        assertTrue(empty.mkdir("panel").isFailure)
+        assertTrue(empty.mkdir("wx").isFailure)
+    }
 }

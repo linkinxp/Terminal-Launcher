@@ -11,6 +11,8 @@ sealed interface Command {
     data class Fx(val name: String?, val on: Boolean?) : Command
     data class Sudo(val rest: String) : Command
     data class Wall(val sub: String?, val arg: String?) : Command
+    data class Panel(val name: String?, val on: Boolean?) : Command
+    data class Wx(val sub: String?, val arg: String?) : Command
     data object History : Command
     data object Neofetch : Command
     data object Whoami : Command
@@ -31,6 +33,8 @@ fun parseCommand(input: String): Command {
         word == "help" && args.isEmpty() -> Command.Help
         word == "fx" -> parseFx(args)
         word == "wall" -> parseWall(args)
+        word == "panel" -> parsePanel(args)
+        word == "wx" -> parseWx(args)
         word == "sudo" && args.isNotEmpty() -> Command.Sudo(args)
         args.isEmpty() && word in SIMPLE -> SIMPLE.getValue(word)
         word == "ls" && args.isEmpty() -> Command.Ls(false)
@@ -68,4 +72,19 @@ private fun parseWall(args: String): Command.Wall {
     if (args.isEmpty()) return Command.Wall(null, null)
     val tokens = args.split(Regex("\\s+"))
     return Command.Wall(tokens[0].lowercase(), tokens.getOrNull(1))
+}
+
+private fun parsePanel(args: String): Command.Panel {
+    if (args.isEmpty()) return Command.Panel(null, null)
+    val tokens = args.split(Regex("\\s+"))
+    val on = when (tokens.getOrNull(1)?.lowercase()) { "on" -> true; "off" -> false; else -> null }
+    return Command.Panel(tokens[0].lowercase(), on)
+}
+
+/** `wx`, `wx units f`, `wx city São Paulo`: the argument is the rest of the line (city names have spaces). */
+private fun parseWx(args: String): Command.Wx {
+    if (args.isEmpty()) return Command.Wx(null, null)
+    val sub = args.substringBefore(' ').lowercase()
+    val rest = args.substringAfter(' ', "").trim()
+    return Command.Wx(sub, rest.ifEmpty { null })
 }

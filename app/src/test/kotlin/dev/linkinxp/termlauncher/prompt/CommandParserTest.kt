@@ -83,4 +83,19 @@ class CommandParserTest {
         assertEquals(Command.Wall("style", "stars"), parseCommand("wall style stars extra"))
         assertEquals(Command.Wall("random", null), parseCommand("wall random"))
     }
+
+    @Test fun panelVariants() {
+        assertEquals(Command.Panel(null, null), parseCommand("panel"))
+        assertEquals(Command.Panel("cal", true), parseCommand("panel cal on"))
+        assertEquals(Command.Panel("wx", false), parseCommand("PANEL WX Off"))
+        assertEquals(Command.Panel("cal", null), parseCommand("panel cal maybe"))
+        assertEquals(Command.Panel("x", true), parseCommand("panel x on"))
+    }
+
+    @Test fun wxVariantsKeepTheRestOfTheLineAsTheArgument() {
+        assertEquals(Command.Wx(null, null), parseCommand("wx"))
+        assertEquals(Command.Wx("units", "f"), parseCommand("wx units f"))
+        assertEquals(Command.Wx("city", "São Paulo"), parseCommand("wx city São Paulo"))
+        assertEquals(Command.Wx("city", "new york"), parseCommand("WX City  new york "))
+    }
 }

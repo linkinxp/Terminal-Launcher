@@ -167,6 +167,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onFailure = { it.message },
                 )
             }
+            is Command.Panel, is Command.Wx -> null // wired in the calendar and weather tasks
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
                 else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
@@ -294,19 +295,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx",
         )
         val HELP = listOf(
             "theme <name>       change theme",
-            "pin <app>          pin to dock",
-            "hide <app>         hide / unhide",
-            "mkdir <f>          new folder",
+            "pin|hide <app>     dock / hide",
+            "mkdir|rmdir <f>    folders",
             "mv <app> <f>       file app",
             "mv <f> <new>       rename folder",
-            "rmdir <f>          remove folder",
             "ls [-a]            drawer / hidden",
             "fx [name on|off]   effects",
             "wall <sub> [arg]   wallpaper",
+            "panel <cal|wx> on|off  panels",
+            "wx [city <n>|units c|f]  weather",
             "history neofetch whoami uptime date",
             "fortune clear sudo matrix help",
         ).joinToString("\n")
