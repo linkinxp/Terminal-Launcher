@@ -1,6 +1,11 @@
 package dev.linkinxp.termlauncher
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -16,21 +21,39 @@ import dev.linkinxp.termlauncher.ui.AppDrawer
 import dev.linkinxp.termlauncher.ui.AppMenu
 import dev.linkinxp.termlauncher.ui.EditMode
 import dev.linkinxp.termlauncher.ui.FolderPanel
+import dev.linkinxp.termlauncher.ui.BootLogOverlay
+import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.ui.MatrixRain
+import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.TermTheme
 
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
 
+    private val unlockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (vm.ui.value.fx.boot) vm.startBoot()
+        }
+    }
+
     override fun onPause() {
         vm.stopMatrix() // overlays never outlive the screen
+        vm.endBoot()
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(unlockReceiver)
+        super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ContextCompat.registerReceiver(
+            this, unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT), ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         setContent {
             val ui by vm.ui.collectAsState()
             var menuPkg by remember { mutableStateOf<String?>(null) }
@@ -62,7 +85,9 @@ class MainActivity : ComponentActivity() {
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
                 if (editing) EditMode(ui, vm) { editing = false }
+                EffectsOverlay(ui.fx, ui.theme, rememberReduceMotion())
                 if (ui.matrix) MatrixRain(onDone = vm::stopMatrix)
+                if (ui.boot) BootLogOverlay(onDone = vm::endBoot)
             }
         }
     }

@@ -11,6 +11,7 @@ import dev.linkinxp.termlauncher.apps.DrawerState
 import dev.linkinxp.termlauncher.apps.buildDrawer
 import dev.linkinxp.termlauncher.apps.fuzzyRank
 import dev.linkinxp.termlauncher.data.IconMode
+import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
@@ -59,6 +60,8 @@ data class LauncherUi(
     val prompt: PromptState = PromptState(),
     val historyAll: List<String> = emptyList(),
     val matrix: Boolean = false,
+    val boot: Boolean = false,
+    val fx: FxSettings = FxSettings(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -71,6 +74,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val filter: String = "",
         val prompt: PromptState = PromptState(),
         val matrix: Boolean = false,
+        val boot: Boolean = false,
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -78,16 +82,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private class Persisted(
         val theme: Theme, val layout: HomeLayout, val hidden: Set<String>,
         val sort: DrawerSort, val icons: IconMode, val stats: Map<String, AppStat>,
-        val history: List<String>,
+        val history: List<String>, val fx: FxSettings,
     )
 
     private val persisted = combine(
         prefs.theme, prefs.layout, prefs.hidden, prefs.sort, prefs.iconMode,
     ) { t, l, h, s, i -> arrayOf(t, l, h, s, i) }
         .combine(prefs.stats) { a, st -> a to st }
-        .combine(prefs.history) { (a, st), h ->
+        .combine(prefs.history) { (a, st), h -> Triple(a, st, h) }
+        .combine(prefs.fx) { (a, st, h), fx ->
             @Suppress("UNCHECKED_CAST")
-            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all())
+            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx)
         }
 
     val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph) { p, apps, e ->
@@ -106,6 +111,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             prompt = e.prompt.copy(history = p.history.asReversed().take(5)),
             historyAll = p.history,
             matrix = e.matrix,
+            boot = e.boot,
+            fx = p.fx,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
@@ -143,7 +150,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 null
             }
             is Command.Ls -> { openDrawer(cmd.hidden); null }
-            is Command.Fx -> null // wired in the effects task
+            is Command.Fx -> when {
+                cmd.name == null -> cur.fx.describe(cur.theme)
+                cmd.on == null -> cur.fx.with(cmd.name, true).fold(
+                    onSuccess = { "usage: fx <name> on|off" }, onFailure = { it.message },
+                )
+                else -> cur.fx.with(cmd.name, cmd.on).fold(
+                    onSuccess = { next -> viewModelScope.launch { prefs.setFx(next) }; null },
+                    onFailure = { it.message },
+                )
+            }
             is Command.Sudo -> "user is not in the sudoers file. This incident will be reported."
             is Command.History ->
                 if (cur.historyAll.isEmpty()) "history: empty"
@@ -168,6 +184,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun complete(input: String): String =
         completeInput(input, COMMANDS + ui.value.apps.values.map { it.label.lowercase() })
 
+    fun startBoot() = eph.update { it.copy(boot = true) }
+    fun endBoot() = eph.update { it.copy(boot = false) }
     fun startMatrix() = eph.update { it.copy(matrix = true) }
     fun stopMatrix() = eph.update { it.copy(matrix = false) }
 

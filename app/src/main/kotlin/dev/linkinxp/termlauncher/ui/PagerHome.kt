@@ -66,10 +66,10 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot) {
+private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boolean) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
-        PixelClock(now.toLocalTime())
+        PixelClock(now.toLocalTime(), glitch = glitch)
         TermText(
             "${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} " +
                 "${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.year}  " +
@@ -113,7 +113,7 @@ fun PagerHome(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
             ) {
-                if (index == 0) ClockHeader(now, snapshot)
+                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch)
                 ui.layout.pages[index].items.forEach { item ->
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(

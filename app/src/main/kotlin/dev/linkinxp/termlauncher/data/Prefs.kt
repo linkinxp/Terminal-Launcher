@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.linkinxp.termlauncher.apps.AppStat
 import dev.linkinxp.termlauncher.apps.DrawerSort
+import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.theme.Theme
@@ -38,6 +40,11 @@ class Prefs(private val context: Context) {
     private val iconKey = stringPreferencesKey("icons")
     private val statsKey = stringPreferencesKey("stats")
     private val historyKey = stringPreferencesKey("history")
+    private val fxScanKey = booleanPreferencesKey("fx_scanlines")
+    private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
+    private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
+    private val fxCursorKey = booleanPreferencesKey("fx_cursor")
+    private val fxBootKey = booleanPreferencesKey("fx_boot")
     private val statsSerializer = MapSerializer(String.serializer(), AppStat.serializer())
 
     private val data: Flow<Preferences> get() = context.store.data.catch { e ->
@@ -49,6 +56,13 @@ class Prefs(private val context: Context) {
     val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }
     val sort: Flow<DrawerSort> = data.map { p -> enumOr(p[sortKey], DrawerSort.AZ) }
     val iconMode: Flow<IconMode> = data.map { p -> enumOr(p[iconKey], IconMode.TEXT) }
+    val fx: Flow<FxSettings> = data.map { p ->
+        val d = FxSettings()
+        FxSettings(
+            scanlines = p[fxScanKey], flicker = p[fxFlickerKey] ?: d.flicker, glitch = p[fxGlitchKey] ?: d.glitch,
+            cursor = p[fxCursorKey] ?: d.cursor, boot = p[fxBootKey] ?: d.boot,
+        )
+    }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
@@ -72,6 +86,16 @@ class Prefs(private val context: Context) {
     suspend fun setHidden(hidden: Set<String>) { safeEdit { it[hiddenKey] = hidden } }
     suspend fun setSort(sort: DrawerSort) { safeEdit { it[sortKey] = sort.name } }
     suspend fun setIconMode(mode: IconMode) { safeEdit { it[iconKey] = mode.name } }
+
+    suspend fun setFx(fx: FxSettings) {
+        safeEdit { p ->
+            fx.scanlines?.let { p[fxScanKey] = it } ?: p.remove(fxScanKey)
+            p[fxFlickerKey] = fx.flicker
+            p[fxGlitchKey] = fx.glitch
+            p[fxCursorKey] = fx.cursor
+            p[fxBootKey] = fx.boot
+        }
+    }
 
     /** Appends [line] to the persisted command history (atomic; blanks and consecutive duplicates are dropped). */
     suspend fun addHistory(line: String) {

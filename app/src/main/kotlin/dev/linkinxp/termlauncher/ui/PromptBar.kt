@@ -17,7 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -61,11 +63,17 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
                 onValueChange = { value = it; vm.onPromptChange(it.text) },
                 singleLine = true,
                 textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
-                cursorBrush = SolidColor(theme.accent.color()),
+                cursorBrush = SolidColor(if (ui.fx.cursor) Color.Transparent else theme.accent.color()),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { vm.onPromptSubmit(value.text) }),
                 modifier = Modifier.weight(1f),
             )
+            if (ui.fx.cursor) {
+                // Block cursor: the native caret is hidden and this block blinks after the text.
+                var lit by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) { while (true) { delay(530); lit = !lit } }
+                TermText("█", color = theme.accent.color().copy(alpha = if (lit) 1f else 0f))
+            }
             TermText(
                 "⇥",
                 Modifier.clickable {
