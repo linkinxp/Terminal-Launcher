@@ -14,6 +14,7 @@ import dev.linkinxp.termlauncher.apps.AppStat
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.wall.WallSettings
@@ -47,6 +48,8 @@ class Prefs(private val context: Context) {
     private val wallSeedKey = intPreferencesKey("wall_seed")
     private val wallDimKey = intPreferencesKey("wall_dim")
     private val wallAnimateKey = booleanPreferencesKey("wall_animate")
+    private val panelCalKey = booleanPreferencesKey("panel_cal")
+    private val panelWxKey = booleanPreferencesKey("panel_wx")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
     private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
@@ -80,6 +83,7 @@ class Prefs(private val context: Context) {
             animate = p[wallAnimateKey] ?: d.animate,
         )
     }
+    val panels: Flow<PanelSettings> = data.map { p -> PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false) }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
@@ -111,6 +115,13 @@ class Prefs(private val context: Context) {
             p[wallSeedKey] = w.seed
             p[wallDimKey] = w.dim
             p[wallAnimateKey] = w.animate
+        }
+    }
+
+    suspend fun setPanels(panels: PanelSettings) {
+        safeEdit { p ->
+            p[panelCalKey] = panels.cal
+            p[panelWxKey] = panels.wx
         }
     }
 

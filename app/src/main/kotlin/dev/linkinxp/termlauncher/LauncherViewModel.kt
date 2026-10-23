@@ -18,7 +18,19 @@ import kotlin.random.Random
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import android.Manifest
 import android.os.Build
+import dev.linkinxp.termlauncher.calendar.CalendarRepository
+import dev.linkinxp.termlauncher.calendar.formatAgenda
+import dev.linkinxp.termlauncher.panel.PanelData
+import dev.linkinxp.termlauncher.panel.PanelSettings
+import dev.linkinxp.termlauncher.panel.applyPanel
+import java.time.ZoneId
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import dev.linkinxp.termlauncher.prompt.DeviceInfo
 import dev.linkinxp.termlauncher.prompt.capLines
 import dev.linkinxp.termlauncher.prompt.complete as completeInput
@@ -66,6 +78,8 @@ data class LauncherUi(
     val boot: Boolean = false,
     val fx: FxSettings = FxSettings(),
     val wall: WallSettings = WallSettings(),
+    val panels: PanelSettings = PanelSettings(),
+    val calendar: PanelData = PanelData.Off,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -79,6 +93,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val prompt: PromptState = PromptState(),
         val matrix: Boolean = false,
         val boot: Boolean = false,
+        val calendar: PanelData = PanelData.Off,
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -87,6 +102,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val theme: Theme, val layout: HomeLayout, val hidden: Set<String>,
         val sort: DrawerSort, val icons: IconMode, val stats: Map<String, AppStat>,
         val history: List<String>, val fx: FxSettings, val wall: WallSettings,
+        val panels: PanelSettings,
     )
 
     private val persisted = combine(
@@ -95,10 +111,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         .combine(prefs.stats) { a, st -> a to st }
         .combine(prefs.history) { (a, st), h -> Triple(a, st, h) }
         .combine(prefs.fx) { (a, st, h), fx -> Pair(Triple(a, st, h), fx) }
-        .combine(prefs.wall) { (t, fx), wall ->
+        .combine(prefs.wall) { (t, fx), wall -> Triple(t, fx, wall) }
+        .combine(prefs.panels) { (t, fx, wall), panels ->
             val (a, st, h) = t
             @Suppress("UNCHECKED_CAST")
-            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall)
+            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
     val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph) { p, apps, e ->
@@ -120,8 +137,41 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             boot = e.boot,
             fx = p.fx,
             wall = p.wall,
+            panels = p.panels,
+            calendar = if (p.panels.cal) e.calendar else PanelData.Off,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
+
+    // ---- panels ----
+
+    private val calendarRepo = CalendarRepository(application)
+    private val _permissionRequests = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    /** Runtime permissions the UI should ask for (currently READ_CALENDAR when `panel cal on` needs it). */
+    val permissionRequests: SharedFlow<String> = _permissionRequests.asSharedFlow()
+
+    init {
+        // Whenever the panel switches change (including the first load), refresh the panels.
+        viewModelScope.launch { prefs.panels.distinctUntilChanged().collect { refreshPanels() } }
+    }
+
+    fun onCalendarPermission(granted: Boolean) = refreshPanels()
+
+    /** Recomputes the calendar panel (cheap; called on the minute tick, on resume and when settings change). */
+    fun refreshPanels() {
+        viewModelScope.launch {
+            val panels = prefs.panels.first()
+            val data: PanelData = when {
+                !panels.cal -> PanelData.Off
+                !calendarRepo.hasPermission() -> PanelData.Message("cal: no permission (grant in Settings)")
+                else -> {
+                    val now = System.currentTimeMillis()
+                    PanelData.Lines(formatAgenda(calendarRepo.events(now, now + CAL_DAYS * DAY_MS), now, ZoneId.systemDefault()))
+                }
+            }
+            eph.update { it.copy(calendar = data) }
+        }
+    }
 
     // ---- prompt ----
 
@@ -167,7 +217,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onFailure = { it.message },
                 )
             }
-            is Command.Panel, is Command.Wx -> null // wired in the calendar and weather tasks
+            is Command.Panel ->
+                if (cmd.name == null) cur.panels.describe()
+                else applyPanel(cur.panels, cmd.name, cmd.on).fold(
+                    onSuccess = { next ->
+                        viewModelScope.launch { prefs.setPanels(next) }
+                        if (next.cal && !cur.panels.cal && !calendarRepo.hasPermission()) {
+                            _permissionRequests.tryEmit(Manifest.permission.READ_CALENDAR)
+                        }
+                        null
+                    },
+                    onFailure = { it.message },
+                )
+            is Command.Wx -> null // wired in the weather task
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
                 else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
@@ -292,6 +354,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         const val LAUNCHER_VERSION = "0.3.0"
+        private const val CAL_DAYS = 7L
+        private const val DAY_MS = 24L * 60 * 60 * 1000
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",

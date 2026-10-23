@@ -36,6 +36,7 @@ import androidx.core.content.ContextCompat
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.panel.PanelData
 import dev.linkinxp.termlauncher.sys.SysSnapshot
 import dev.linkinxp.termlauncher.sys.readSystemStats
 import kotlinx.coroutines.launch
@@ -67,7 +68,7 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boolean) {
+private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boolean, calendar: PanelData) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
         PixelClock(now.toLocalTime(), glitch = glitch)
@@ -78,6 +79,7 @@ private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boole
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
         SysPanel(snapshot)
+        PanelBlock("cal", calendar)
     }
 }
 
@@ -102,6 +104,8 @@ fun PagerHome(
     val context = LocalContext.current
     val now = rememberNow()
     val snapshot = remember(now) { readSystemStats(context) }
+    // Panels that read live data refresh on every minute tick.
+    LaunchedEffect(now.minute) { vm.refreshPanels() }
     Column(
         modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
             .pointerInput(Unit) {
@@ -117,7 +121,7 @@ fun PagerHome(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
             ) {
-                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch)
+                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar)
                 ui.layout.pages[index].items.forEach { item ->
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(

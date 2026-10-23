@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import android.view.WindowManager
 import androidx.compose.runtime.LaunchedEffect
 import dev.linkinxp.termlauncher.wall.WallMode
@@ -41,6 +44,10 @@ import dev.linkinxp.termlauncher.ui.TermTheme
 class MainActivity : ComponentActivity() {
     private val vm: LauncherViewModel by viewModels()
 
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.onCalendarPermission(granted)
+    }
+
     private val homePresses = mutableIntStateOf(0)
 
     /** Pressing Home (button or gesture) while the launcher is open goes back to the first home page. */
@@ -72,6 +79,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        vm.refreshPanels()
         maybeBoot() // unlock broadcast may arrive before the activity is resumed
     }
 
@@ -89,6 +97,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        lifecycleScope.launch { vm.permissionRequests.collect { permissionLauncher.launch(it) } }
         ContextCompat.registerReceiver(
             this, unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT), ContextCompat.RECEIVER_NOT_EXPORTED,
         )
