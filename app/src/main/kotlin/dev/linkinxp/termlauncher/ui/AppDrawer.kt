@@ -37,6 +37,7 @@ import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
+import dev.linkinxp.termlauncher.wall.WallMode
 import kotlinx.coroutines.launch
 
 private val SORT_LABEL = mapOf(DrawerSort.AZ to "a-z", DrawerSort.RECENTLY_INSTALLED to "new", DrawerSort.MOST_USED to "used")
@@ -58,6 +59,8 @@ fun AppDrawer(
     BackHandler { vm.closeDrawer() }
 
     var filterValue by remember { mutableStateOf(TextFieldValue(ui.filter)) }
+    // Solid: opaque as before. Otherwise the wall shows through with a fixed 35% readability layer.
+    val drawerBg = theme.background.color().let { if (ui.wall.mode == WallMode.SOLID) it else it.copy(alpha = 0.35f) }
     val folders = ui.layout.folders()
     val showFolders = ui.filter.isBlank() && !ui.showHidden
 
@@ -70,7 +73,7 @@ fun AppDrawer(
     }
 
     Box(
-        modifier.fillMaxSize().background(theme.background.color())
+        modifier.fillMaxSize().background(drawerBg)
             // Swallow taps/long-presses the rows do not handle, so they cannot reach the home screen underneath.
             .pointerInput(Unit) { detectTapGestures(onTap = {}, onLongPress = {}) }
             .statusBarsPadding().navigationBarsPadding().imePadding(),

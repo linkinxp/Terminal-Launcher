@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import dev.linkinxp.termlauncher.R
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
+import dev.linkinxp.termlauncher.wall.WallSettings
 
 val LocalTheme = staticCompositionLocalOf { ThemeRegistry.default }
 
@@ -29,9 +30,12 @@ val TermFont = FontFamily(
 fun Long.color(): Color = Color(this)
 
 @Composable
-fun TermTheme(theme: Theme, content: @Composable () -> Unit) {
+fun TermTheme(theme: Theme, wall: WallSettings = WallSettings(), content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalTheme provides theme) {
-        Box(Modifier.fillMaxSize().background(theme.background.color())) { content() }
+        Box(Modifier.fillMaxSize()) {
+            WallBackground(wall, theme, rememberReduceMotion())
+            content()
+        }
     }
 }
 

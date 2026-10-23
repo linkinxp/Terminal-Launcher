@@ -12,6 +12,9 @@ import dev.linkinxp.termlauncher.apps.buildDrawer
 import dev.linkinxp.termlauncher.apps.fuzzyRank
 import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.fx.FxSettings
+import dev.linkinxp.termlauncher.wall.WallSettings
+import dev.linkinxp.termlauncher.wall.applyWall
+import kotlin.random.Random
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
@@ -62,6 +65,7 @@ data class LauncherUi(
     val matrix: Boolean = false,
     val boot: Boolean = false,
     val fx: FxSettings = FxSettings(),
+    val wall: WallSettings = WallSettings(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,7 +86,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private class Persisted(
         val theme: Theme, val layout: HomeLayout, val hidden: Set<String>,
         val sort: DrawerSort, val icons: IconMode, val stats: Map<String, AppStat>,
-        val history: List<String>, val fx: FxSettings,
+        val history: List<String>, val fx: FxSettings, val wall: WallSettings,
     )
 
     private val persisted = combine(
@@ -90,9 +94,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     ) { t, l, h, s, i -> arrayOf(t, l, h, s, i) }
         .combine(prefs.stats) { a, st -> a to st }
         .combine(prefs.history) { (a, st), h -> Triple(a, st, h) }
-        .combine(prefs.fx) { (a, st, h), fx ->
+        .combine(prefs.fx) { (a, st, h), fx -> Pair(Triple(a, st, h), fx) }
+        .combine(prefs.wall) { (t, fx), wall ->
+            val (a, st, h) = t
             @Suppress("UNCHECKED_CAST")
-            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx)
+            Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall)
         }
 
     val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph) { p, apps, e ->
@@ -113,6 +119,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             matrix = e.matrix,
             boot = e.boot,
             fx = p.fx,
+            wall = p.wall,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
@@ -160,7 +167,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onFailure = { it.message },
                 )
             }
-            is Command.Wall -> null // wired in the wallpaper-backgrounds task
+            is Command.Wall ->
+                if (cmd.sub == null) cur.wall.describe()
+                else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
+                    onSuccess = { next -> viewModelScope.launch { prefs.setWall(next) }; null },
+                    onFailure = { it.message },
+                )
             is Command.Sudo -> "user is not in the sudoers file. This incident will be reported."
             is Command.History ->
                 if (cur.historyAll.isEmpty()) "history: empty"

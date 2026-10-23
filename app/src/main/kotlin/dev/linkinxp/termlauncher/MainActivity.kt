@@ -16,6 +16,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,7 +83,7 @@ class MainActivity : ComponentActivity() {
             var folderName by remember { mutableStateOf<String?>(null) }
             var editing by remember { mutableStateOf(false) }
             BackHandler { /* a launcher stays home */ }
-            TermTheme(ui.theme) {
+            TermTheme(ui.theme, ui.wall) {
                 val tap = { item: Item ->
                     when (item) {
                         is Item.App -> vm.launch(item.pkg)
@@ -99,6 +101,8 @@ class MainActivity : ComponentActivity() {
                     },
                     onSwipeUp = { vm.openDrawer() },
                     onEdit = { editing = true },
+                    // Kept composed but invisible under the drawer so the wall shows and the page is kept.
+                    modifier = Modifier.alpha(if (ui.drawerOpen) 0f else 1f),
                 )
                 if (ui.drawerOpen) {
                     AppDrawer(ui, vm, onAppLongPress = { menuPkg = it }, onFolderTap = { folderName = it })

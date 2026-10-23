@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -15,6 +16,7 @@ import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.theme.Theme
+import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +42,11 @@ class Prefs(private val context: Context) {
     private val iconKey = stringPreferencesKey("icons")
     private val statsKey = stringPreferencesKey("stats")
     private val historyKey = stringPreferencesKey("history")
+    private val wallModeKey = stringPreferencesKey("wall_mode")
+    private val wallStyleKey = stringPreferencesKey("wall_style")
+    private val wallSeedKey = intPreferencesKey("wall_seed")
+    private val wallDimKey = intPreferencesKey("wall_dim")
+    private val wallAnimateKey = booleanPreferencesKey("wall_animate")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
     private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
@@ -61,6 +68,16 @@ class Prefs(private val context: Context) {
         FxSettings(
             scanlines = p[fxScanKey], flicker = p[fxFlickerKey] ?: d.flicker, glitch = p[fxGlitchKey] ?: d.glitch,
             cursor = p[fxCursorKey] ?: d.cursor, boot = p[fxBootKey] ?: d.boot,
+        )
+    }
+    val wall: Flow<WallSettings> = data.map { p ->
+        val d = WallSettings()
+        WallSettings(
+            mode = enumOr(p[wallModeKey], d.mode),
+            style = enumOr(p[wallStyleKey], d.style),
+            seed = p[wallSeedKey] ?: d.seed,
+            dim = p[wallDimKey]?.takeIf { it in 0..100 } ?: d.dim,
+            animate = p[wallAnimateKey] ?: d.animate,
         )
     }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
@@ -86,6 +103,16 @@ class Prefs(private val context: Context) {
     suspend fun setHidden(hidden: Set<String>) { safeEdit { it[hiddenKey] = hidden } }
     suspend fun setSort(sort: DrawerSort) { safeEdit { it[sortKey] = sort.name } }
     suspend fun setIconMode(mode: IconMode) { safeEdit { it[iconKey] = mode.name } }
+
+    suspend fun setWall(w: WallSettings) {
+        safeEdit { p ->
+            p[wallModeKey] = w.mode.name
+            p[wallStyleKey] = w.style.name
+            p[wallSeedKey] = w.seed
+            p[wallDimKey] = w.dim
+            p[wallAnimateKey] = w.animate
+        }
+    }
 
     suspend fun setFx(fx: FxSettings) {
         safeEdit { p ->
