@@ -10,6 +10,7 @@ sealed interface Command {
     data class Ls(val hidden: Boolean) : Command
     data class Fx(val name: String?, val on: Boolean?) : Command
     data class Sudo(val rest: String) : Command
+    data class Wall(val sub: String?, val arg: String?) : Command
     data object History : Command
     data object Neofetch : Command
     data object Whoami : Command
@@ -29,6 +30,7 @@ fun parseCommand(input: String): Command {
     return when {
         word == "help" && args.isEmpty() -> Command.Help
         word == "fx" -> parseFx(args)
+        word == "wall" -> parseWall(args)
         word == "sudo" && args.isNotEmpty() -> Command.Sudo(args)
         args.isEmpty() && word in SIMPLE -> SIMPLE.getValue(word)
         word == "ls" && args.isEmpty() -> Command.Ls(false)
@@ -60,4 +62,10 @@ private fun parseFx(args: String): Command.Fx {
     val tokens = args.split(Regex("\\s+"))
     val on = when (tokens.getOrNull(1)?.lowercase()) { "on" -> true; "off" -> false; else -> null }
     return Command.Fx(tokens[0].lowercase(), on)
+}
+
+private fun parseWall(args: String): Command.Wall {
+    if (args.isEmpty()) return Command.Wall(null, null)
+    val tokens = args.split(Regex("\\s+"))
+    return Command.Wall(tokens[0].lowercase(), tokens.getOrNull(1))
 }

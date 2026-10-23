@@ -196,4 +196,8 @@ class HomeLayoutTest {
             assertTrue("'$word' should be reserved", empty.mkdir(word).isFailure)
         }
     }
+
+    @Test fun mkdirRejectsWall() {
+        assertTrue(empty.mkdir("wall").isFailure)
+    }
 }

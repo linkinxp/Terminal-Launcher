@@ -75,4 +75,12 @@ class CommandParserTest {
         assertEquals(Command.Sudo("rm -rf /"), parseCommand("sudo rm -rf /"))
         assertEquals(Command.Query("sudo"), parseCommand("sudo"))
     }
+
+    @Test fun wallVariants() {
+        assertEquals(Command.Wall(null, null), parseCommand("wall"))
+        assertEquals(Command.Wall("mode", "ascii"), parseCommand("wall mode ascii"))
+        assertEquals(Command.Wall("dim", "40"), parseCommand("WALL Dim 40"))
+        assertEquals(Command.Wall("style", "stars"), parseCommand("wall style stars extra"))
+        assertEquals(Command.Wall("random", null), parseCommand("wall random"))
+    }
 }

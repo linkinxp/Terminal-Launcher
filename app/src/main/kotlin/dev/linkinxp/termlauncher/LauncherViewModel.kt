@@ -160,6 +160,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     onFailure = { it.message },
                 )
             }
+            is Command.Wall -> null // wired in the wallpaper-backgrounds task
             is Command.Sudo -> "user is not in the sudoers file. This incident will be reported."
             is Command.History ->
                 if (cur.historyAll.isEmpty()) "history: empty"
@@ -281,7 +282,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall",
         )
         val HELP = listOf(
             "theme <name>       change theme",
@@ -293,6 +294,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "rmdir <f>          remove folder",
             "ls [-a]            drawer / hidden",
             "fx [name on|off]   effects",
+            "wall <sub> [arg]   wallpaper",
             "history neofetch whoami uptime date",
             "fortune clear sudo matrix help",
         ).joinToString("\n")
