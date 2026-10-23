@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.ui.AppDrawer
 import dev.linkinxp.termlauncher.ui.AppMenu
 import dev.linkinxp.termlauncher.ui.EditMode
@@ -46,6 +47,68 @@ class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.onCalendarPermission(granted)
+    }
+
+    /** A widget being added: its host id is allocated, and deleted again if the user cancels or anything fails. */
+    private data class PendingWidget(val page: Int, val provider: String, val id: Int)
+
+    private var pendingWidget: PendingWidget? = null
+
+    private val bindLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) afterBind() else cancelPendingWidget()
+    }
+
+    /** Edit mode picked [provider] for [page]: bind it (asking the user if needed), configure it, then add it. */
+    private fun beginAddWidget(page: Int, provider: String) {
+        cancelPendingWidget() // never leave an earlier allocation behind
+        val id = vm.widgets.allocate()
+        pendingWidget = PendingWidget(page, provider, id)
+        if (vm.widgets.bindIfAllowed(id, provider)) afterBind() else bindLauncher.launch(vm.widgets.bindIntent(id, provider))
+    }
+
+    private fun afterBind() {
+        val p = pendingWidget ?: return
+        if (vm.widgets.needsConfigure(p.provider)) {
+            if (!vm.widgets.configure(this, p.id, REQ_CONFIGURE)) cancelPendingWidget()
+        } else {
+            finishAddWidget()
+        }
+    }
+
+    private fun finishAddWidget() {
+        val p = pendingWidget ?: return
+        pendingWidget = null
+        vm.addWidget(p.page, Item.Widget(p.id, p.provider, WidgetSize.MEDIUM))
+    }
+
+    private fun cancelPendingWidget() {
+        val p = pendingWidget ?: return
+        pendingWidget = null
+        vm.widgets.delete(p.id)
+        val label = vm.widgets.providers().firstOrNull { it.provider == p.provider }?.label ?: "widget"
+        vm.showMessage("widget: ${label.lowercase()}: not added")
+    }
+
+    @Deprecated("Widget configure screens report back through the classic result callback")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_CONFIGURE) {
+            if (resultCode == RESULT_OK) finishAddWidget() else cancelPendingWidget()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        vm.widgets.start()
+    }
+
+    override fun onStop() {
+        vm.widgets.stop()
+        super.onStop()
+    }
+
+    private companion object {
+        const val REQ_CONFIGURE = 4711
     }
 
     private val homePresses = mutableIntStateOf(0)
@@ -147,7 +210,7 @@ class MainActivity : ComponentActivity() {
                 }
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
-                if (editing) EditMode(ui, vm) { editing = false }
+                if (editing) EditMode(ui, vm, onAddWidget = ::beginAddWidget) { editing = false }
                 EffectsOverlay(ui.fx, ui.theme, rememberReduceMotion())
                 if (ui.matrix) MatrixRain(onDone = vm::stopMatrix)
                 if (ui.boot) BootLogOverlay(onDone = vm::endBoot)

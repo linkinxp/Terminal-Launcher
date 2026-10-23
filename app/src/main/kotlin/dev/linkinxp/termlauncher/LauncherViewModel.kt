@@ -30,6 +30,8 @@ import dev.linkinxp.termlauncher.weather.WxAction
 import dev.linkinxp.termlauncher.weather.formatWeather
 import dev.linkinxp.termlauncher.weather.parseForecast
 import dev.linkinxp.termlauncher.weather.parseWxAction
+import dev.linkinxp.termlauncher.layout.WidgetSize
+import dev.linkinxp.termlauncher.widgets.WidgetHostController
 import java.time.ZoneId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -38,6 +40,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import dev.linkinxp.termlauncher.prompt.DeviceInfo
 import dev.linkinxp.termlauncher.prompt.capLines
 import dev.linkinxp.termlauncher.prompt.complete as completeInput
@@ -161,6 +164,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val permissionRequests: SharedFlow<String> = _permissionRequests.asSharedFlow()
 
     fun onCalendarPermission(granted: Boolean) = refreshPanels()
+
+    // ---- widgets ----
+
+    /** Host for real Android widgets; the Activity starts/stops it and drives bind/configure results. */
+    val widgets = WidgetHostController(application)
+
+    fun addWidget(page: Int, widget: Item.Widget) = edit { it.addWidget(page, widget) }
+    fun removeWidget(id: Int) = edit { it.removeWidget(id) }
+    fun resizeWidget(id: Int, size: WidgetSize) = edit { it.resizeWidget(id, size) }
+    fun showMessage(text: String) = say(text)
+
+    /** Drops widgets whose provider was uninstalled (skipped when the provider query failed or came back empty). */
+    private suspend fun pruneMissingWidgets() {
+        val providers = widgets.providersOrNull()?.map { it.provider }?.toSet()?.takeIf { it.isNotEmpty() } ?: return
+        if (prefs.layout.first().pruneWidgets(providers).second.isEmpty()) return
+        applyLayout { Result.success(it.pruneWidgets(providers).first) }
+    }
 
     // ---- weather ----
 
@@ -432,6 +452,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         // Whenever the panel switches change (including the first load), refresh the panels.
         viewModelScope.launch { prefs.panels.distinctUntilChanged().collect { refreshPanels() } }
+        // Host ids that left the stored layout (widget or page removed, provider pruned) are deleted exactly once.
+        viewModelScope.launch {
+            var previous: Set<Int>? = null
+            prefs.layout.map { it.widgetIds() }.distinctUntilChanged().collect { current ->
+                previous?.let { gone -> (gone - current).forEach(widgets::delete) }
+                previous = current
+            }
+        }
+        viewModelScope.launch { repo.apps.collect { pruneMissingWidgets() } }
     }
 
     companion object {

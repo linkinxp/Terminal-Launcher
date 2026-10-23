@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -28,11 +29,13 @@ import androidx.compose.ui.window.Dialog
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.layout.Item
 
 private sealed interface Adding {
     data class App(val page: Int) : Adding
     data class Dir(val page: Int) : Adding
+    data class Widget(val page: Int) : Adding
 }
 
 @Composable
@@ -42,11 +45,17 @@ private fun Action(text: String, onClick: () -> Unit) {
 
 /** Edit pages: add, remove and reorder pages; add an app shortcut or a folder to a page. */
 @Composable
-fun EditMode(ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
+fun EditMode(
+    ui: LauncherUi,
+    vm: LauncherViewModel,
+    onAddWidget: (page: Int, provider: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val theme = ui.theme
     var adding by remember { mutableStateOf<Adding?>(null) }
     var newName by remember { mutableStateOf("") }
     val pages = ui.layout.pages
+    val providers = remember { vm.widgets.providers() }
     Dialog(onDismissRequest = onDismiss) {
         Box(Modifier.padding(8.dp)) {
             DialogSurface(theme) {
@@ -61,6 +70,20 @@ fun EditMode(ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
                                 if (pages.size > 1) Action("[rm]") { vm.removePage(i) }
                                 Action("[+app]") { adding = Adding.App(i) }
                                 Action("[+dir]") { adding = Adding.Dir(i); newName = "" }
+                                Action("[+widget]") { adding = Adding.Widget(i) }
+                            }
+                            // Hosted widgets on this page: size and remove.
+                            page.items.filterIsInstance<Item.Widget>().forEach { w ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TermText(
+                                        "  ${providers.firstOrNull { it.provider == w.provider }?.label?.lowercase() ?: "widget"}",
+                                        Modifier.weight(1f), dim = true,
+                                    )
+                                    Action(if (w.size == WidgetSize.SMALL) "[S]" else "S") { vm.resizeWidget(w.id, WidgetSize.SMALL) }
+                                    Action(if (w.size == WidgetSize.MEDIUM) "[M]" else "M") { vm.resizeWidget(w.id, WidgetSize.MEDIUM) }
+                                    Action(if (w.size == WidgetSize.LARGE) "[L]" else "L") { vm.resizeWidget(w.id, WidgetSize.LARGE) }
+                                    Action("[rm]") { vm.removeWidget(w.id) }
+                                }
                             }
                             when (val a = adding) {
                                 is Adding.Dir -> if (a.page == i) {
@@ -83,6 +106,15 @@ fun EditMode(ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
                                         TermText(
                                             "  > ${app.label.lowercase()}",
                                             Modifier.fillMaxWidth().clickable { vm.addToPage(i, Item.App(app.pkg)); adding = null }.padding(vertical = 5.dp),
+                                        )
+                                    }
+                                }
+                                is Adding.Widget -> if (a.page == i) {
+                                    if (providers.isEmpty()) TermText("  no widgets installed", dim = true)
+                                    providers.forEach { prov ->
+                                        TermText(
+                                            "  + ${prov.label.lowercase()}",
+                                            Modifier.fillMaxWidth().clickable { onAddWidget(i, prov.provider); adding = null }.padding(vertical = 5.dp),
                                         )
                                     }
                                 }

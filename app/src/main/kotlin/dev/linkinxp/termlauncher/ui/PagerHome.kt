@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -118,12 +120,16 @@ fun PagerHome(
             },
     ) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
+            // Scrolls only when the page overflows, so a page that fits does not swallow the drawer's swipe-up.
+            val scroll = rememberScrollState()
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
-                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) },
+                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
+                    .verticalScroll(scroll, enabled = scroll.maxValue > 0),
             ) {
                 if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather)
                 ui.layout.pages[index].items.forEach { item ->
+                    if (item is Item.Widget) { WidgetPanel(item, vm); return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(
                         "${if (item is Item.Folder) "" else "> "}$label",
