@@ -10,7 +10,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.LauncherUi
+import dev.linkinxp.termlauncher.apps.shortName
 import dev.linkinxp.termlauncher.layout.Item
+
+/** Short dock tab text: vowel-stripped app name (`msgs`) or `~folder`; null when an app is gone. */
+fun dockLabel(item: Item, ui: LauncherUi): String? = when (item) {
+    is Item.App -> ui.apps[item.pkg]?.label?.let(::shortName)
+    is Item.Folder -> "~${item.name}"
+}
 
 /** Display name of a layout item; null when an app is no longer installed. */
 fun itemLabel(item: Item, ui: LauncherUi): String? = when (item) {
@@ -29,9 +36,9 @@ fun Dock(
 ) {
     Row(modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
         ui.layout.dock.forEach { item ->
-            val label = itemLabel(item, ui) ?: return@forEach
+            val label = dockLabel(item, ui) ?: return@forEach
             TermText(
-                label.take(6),
+                label,
                 Modifier.combinedClickable(onClick = { onTap(item) }, onLongClick = { onLongPress(item) })
                     .padding(horizontal = 6.dp, vertical = 10.dp),
                 bold = true,
