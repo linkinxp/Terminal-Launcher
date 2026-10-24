@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.5.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 0.6.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest
@@ -15,10 +15,24 @@ Switch the default Home app back in Settings, or `adb uninstall dev.linkinxp.ter
 
 ## Themes
 `classy-black`, `matrix`, `amber`, `solarized-dark`, `dracula`, and the cyber set `neon-city`, `synthwave`,
-`blade-runner`, `glitch-red` (scanlines on by default). Switch with `theme <name>`.
+`blade-runner`, `glitch-red` (scanlines on by default), and the popular terminal palettes `gruvbox`, `nord`, `tokyo-night`,
+`catppuccin`, `monokai`, `one-dark`. Switch with `theme <name>`.
+
+### Your own themes
+`theme add <name> <bg> <fg> <accent> <dim> [single|double|rounded|ascii|bracket]` with colors as `#RRGGBB` or `#RGB` (the `#` is optional),
+e.g. `theme add mine #101010 #e0e0e0 #3d7bff #888888 rounded`. Names are 1-24 characters of `a-z 0-9 - _`, cannot be a built-in theme or
+command word, and at most 8 custom themes fit; adding an existing name replaces it. A foreground/background contrast below 3:1 still adds
+the theme but prints `theme: low contrast`. `theme rm <name>` removes one (the active theme then falls back to `classy-black`). Custom themes
+show in the settings theme list with `+` and `[rm]`, and are part of the backup.
+
+## Clock
+`clock auto|24|12` sets the hour format (`auto` follows the phone; 12-hour drops the leading zero and adds `am`/`pm`, also in the status
+line, calendar and `date`). `clock style pixel|segment|figlet|binary|hex|epoch|plain` picks how the clock looks (`binary`, `hex` and
+`epoch` always use 24-hour values; `epoch` ticks each second only while the launcher is on screen). Both are in settings under `clock`
+and in the backup. A bare `clock` shows the current values.
 
 ## Prompt commands
-`theme <name>` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
+`theme <name>` | `theme add|rm ...` | `clock ...` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
 `mv <folder> <newname>` (rename) | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help` |
 `fx [name on|off]` | `settings` | `wall ...` | `panel <cal|wx|search|quick> on|off` | `quick ...` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
 Any other text fuzzy-matches installed apps; Enter launches the top match. `⇥` completes the input;
@@ -80,7 +94,7 @@ Long-press an empty page area -> `[+widget]` on a page lists the installed widge
 Per widget in edit mode: size `S M L` and `[rm]`. Pages scroll when their content overflows; the swipe-up for the drawer works from the bottom area.
 
 ## Gestures
-Swipe up: app drawer. Swipe left/right: pages. Long-press an app: menu. Long-press empty page area: edit pages.
+Swipe up: app drawer (anywhere on home; on a page that scrolls, once it is at the bottom). Swipe down: the quick tiles slide in from the top (at the top of a scrolling page); swipe up, tap a tile, Back or Home closes them. Swipe left/right: pages. Long-press an app: menu. Long-press empty page area: edit pages.
 
 ## Permissions
 `REQUEST_DELETE_PACKAGES` (uninstall from the app menu), `ACCESS_NETWORK_STATE` (network type in the sys panel), `READ_CALENDAR` (calendar panel, asked at runtime), `INTERNET` (weather panel only).

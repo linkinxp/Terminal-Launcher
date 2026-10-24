@@ -346,4 +346,12 @@ class ScreenshotsTest {
     @Test fun clockPixelTwelve() = home("clock-pixel-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PIXEL, clockFormat = ClockFormat.H12)
     @Test fun clockFigletTwelve() = home("clock-figlet-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.FIGLET, clockFormat = ClockFormat.H12)
     @Test fun clockPlainTwelve() = home("clock-plain-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PLAIN, clockFormat = ClockFormat.H12)
+
+    // The six popular palettes on the home screen.
+    @Test fun paletteGruvbox() = home("home-gruvbox", ThemeRegistry.byName("gruvbox")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+    @Test fun paletteNord() = home("home-nord", ThemeRegistry.byName("nord")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+    @Test fun paletteTokyoNight() = home("home-tokyo-night", ThemeRegistry.byName("tokyo-night")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+    @Test fun paletteCatppuccin() = home("home-catppuccin", ThemeRegistry.byName("catppuccin")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+    @Test fun paletteMonokai() = home("home-monokai", ThemeRegistry.byName("monokai")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+    @Test fun paletteOneDark() = home("home-one-dark", ThemeRegistry.byName("one-dark")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
 }

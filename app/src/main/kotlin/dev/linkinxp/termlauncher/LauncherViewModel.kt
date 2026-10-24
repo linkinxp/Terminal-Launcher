@@ -750,7 +750,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "0.5.0"
+        const val LAUNCHER_VERSION = "0.6.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 7L
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
