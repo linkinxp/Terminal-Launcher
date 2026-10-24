@@ -145,4 +145,13 @@ class SettingsScreenTest {
         click("clock-row"); until { vm.ui.value.clockFormat == dev.linkinxp.termlauncher.clock.ClockFormat.H12 }
         click("clock-row"); until { vm.ui.value.clockFormat == dev.linkinxp.termlauncher.clock.ClockFormat.AUTO }
     }
+
+    @Test fun theClockStyleRowCyclesThroughAllSevenAndWraps() {
+        val vm = show()
+        val order = dev.linkinxp.termlauncher.clock.ClockStyle.entries
+        assertEquals(order[0], vm.ui.value.clockStyle)
+        for (next in order.drop(1) + order[0]) {
+            click("clock-style-row"); until({ "style=${vm.ui.value.clockStyle}" }) { vm.ui.value.clockStyle == next }
+        }
+    }
 }

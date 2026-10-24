@@ -128,4 +128,9 @@ class LauncherBackupTest {
         assertEquals("H12", decodeBackup(encodeBackup(sample().copy(clockFormat = "H12"))).getOrThrow().clockFormat)
         assertEquals("AUTO", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().clockFormat)
     }
+
+    @Test fun theClockStyleRoundTripsAndFallsBackToPixel() {
+        assertEquals("FIGLET", decodeBackup(encodeBackup(sample().copy(clockStyle = "FIGLET"))).getOrThrow().clockStyle)
+        assertEquals("PIXEL", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().clockStyle)
+    }
 }

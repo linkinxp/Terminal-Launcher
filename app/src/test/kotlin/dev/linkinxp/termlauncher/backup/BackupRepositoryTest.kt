@@ -118,4 +118,11 @@ class BackupRepositoryTest {
         repo.apply(sample())
         assertEquals("AUTO", repo.snapshot().clockFormat)
     }
+
+    @Test fun theClockStyleIsBackedUpAndRestoredAndUnknownNamesBecomePixel() = runBlocking {
+        repo.apply(sample().copy(clockStyle = "BINARY"))
+        assertEquals("BINARY", repo.snapshot().clockStyle)
+        repo.apply(sample().copy(clockStyle = "nonsense"))
+        assertEquals("PIXEL", repo.snapshot().clockStyle)
+    }
 }

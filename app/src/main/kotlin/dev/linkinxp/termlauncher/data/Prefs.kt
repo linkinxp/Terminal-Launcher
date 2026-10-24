@@ -1,6 +1,7 @@
 package dev.linkinxp.termlauncher.data
 
 import dev.linkinxp.termlauncher.clock.ClockFormat
+import dev.linkinxp.termlauncher.clock.ClockStyle
 import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
@@ -69,6 +70,7 @@ class Prefs(private val context: Context) {
     private val panelQuickKey = booleanPreferencesKey("panel_quick")
     private val quickKey = stringPreferencesKey("quick")
     private val clockFormatKey = stringPreferencesKey("clock_format")
+    private val clockStyleKey = stringPreferencesKey("clock_style")
     private val drawerKeyboardKey = booleanPreferencesKey("drawer_keyboard")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
@@ -102,6 +104,7 @@ class Prefs(private val context: Context) {
     /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
     val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
     val clockFormat: Flow<ClockFormat> = data.map { ClockFormat.fromName(it[clockFormatKey]) }.distinctUntilChanged()
+    val clockStyle: Flow<ClockStyle> = data.map { ClockStyle.fromName(it[clockStyleKey]) }.distinctUntilChanged()
     val drawerKeyboard: Flow<Boolean> = data.map { it[drawerKeyboardKey] ?: true }.distinctUntilChanged()
     val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }
     val stats: Flow<Map<String, AppStat>> = data.map { it[statsKey] }.distinctUntilChanged().map { decodeStats(it) }
@@ -177,6 +180,7 @@ class Prefs(private val context: Context) {
     }
 
     suspend fun setClockFormat(f: ClockFormat) { safeEdit { it[clockFormatKey] = f.name } }
+    suspend fun setClockStyle(s: ClockStyle) { safeEdit { it[clockStyleKey] = s.name } }
     suspend fun setDrawerKeyboard(on: Boolean) { safeEdit { it[drawerKeyboardKey] = on } }
 
     suspend fun setFx(fx: FxSettings) { safeEdit { writeFx(it, fx) } }

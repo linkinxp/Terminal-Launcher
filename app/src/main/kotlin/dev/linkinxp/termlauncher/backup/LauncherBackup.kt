@@ -66,6 +66,7 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     /** Whether the drawer raises the keyboard for its search field when it opens (on by default). */
     val drawerKeyboard: Boolean = true,
     val clockFormat: String = "AUTO",
+    val clockStyle: String = "PIXEL",
 )
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
@@ -111,6 +112,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 quick = section("quick", ListSerializer(String.serializer()).nullable, null),
                 drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), true),
                 clockFormat = section("clockFormat", String.serializer(), "AUTO"),
+                clockStyle = section("clockStyle", String.serializer(), "PIXEL"),
             ),
         )
     } catch (e: Exception) {

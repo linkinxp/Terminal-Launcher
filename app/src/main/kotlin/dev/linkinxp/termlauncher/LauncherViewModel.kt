@@ -2,7 +2,9 @@ package dev.linkinxp.termlauncher
 
 import android.text.format.DateFormat
 import dev.linkinxp.termlauncher.clock.ClockFormat
+import dev.linkinxp.termlauncher.clock.ClockStyle
 import dev.linkinxp.termlauncher.clock.clockFormatReply
+import dev.linkinxp.termlauncher.clock.clockStyleReply
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -126,6 +128,7 @@ data class LauncherUi(
     val quick: List<String> = emptyList(),
     val drawerKeyboard: Boolean = true,
     val clockFormat: ClockFormat = ClockFormat.AUTO,
+    val clockStyle: ClockStyle = ClockStyle.PIXEL,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -165,9 +168,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat) { wx, quick, kbd, fmt -> Extras(wx, quick, kbd, fmt) }
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle) { wx, quick, kbd, fmt, style -> Extras(wx, quick, kbd, fmt, style) }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
     private val quickDefaults: List<String> by lazy { QuickDefaults(application).packages() }
@@ -207,6 +210,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             quick = (x.quick ?: quickDefaults).filter { it in installed },
             drawerKeyboard = x.drawerKeyboard,
             clockFormat = x.clockFormat,
+            clockStyle = x.clockStyle,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
@@ -623,12 +627,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setClockFormat(f: ClockFormat) { viewModelScope.launch { prefs.setClockFormat(f) } }
+    fun setClockStyle(s: ClockStyle) { viewModelScope.launch { prefs.setClockStyle(s) } }
+    fun cycleClockStyle() { setClockStyle(ClockStyle.entries.let { it[(it.indexOf(ui.value.clockStyle) + 1) % it.size] }) }
     fun cycleClockFormat() { setClockFormat(ClockFormat.entries.let { it[(it.indexOf(ui.value.clockFormat) + 1) % it.size] }) }
 
     /** Whether times are drawn in 24-hour form right now (the setting, or the phone's own when it is `auto`). */
     private fun h24(): Boolean = ui.value.clockFormat.is24(DateFormat.is24HourFormat(getApplication()))
 
     private fun handleClock(sub: String?, arg: String?, cur: LauncherUi): String? {
+        if (sub == null) return clockFormatReply(null, null, cur.clockFormat).text + "\n" + clockStyleReply(null, cur.clockStyle).text
+        if (sub == "style") {
+            val styleReply = clockStyleReply(arg, cur.clockStyle)
+            styleReply.set?.let { setClockStyle(it) }
+            return styleReply.text
+        }
         val reply = clockFormatReply(sub, arg, cur.clockFormat)
         reply.set?.let { setClockFormat(it) }
         return reply.text
@@ -719,7 +731,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock",
         )
         val HELP = listOf(
-            "theme <name> | clock auto|24|12",
+            "theme <name> | clock auto|24|12|style",
             "pin|hide <app>     dock / hide",
             "mkdir|rmdir <f>    folders",
             "mv <app>|<f> <f|new>  file / rename",

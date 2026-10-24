@@ -37,6 +37,8 @@ import dev.linkinxp.termlauncher.wall.AsciiStyle
 import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.apps.AppEntry
+import dev.linkinxp.termlauncher.clock.ClockFormat
+import dev.linkinxp.termlauncher.clock.ClockStyle
 import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.prompt.DeviceInfo
 import dev.linkinxp.termlauncher.prompt.neofetch
@@ -83,6 +85,8 @@ class ScreenshotsTest {
         calendar: PanelData = PanelData.Off,
         weather: PanelData = PanelData.Off,
         quick: List<String> = emptyList(),
+        clockStyle: ClockStyle = ClockStyle.PIXEL,
+        clockFormat: ClockFormat = ClockFormat.H24,
     ): LauncherUi {
         val layout = HomeLayout(
             dock = listOf("Phone", "Messages", "Chrome", "Camera").map { Item.App(pkg(it)) },
@@ -105,6 +109,8 @@ class ScreenshotsTest {
             prompt = prompt,
             fx = fx,
             wall = wall,
+            clockStyle = clockStyle,
+            clockFormat = clockFormat,
         )
     }
 
@@ -119,11 +125,13 @@ class ScreenshotsTest {
         calendar: PanelData = PanelData.Off,
         weather: PanelData = PanelData.Off,
         quick: List<String> = emptyList(),
+        clockStyle: ClockStyle = ClockStyle.PIXEL,
+        clockFormat: ClockFormat = ClockFormat.H24,
     ) {
         val vm = vm()
         rule.setContent {
             TermTheme(theme, wall) {
-                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall, calendar = calendar, weather = weather, quick = quick)
+                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall, calendar = calendar, weather = weather, quick = quick, clockStyle = clockStyle, clockFormat = clockFormat)
                 PagerHome(ui, vm, {}, {}, {}, {})
                 EffectsOverlay(ui.fx, theme, reduceMotion = true)
             }
@@ -319,4 +327,23 @@ class ScreenshotsTest {
         "quick-matrix-eight", ThemeRegistry.byName("matrix")!!,
         quick = listOf("Phone", "Messages", "Camera", "Maps", "Chrome", "Spotify", "Signal", "Notes").map { pkg(it) },
     )
+
+    // One shot of every clock style in two themes, plus the 12-hour variants (the time shown is the real one).
+    @Test fun clockPixelNeonCity() = home("clock-pixel-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.PIXEL)
+    @Test fun clockSegmentNeonCity() = home("clock-segment-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.SEGMENT)
+    @Test fun clockFigletNeonCity() = home("clock-figlet-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.FIGLET)
+    @Test fun clockBinaryNeonCity() = home("clock-binary-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.BINARY)
+    @Test fun clockHexNeonCity() = home("clock-hex-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.HEX)
+    @Test fun clockEpochNeonCity() = home("clock-epoch-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.EPOCH)
+    @Test fun clockPlainNeonCity() = home("clock-plain-neon-city", ThemeRegistry.byName("neon-city")!!, clockStyle = ClockStyle.PLAIN)
+    @Test fun clockPixelMatrix() = home("clock-pixel-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PIXEL)
+    @Test fun clockSegmentMatrix() = home("clock-segment-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.SEGMENT)
+    @Test fun clockFigletMatrix() = home("clock-figlet-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.FIGLET)
+    @Test fun clockBinaryMatrix() = home("clock-binary-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.BINARY)
+    @Test fun clockHexMatrix() = home("clock-hex-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.HEX)
+    @Test fun clockEpochMatrix() = home("clock-epoch-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.EPOCH)
+    @Test fun clockPlainMatrix() = home("clock-plain-matrix", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PLAIN)
+    @Test fun clockPixelTwelve() = home("clock-pixel-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PIXEL, clockFormat = ClockFormat.H12)
+    @Test fun clockFigletTwelve() = home("clock-figlet-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.FIGLET, clockFormat = ClockFormat.H12)
+    @Test fun clockPlainTwelve() = home("clock-plain-12h", ThemeRegistry.byName("matrix")!!, clockStyle = ClockStyle.PLAIN, clockFormat = ClockFormat.H12)
 }

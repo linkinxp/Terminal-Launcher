@@ -1,6 +1,7 @@
 package dev.linkinxp.termlauncher.ui
 
 import android.text.format.DateFormat
+import dev.linkinxp.termlauncher.clock.ClockStyle
 import dev.linkinxp.termlauncher.clock.amPm
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -88,6 +89,7 @@ private fun rememberNow(): LocalDateTime {
 private fun ClockHeader(
     now: LocalDateTime,
     h24: Boolean,
+    clockStyle: ClockStyle,
     snapshot: SysSnapshot,
     glitch: Boolean,
     calendar: PanelData,
@@ -97,7 +99,7 @@ private fun ClockHeader(
 ) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
-        PixelClock(now.toLocalTime(), glitch = glitch, h24 = h24)
+        ClockView(clockStyle, now, h24, glitch)
         TermText(
             "${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} " +
                 "${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.year}  " +
@@ -175,7 +177,7 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll),
             ) {
-                if (index == 0) ClockHeader(now, h24, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
+                if (index == 0) ClockHeader(now, h24, ui.clockStyle, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
