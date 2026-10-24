@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.sys.SysSnapshot
@@ -34,10 +35,12 @@ fun StatusLine(
     snapshot: SysSnapshot,
     now: LocalDateTime,
     onPage: (Int) -> Unit,
+    onSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Start) {
-        TermText("[0] ", dim = true)
+        // Tap to open the settings screen.
+        TermText("[cfg] ", Modifier.testTag("status-cfg").clickable(onClick = onSettings), bold = true)
         (0 until pageCount).forEach { i ->
             TermText(
                 pageLabel(i, compactPageLabels(pageCount)) + if (i == current) "*" else "",

@@ -62,6 +62,7 @@ fun EditMode(
             DialogSurface(theme) {
                 TermPanel("edit pages", Modifier.fillMaxWidth().padding(8.dp), trailing = "[done]") {
                     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
+                        TermText("[settings]", Modifier.clickable(onClick = onOpenSettings).padding(bottom = 4.dp), bold = true, color = theme.accent.color())
                         ui.prompt.message?.let { TermText(it, color = theme.accent.color(), maxLines = 3) }
                         pages.forEachIndexed { i, page ->
                             TermText("page ${i + 1} (${page.items.size} items)", Modifier.padding(top = 10.dp), color = theme.accent.color(), bold = true)
@@ -125,7 +126,6 @@ fun EditMode(
                         if (pages.size < HomeLayout.MAX_PAGES) {
                             TermText("+ add page", Modifier.clickable { vm.addPage() }.padding(top = 14.dp, bottom = 6.dp), bold = true)
                         }
-                        TermText("[settings]", Modifier.clickable(onClick = onOpenSettings).padding(top = 10.dp), bold = true)
                         TermText("[done]", Modifier.clickable(onClick = onDismiss).padding(top = 10.dp), dim = true)
                     }
                 }

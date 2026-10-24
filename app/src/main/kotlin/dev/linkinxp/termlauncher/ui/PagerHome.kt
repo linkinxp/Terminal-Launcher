@@ -108,6 +108,7 @@ fun PagerHome(
     onEdit: () -> Unit,
     homeSignal: Int = 0,
     onSearch: (String) -> Unit = {},
+    onSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
@@ -149,7 +150,7 @@ fun PagerHome(
                 }
             }
         }
-        StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } })
+        StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
         Dock(ui, onItemTap, onItemLongPress)
         PromptBar(ui, vm)
     }

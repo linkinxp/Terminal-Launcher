@@ -26,6 +26,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import dev.linkinxp.termlauncher.apps.filterFolders
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -60,6 +61,7 @@ fun AppDrawer(
     vm: LauncherViewModel,
     onAppLongPress: (String) -> Unit,
     onFolderTap: (String) -> Unit,
+    onSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalTheme.current
@@ -122,6 +124,7 @@ fun AppDrawer(
                     TermText("icons:${ICON_LABEL.getValue(ui.iconMode)}", Modifier.clickable {
                         vm.setIconMode(IconMode.entries[(ui.iconMode.ordinal + 1) % IconMode.entries.size])
                     }.padding(horizontal = 8.dp))
+                    TermText("[cfg]", Modifier.testTag("drawer-cfg").clickable(onClick = onSettings).padding(horizontal = 8.dp), bold = true)
                     TermText("[x]", Modifier.clickable { vm.closeDrawer() }.padding(start = 8.dp), dim = true)
                 }
             }

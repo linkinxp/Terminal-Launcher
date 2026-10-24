@@ -264,11 +264,17 @@ class MainActivity : ComponentActivity() {
                     onEdit = { editing = true },
                     homeSignal = homeSignal,
                     onSearch = ::openSearch,
+                    onSettings = { settingsOpen.value = true },
                     // Kept composed but invisible under the drawer so the wall shows and the page is kept.
                     modifier = Modifier.alpha(if (ui.drawerOpen) 0f else 1f),
                 )
                 if (ui.drawerOpen) {
-                    AppDrawer(ui, vm, onAppLongPress = { menuPkg = it }, onFolderTap = { folderName = it })
+                    AppDrawer(
+                        ui, vm,
+                        onAppLongPress = { menuPkg = it },
+                        onFolderTap = { folderName = it },
+                        onSettings = { vm.closeDrawer(); settingsOpen.value = true },
+                    )
                 }
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
