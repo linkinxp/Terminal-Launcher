@@ -1,6 +1,8 @@
 package dev.linkinxp.termlauncher.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +48,12 @@ private fun Action(text: String, onClick: () -> Unit) {
     TermText(text, Modifier.clickable(onClick = onClick).padding(end = 12.dp, top = 4.dp, bottom = 4.dp), bold = true)
 }
 
+private fun PanelKind.label() = when (this) {
+    PanelKind.SEARCH -> "search bar"; PanelKind.SYS -> "sys stats"; PanelKind.CAL -> "calendar"; PanelKind.WX -> "weather"
+}
+
 /** Edit pages: add, remove and reorder pages; add an app shortcut or a folder to a page. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EditMode(
     ui: LauncherUi,
@@ -69,7 +76,7 @@ fun EditMode(
                         ui.prompt.message?.let { TermText(it, color = theme.accent.color(), maxLines = 3) }
                         pages.forEachIndexed { i, page ->
                             TermText("page ${i + 1} (${page.items.size} items)", Modifier.padding(top = 10.dp), color = theme.accent.color(), bold = true)
-                            Row(horizontalArrangement = Arrangement.Start) {
+                            FlowRow {
                                 if (i > 0) Action("[up]") { vm.movePage(i, i - 1) }
                                 if (i < pages.lastIndex) Action("[down]") { vm.movePage(i, i + 1) }
                                 if (pages.size > 1) Action("[rm]") { vm.removePage(i) }
@@ -78,27 +85,31 @@ fun EditMode(
                                 Action("[+widget]") { adding = Adding.Widget(i) }
                                 Action("[+panel]") { adding = Adding.Panel(i) }
                             }
-                            // Info panels on this page: reorder, send to the next page, take off.
+                            // Info panels on this page: the name on its own line, its buttons under it.
                             page.items.filterIsInstance<Item.Panel>().forEach { panel ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TermText("  ${panel.kind.name.lowercase()}", Modifier.weight(1f).testTag("panel-${panel.kind.name.lowercase()}"), dim = true)
-                                    Action("[up]") { vm.movePanel(panel.kind, -1) }
-                                    Action("[down]") { vm.movePanel(panel.kind, +1) }
-                                    if (pages.size > 1) Action("[pg ${(i + 1) % pages.size + 1}]") { vm.movePanelToPage(panel.kind, (i + 1) % pages.size) }
-                                    Action("[rm]") { vm.removePanelItem(panel.kind) }
+                                Column(Modifier.padding(start = 12.dp, top = 6.dp)) {
+                                    TermText("${panel.kind.label()} panel", Modifier.testTag("panel-${panel.kind.name.lowercase()}"), color = theme.accent.color())
+                                    FlowRow {
+                                        Action("[up]") { vm.movePanel(panel.kind, -1) }
+                                        Action("[down]") { vm.movePanel(panel.kind, +1) }
+                                        if (pages.size > 1) Action("[to pg ${(i + 1) % pages.size + 1}]") { vm.movePanelToPage(panel.kind, (i + 1) % pages.size) }
+                                        Action("[rm]") { vm.removePanelItem(panel.kind) }
+                                    }
                                 }
                             }
                             // Hosted widgets on this page: size and remove.
                             page.items.filterIsInstance<Item.Widget>().forEach { w ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.padding(start = 12.dp, top = 6.dp)) {
                                     TermText(
-                                        "  ${providers.firstOrNull { it.provider == w.provider }?.label?.lowercase() ?: "widget"}",
-                                        Modifier.weight(1f), dim = true,
+                                        "${providers.firstOrNull { it.provider == w.provider }?.label?.lowercase() ?: "widget"} widget",
+                                        color = theme.accent.color(),
                                     )
-                                    Action(if (w.size == WidgetSize.SMALL) "[S]" else "S") { vm.resizeWidget(w.id, WidgetSize.SMALL) }
-                                    Action(if (w.size == WidgetSize.MEDIUM) "[M]" else "M") { vm.resizeWidget(w.id, WidgetSize.MEDIUM) }
-                                    Action(if (w.size == WidgetSize.LARGE) "[L]" else "L") { vm.resizeWidget(w.id, WidgetSize.LARGE) }
-                                    Action("[rm]") { vm.removeWidget(w.id) }
+                                    FlowRow {
+                                        Action(if (w.size == WidgetSize.SMALL) "[S]" else "S") { vm.resizeWidget(w.id, WidgetSize.SMALL) }
+                                        Action(if (w.size == WidgetSize.MEDIUM) "[M]" else "M") { vm.resizeWidget(w.id, WidgetSize.MEDIUM) }
+                                        Action(if (w.size == WidgetSize.LARGE) "[L]" else "L") { vm.resizeWidget(w.id, WidgetSize.LARGE) }
+                                        Action("[rm]") { vm.removeWidget(w.id) }
+                                    }
                                 }
                             }
                             when (val a = adding) {
@@ -139,7 +150,7 @@ fun EditMode(
                                     if (free.isEmpty()) TermText("  all panels are placed", dim = true)
                                     free.forEach { kind ->
                                         TermText(
-                                            "  + ${kind.name.lowercase()}",
+                                            "  + ${kind.label()}",
                                             Modifier.fillMaxWidth().testTag("add-panel-${kind.name.lowercase()}").clickable { vm.addPanelTo(i, kind); adding = null }.padding(vertical = 5.dp),
                                         )
                                     }
