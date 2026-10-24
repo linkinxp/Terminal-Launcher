@@ -4,6 +4,8 @@ import dev.linkinxp.termlauncher.layout.HomeLayout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
 
 data class CustomThemeSpec(
     val name: String, val bg: Long, val fg: Long, val accent: Long, val dim: Long, val border: BorderStyle,
@@ -18,7 +20,7 @@ fun validateCustomTheme(name: String, existingCustom: List<String>, builtIn: Lis
     name.isEmpty() || name.length > 24 -> "theme: name must be 1-24 characters"
     !NAME.matches(name) -> "theme: name may use a-z 0-9 - _ only"
     builtIn.any { it.equals(name, ignoreCase = true) } -> "theme: $name is a built-in theme"
-    name in HomeLayout.RESERVED_WORDS -> "theme: $name is a reserved word"
+    name in HomeLayout.RESERVED_WORDS || name == "add" || name == "rm" -> "theme: $name is a reserved word"
     existingCustom.none { it.equals(name, ignoreCase = true) } && existingCustom.size >= CustomThemes.MAX ->
         "theme: too many custom themes (${CustomThemes.MAX} max)"
     else -> null
@@ -75,7 +77,9 @@ object CustomThemes {
     /** Bad data gives an empty list; entries with a bad name, color or border are skipped; at most [MAX] are kept. */
     fun decode(raw: String?): List<Theme> {
         if (raw.isNullOrBlank()) return emptyList()
-        val dtos = try { json.decodeFromString(ListSerializer(Dto.serializer()), raw) } catch (_: Exception) { return emptyList() }
+        val elements = try { json.parseToJsonElement(raw).jsonArray } catch (_: Exception) { return emptyList() }
+        // One damaged entry is skipped, the others stay.
+        val dtos = elements.mapNotNull { e -> try { json.decodeFromJsonElement(Dto.serializer(), e) } catch (_: Exception) { null } }
         return dtos.mapNotNull { d ->
             if (!NAME.matches(d.name)) return@mapNotNull null
             val border = BorderStyle.entries.firstOrNull { it.name == d.border } ?: return@mapNotNull null

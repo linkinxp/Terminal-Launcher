@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +61,7 @@ fun ClockView(style: ClockStyle, time: LocalDateTime, h24: Boolean, glitch: Bool
 private fun BigText(lines: List<String>, size: TextUnit, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val color = theme.foreground.color()
+    val size = fixedSp(size)
     val style = remember(color, size, theme.glow) {
         TextStyle(
             color = color, fontFamily = TermFont, fontSize = size, fontWeight = FontWeight.Bold,
@@ -71,6 +73,10 @@ private fun BigText(lines: List<String>, size: TextUnit, modifier: Modifier = Mo
         BasicText(lines.joinToString("\n"), style = style, maxLines = lines.size, softWrap = false)
     }
 }
+
+/** [size] ignoring the system font scale: the clock lives in a fixed-height box, so it must not grow with it. */
+@Composable
+private fun fixedSp(size: TextUnit): TextUnit = (size.value / LocalDensity.current.fontScale).sp
 
 /** Four columns of lit/unlit dots (hour tens and units, minute tens and units), least significant at the bottom. */
 @Composable
@@ -88,9 +94,9 @@ private fun BinaryClock(time: LocalDateTime, modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Pad the short columns at the top so every column's last bit lines up.
-                repeat(4 - bits.size) { TermText(" ", size = 14.sp) }
-                bits.forEach { on -> TermText(if (on) "●" else "○", size = 14.sp, color = if (on) theme.accent.color() else theme.dim.color(), bold = on) }
-                TermText("${digits[i]}", size = 10.sp, dim = true)
+                repeat(4 - bits.size) { TermText(" ", size = fixedSp(14.sp)) }
+                bits.forEach { on -> TermText(if (on) "●" else "○", size = fixedSp(14.sp), color = if (on) theme.accent.color() else theme.dim.color(), bold = on) }
+                TermText("${digits[i]}", size = fixedSp(10.sp), dim = true)
             }
         }
     }

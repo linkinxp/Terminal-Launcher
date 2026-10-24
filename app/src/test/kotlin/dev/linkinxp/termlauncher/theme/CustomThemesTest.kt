@@ -147,4 +147,16 @@ class CustomThemesTest {
         assertEquals(16, lines.size)
         assertEquals("* mine +", lines.last())
     }
+
+    @Test fun theSubcommandWordsCannotBeThemeNames() {
+        assertNotNull(validateCustomTheme("add", emptyList(), builtIn))
+        assertNotNull(validateCustomTheme("rm", emptyList(), builtIn))
+    }
+
+    @Test fun oneBrokenEntryDoesNotDropTheRest() {
+        val raw = """[{"name":"a","bg":"#000000","fg":"#ffffff","accent":"#ff0000","dim":"#888888","border":"SINGLE"},
+            {"name":"noborder","bg":"#000000","fg":"#ffffff","accent":"#ff0000","dim":"#888888"},
+            {"name":"b","bg":"#000000","fg":"#ffffff","accent":"#ff0000","dim":"#888888","border":"DOUBLE"}]"""
+        assertEquals(listOf("a", "b"), CustomThemes.decode(raw).map { it.name })
+    }
 }

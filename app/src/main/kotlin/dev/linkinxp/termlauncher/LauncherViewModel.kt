@@ -323,18 +323,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun removeCustomTheme(name: String) { handleThemeRm(name, ui.value) }
 
     private fun handleThemeAdd(args: List<String>, cur: LauncherUi): String {
-        val r = addCustomTheme(args, cur.customThemes)
-        r.list?.let { list -> viewModelScope.launch { prefs.editCustomThemes { list } } }
+        val r = addCustomTheme(args, cur.customThemes) // the message; the write redoes it on the stored list
+        if (r.list != null) viewModelScope.launch { prefs.editCustomThemes { stored -> addCustomTheme(args, stored).list ?: stored } }
         return r.message
     }
 
     private fun handleThemeRm(name: String, cur: LauncherUi): String {
         val r = removeCustomTheme(name, cur.customThemes, cur.theme.name)
-        r.list?.let { list ->
-            viewModelScope.launch {
-                prefs.editCustomThemes { list }
-                if (r.wasActive) prefs.setTheme(ThemeRegistry.default.name)
-            }
+        if (r.list != null) viewModelScope.launch {
+            prefs.editCustomThemes { stored -> removeCustomTheme(name, stored, cur.theme.name).list ?: stored }
+            if (r.wasActive) prefs.setTheme(ThemeRegistry.default.name)
         }
         return r.message
     }

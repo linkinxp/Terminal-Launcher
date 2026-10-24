@@ -143,6 +143,7 @@ fun PagerHome(
     var pulled by remember { mutableStateOf(false) }
     val canPull = ui.panels.quick && ui.quick.isNotEmpty()
     LaunchedEffect(homeSignal) { pulled = false }
+    LaunchedEffect(canPull) { if (!canPull) pulled = false }
     BackHandler(enabled = pulled) { pulled = false }
     // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
     // pulling down at the top shows the quick panel, pushing up at the bottom opens the drawer.

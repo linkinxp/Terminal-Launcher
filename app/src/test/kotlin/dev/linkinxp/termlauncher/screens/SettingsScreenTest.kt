@@ -165,4 +165,15 @@ class SettingsScreenTest {
         click("theme-rm-mine")
         until({ "custom=${vm.ui.value.customThemes} theme=${vm.ui.value.theme.name}" }) { vm.ui.value.customThemes.isEmpty() && vm.ui.value.theme.name == "classy-black" }
     }
+
+    @Test fun removingTwoCustomThemesInQuickSuccessionRemovesBoth() {
+        val vm = show()
+        val prefs = Prefs(ApplicationProvider.getApplicationContext<Application>())
+        runBlocking { prefs.editCustomThemes { listOf("a", "b", "c").map { buildCustomTheme(it, 0xFF101010, 0xFFEEEEEE, 0xFF3366FF, 0xFF888888, BorderStyle.SINGLE) } } }
+        until({ "custom=${vm.ui.value.customThemes.map { it.name }}" }) { vm.ui.value.customThemes.size == 3 }
+        vm.removeCustomTheme("a"); vm.removeCustomTheme("b") // before the UI state has caught up with the first
+        until({ "custom=${vm.ui.value.customThemes.map { it.name }}" }) { vm.ui.value.customThemes.map { it.name } == listOf("c") }
+        settle()
+        assertEquals(listOf("c"), vm.ui.value.customThemes.map { it.name })
+    }
 }
