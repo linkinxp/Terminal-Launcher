@@ -9,7 +9,9 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.view.WindowManager
 import androidx.compose.runtime.LaunchedEffect
 import dev.linkinxp.termlauncher.wall.WallMode
@@ -42,6 +44,7 @@ import dev.linkinxp.termlauncher.ui.BootLogOverlay
 import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
+import dev.linkinxp.termlauncher.ui.ImportDialog
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
@@ -108,6 +111,8 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val REQ_CONFIGURE = 4711
+        const val MAX_IMPORT_BYTES = 5 * 1024 * 1024
+        const val BACKUP_FILE = "terminal-launcher-backup.json"
     }
 
     /** Hands a typed query to the system (browser or the Google app) as a Google search URL. */
@@ -118,6 +123,34 @@ class MainActivity : ComponentActivity() {
         } catch (_: ActivityNotFoundException) {
             vm.showMessage("search: no browser found")
         }
+    }
+
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) lifecycleScope.launch { writeBackup(uri) }
+    }
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) lifecycleScope.launch { vm.startImport(readText(uri)) }
+    }
+
+    private suspend fun writeBackup(uri: Uri) {
+        val text = vm.exportJson()
+        val ok = withContext(Dispatchers.IO) {
+            try {
+                contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } != null
+            } catch (_: Exception) { false }
+        }
+        vm.showMessage(if (ok) "backup: saved" else "backup: could not save")
+    }
+
+    /** The picked file as text, or null when it cannot be read or is larger than 5 MB. */
+    private suspend fun readText(uri: Uri): String? = withContext(Dispatchers.IO) {
+        try {
+            contentResolver.openInputStream(uri)?.use { s ->
+                val bytes = s.readNBytes(MAX_IMPORT_BYTES + 1)
+                if (bytes.size > MAX_IMPORT_BYTES) null else String(bytes, Charsets.UTF_8)
+            }
+        } catch (_: Exception) { null }
     }
 
     private val settingsOpen = mutableStateOf(false)
@@ -226,10 +259,14 @@ class MainActivity : ComponentActivity() {
                 if (settingsOpen.value) {
                     SettingsScreen(
                         ui, vm,
-                        onExport = {}, onImport = {}, onImportLauncher = {},
+                        onExport = { exportLauncher.launch(BACKUP_FILE) },
+                        onImport = { importLauncher.launch(arrayOf("*/*")) },
+                        onImportLauncher = {},
                         onClose = { settingsOpen.value = false },
                     )
                 }
+                val preview by vm.importPreview.collectAsState()
+                preview?.let { ImportDialog(ui.theme, it, onReplace = vm::confirmImport, onCancel = vm::cancelImport) }
                 if (editing) {
                     EditMode(
                         ui, vm,

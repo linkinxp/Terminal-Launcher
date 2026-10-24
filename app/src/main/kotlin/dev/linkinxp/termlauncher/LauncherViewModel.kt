@@ -20,6 +20,10 @@ import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import android.Manifest
 import android.os.Build
+import dev.linkinxp.termlauncher.backup.BackupRepository
+import dev.linkinxp.termlauncher.backup.decodeBackup
+import dev.linkinxp.termlauncher.backup.describeBackup
+import dev.linkinxp.termlauncher.backup.encodeBackup
 import dev.linkinxp.termlauncher.calendar.CalendarRepository
 import dev.linkinxp.termlauncher.calendar.calendarQueryWindow
 import dev.linkinxp.termlauncher.calendar.formatAgenda
@@ -40,6 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -66,6 +71,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** What an import would do: a title, summary lines and the action behind `[replace]`. */
+data class ImportPreview(val title: String, val lines: List<String>, val onConfirm: suspend () -> Unit)
 
 /** A widget the user is adding: where, which provider, and the host id allocated for it. */
 data class PendingWidget(val page: Int, val provider: String, val id: Int)
@@ -163,6 +171,38 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             wx = wx,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
+
+    // ---- backup and import ----
+
+    private val backups = BackupRepository(prefs)
+    private val _importPreview = MutableStateFlow<ImportPreview?>(null)
+
+    /** The import waiting for the user's `[replace]` / `[cancel]`, or null. */
+    val importPreview: StateFlow<ImportPreview?> = _importPreview.asStateFlow()
+
+    suspend fun exportJson(): String = encodeBackup(backups.snapshot())
+
+    /** [json] is the text of the picked file (null when it could not be read). */
+    fun startImport(json: String?) {
+        if (json == null) { say("import: could not read that file"); return }
+        decodeBackup(json).fold(
+            onSuccess = { b ->
+                _importPreview.value = ImportPreview("import backup", describeBackup(b, ui.value.apps.keys)) { backups.apply(b) }
+            },
+            onFailure = { say(it.message ?: "import: not a launcher backup") },
+        )
+    }
+
+    /** Shows [preview] (used by the other-launcher import too). */
+    fun showImportPreview(preview: ImportPreview) { _importPreview.value = preview }
+
+    fun confirmImport() {
+        val p = _importPreview.value ?: return
+        _importPreview.value = null
+        viewModelScope.launch { p.onConfirm(); say("import: done") }
+    }
+
+    fun cancelImport() { _importPreview.value = null }
 
     // ---- settings (used by the settings screen and the `settings` command) ----
 
