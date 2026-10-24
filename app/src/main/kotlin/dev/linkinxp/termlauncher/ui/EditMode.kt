@@ -49,6 +49,7 @@ fun EditMode(
     ui: LauncherUi,
     vm: LauncherViewModel,
     onAddWidget: (page: Int, provider: String) -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val theme = ui.theme
@@ -124,6 +125,7 @@ fun EditMode(
                         if (pages.size < HomeLayout.MAX_PAGES) {
                             TermText("+ add page", Modifier.clickable { vm.addPage() }.padding(top = 14.dp, bottom = 6.dp), bold = true)
                         }
+                        TermText("[settings]", Modifier.clickable(onClick = onOpenSettings).padding(top = 10.dp), bold = true)
                         TermText("[done]", Modifier.clickable(onClick = onDismiss).padding(top = 10.dp), dim = true)
                     }
                 }

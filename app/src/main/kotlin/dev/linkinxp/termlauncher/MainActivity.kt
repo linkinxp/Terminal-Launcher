@@ -43,6 +43,7 @@ import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.PagerHome
+import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
 
 class MainActivity : ComponentActivity() {
@@ -119,6 +120,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val settingsOpen = mutableStateOf(false)
     private val homePresses = mutableIntStateOf(0)
 
     /** Pressing Home (button or gesture) while the launcher is open goes back to the first home page. */
@@ -126,6 +128,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) {
             vm.closeDrawer()
+            settingsOpen.value = false
             homePresses.intValue++
         }
     }
@@ -169,6 +172,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         lifecycleScope.launch { vm.permissionRequests.collect { permissionLauncher.launch(it) } }
+        lifecycleScope.launch { vm.settingsRequests.collect { settingsOpen.value = true } }
         ContextCompat.registerReceiver(
             this, unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT), ContextCompat.RECEIVER_NOT_EXPORTED,
         )
@@ -219,7 +223,20 @@ class MainActivity : ComponentActivity() {
                 }
                 menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
-                if (editing) EditMode(ui, vm, onAddWidget = ::beginAddWidget) { editing = false }
+                if (settingsOpen.value) {
+                    SettingsScreen(
+                        ui, vm,
+                        onExport = {}, onImport = {}, onImportLauncher = {},
+                        onClose = { settingsOpen.value = false },
+                    )
+                }
+                if (editing) {
+                    EditMode(
+                        ui, vm,
+                        onAddWidget = ::beginAddWidget,
+                        onOpenSettings = { editing = false; settingsOpen.value = true },
+                    ) { editing = false }
+                }
                 EffectsOverlay(ui.fx, ui.theme, rememberReduceMotion())
                 if (ui.matrix) MatrixRain(onDone = vm::stopMatrix)
                 if (ui.boot) BootLogOverlay(onDone = vm::endBoot)

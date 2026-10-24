@@ -27,6 +27,7 @@ import dev.linkinxp.termlauncher.panel.PanelData
 import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.panel.applyPanel
 import dev.linkinxp.termlauncher.weather.WeatherRepository
+import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.weather.WxAction
 import dev.linkinxp.termlauncher.weather.formatWeather
 import dev.linkinxp.termlauncher.weather.parseForecast
@@ -97,6 +98,7 @@ data class LauncherUi(
     val panels: PanelSettings = PanelSettings(),
     val calendar: PanelData = PanelData.Off,
     val weather: PanelData = PanelData.Off,
+    val wx: WxSettings = WxSettings(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -136,7 +138,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph) { p, apps, e ->
+    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph, prefs.wx) { p, apps, e, wx ->
         val installed = apps.map { it.pkg }.toSet()
         LauncherUi(
             theme = p.theme,
@@ -158,8 +160,49 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             panels = p.panels,
             calendar = if (p.panels.cal) e.calendar else PanelData.Off,
             weather = if (p.panels.wx) e.weather else PanelData.Off,
+            wx = wx,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
+
+    // ---- settings (used by the settings screen and the `settings` command) ----
+
+    private val _settingsRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Emits when the `settings` command asks the UI to open the settings screen. */
+    val settingsRequests: SharedFlow<Unit> = _settingsRequests.asSharedFlow()
+
+    fun setTheme(name: String) {
+        ThemeRegistry.byName(name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) } }
+    }
+
+    fun setFx(name: String, on: Boolean) {
+        ui.value.fx.with(name, on).onSuccess { next -> viewModelScope.launch { prefs.setFx(next) } }
+    }
+
+    /** `null` = follow the theme again. */
+    fun setScanlines(value: Boolean?) {
+        val next = ui.value.fx.withScanlines(value)
+        viewModelScope.launch { prefs.setFx(next) }
+    }
+
+    fun setWall(w: WallSettings) {
+        viewModelScope.launch { prefs.setWall(w.copy(dim = w.dim.coerceIn(0, 100))) }
+    }
+
+    fun setPanel(name: String, on: Boolean) {
+        val cur = ui.value.panels
+        applyPanel(cur, name, on).onSuccess { next -> savePanels(cur, next) }
+    }
+
+    fun setWxCity(name: String) { if (name.isNotBlank()) handleWx(WxAction.City(name.trim())) }
+    fun setWxUnits(fahrenheit: Boolean) = handleWx(WxAction.Units(fahrenheit))
+
+    private fun savePanels(cur: PanelSettings, next: PanelSettings) {
+        viewModelScope.launch { prefs.setPanels(next) }
+        if (next.cal && !cur.cal && !calendarRepo.hasPermission()) {
+            _permissionRequests.tryEmit(Manifest.permission.READ_CALENDAR)
+        }
+    }
 
     // ---- panels ----
 
@@ -345,20 +388,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             is Command.Panel ->
                 if (cmd.name == null) cur.panels.describe()
                 else applyPanel(cur.panels, cmd.name, cmd.on).fold(
-                    onSuccess = { next ->
-                        viewModelScope.launch { prefs.setPanels(next) }
-                        if (next.cal && !cur.panels.cal && !calendarRepo.hasPermission()) {
-                            _permissionRequests.tryEmit(Manifest.permission.READ_CALENDAR)
-                        }
-                        null
-                    },
+                    onSuccess = { next -> savePanels(cur.panels, next); null },
                     onFailure = { it.message },
                 )
             is Command.Wx -> parseWxAction(cmd.sub, cmd.arg).fold(
                 onSuccess = { action -> handleWx(action); null },
                 onFailure = { it.message },
             )
-            is Command.Settings -> null // opened by the settings screen task
+            is Command.Settings -> { _settingsRequests.tryEmit(Unit); null }
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
                 else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
@@ -497,7 +534,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "0.4.0"
+        const val LAUNCHER_VERSION = "0.5.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 7L
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
