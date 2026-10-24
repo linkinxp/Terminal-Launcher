@@ -10,6 +10,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -121,13 +125,24 @@ fun PagerHome(
     val snapshot = remember(now) { readSystemStats(context) }
     // Panels that read live data refresh on every minute tick.
     LaunchedEffect(now.minute) { vm.refreshPanels() }
+    // Swiping down slides the quick tiles in from the top, where a thumb can reach them.
+    var pulled by remember { mutableStateOf(false) }
+    val canPull = ui.panels.quick && ui.quick.isNotEmpty()
+    LaunchedEffect(homeSignal) { pulled = false }
+    BackHandler(enabled = pulled) { pulled = false }
+    Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
     Column(
-        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
-            .pointerInput(Unit) {
+        Modifier.fillMaxSize()
+            .pointerInput(canPull) {
                 var total = 0f
                 detectVerticalDragGestures(
                     onDragStart = { total = 0f },
-                    onDragEnd = { if (total < -120f) onSwipeUp() },
+                    onDragEnd = {
+                        when {
+                            total < -120f -> if (pulled) pulled = false else onSwipeUp()
+                            total > 120f -> if (canPull) pulled = true
+                        }
+                    },
                 ) { _, dy -> total += dy }
             },
     ) {
@@ -155,5 +170,13 @@ fun PagerHome(
         QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
         Dock(ui, onItemTap, onItemLongPress)
         PromptBar(ui, vm)
+    }
+    if (pulled && canPull) {
+        QuickPanel(
+            ui, { pulled = false; onItemTap(Item.App(it)) }, { pulled = false; onItemLongPress(Item.App(it)) },
+            Modifier.align(Alignment.TopCenter).background(LocalTheme.current.background.color()).padding(horizontal = 16.dp),
+            tagPrefix = "pull-quick-",
+        )
+    }
     }
 }
