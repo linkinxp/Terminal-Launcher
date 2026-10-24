@@ -77,6 +77,9 @@ import dev.linkinxp.termlauncher.quick.quickRemove
 import dev.linkinxp.termlauncher.prompt.Command
 import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
+import dev.linkinxp.termlauncher.matrix.RABBIT
+import dev.linkinxp.termlauncher.matrix.SPOON
+import dev.linkinxp.termlauncher.matrix.pillPlan
 import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.theme.addCustomTheme
@@ -121,6 +124,7 @@ data class LauncherUi(
     val prompt: PromptState = PromptState(),
     val historyAll: List<String> = emptyList(),
     val matrix: Boolean = false,
+    val wake: Boolean = false,
     val boot: Boolean = false,
     val fx: FxSettings = FxSettings(),
     val wall: WallSettings = WallSettings(),
@@ -146,6 +150,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val filter: String = "",
         val prompt: PromptState = PromptState(),
         val matrix: Boolean = false,
+        val wake: Boolean = false,
         val boot: Boolean = false,
         val calendar: PanelData = PanelData.Off,
         val weather: PanelData = PanelData.Off,
@@ -208,6 +213,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             prompt = e.prompt.copy(history = p.history.asReversed().take(5)),
             historyAll = p.history,
             matrix = e.matrix,
+            wake = e.wake,
             boot = e.boot,
             fx = p.fx,
             wall = p.wall,
@@ -607,6 +613,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             is Command.Fortune -> fortune(System.nanoTime().toInt())
             is Command.Clear -> null
             is Command.Matrix -> { startMatrix(); null }
+            is Command.Wake -> { startWake(); null }
+            is Command.Rabbit -> RABBIT
+            is Command.Spoon -> SPOON
+            is Command.Pill -> pillPlan(cmd.arg).let { plan ->
+                plan.theme?.let { t -> viewModelScope.launch { prefs.setTheme(t) } }
+                plan.wallMode?.let { m -> updateWall { it.copy(mode = m) } }
+                plan.message
+            }
             is Command.Query -> when {
                 cmd.text.isBlank() -> null
                 else -> rank(cmd.text, cur).firstOrNull()?.let { launch(it.pkg); null } ?: "no match: ${cmd.text}"
@@ -626,6 +640,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun endBoot() = eph.update { it.copy(boot = false) }
     fun startMatrix() = eph.update { it.copy(matrix = true) }
     fun stopMatrix() = eph.update { it.copy(matrix = false) }
+    fun startWake() = eph.update { it.copy(wake = true) }
+    fun stopWake() = eph.update { it.copy(wake = false) }
 
     private fun deviceInfo(cur: LauncherUi): DeviceInfo {
         val stats = readSystemStats(getApplication())
@@ -756,21 +772,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT_12: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy hh:mm:ss a", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill",
         )
         val HELP = listOf(
             "theme <n>|add <n> bg fg acc dim|rm <n>",
             "clock [auto|24|12|style <name>]",
-            "pin|hide <app>     dock / hide",
-            "mkdir|rmdir <f>  ls [-a]  folders",
+            "pin|hide <app>  ls [-a]  dock/hidden",
+            "mkdir|rmdir <f>    folders",
             "mv <app>|<f> <f|new>  file / rename",
-            "fx [name on|off]   effects",
-            "wall <sub> [arg]   wallpaper",
+            "fx [n on|off]  wall <sub> [arg]",
             "panel <p> on|off  cal wx search quick",
             "wx [city <n>|units c|f]  weather",
             "quick [add|rm <app>|clear|reset]",
             "history neofetch whoami uptime date",
-            "fortune clear sudo matrix help settings",
+            "fortune clear help settings sudo",
+            "matrix [wake]  pill red|blue",
         ).joinToString("\n")
     }
 }

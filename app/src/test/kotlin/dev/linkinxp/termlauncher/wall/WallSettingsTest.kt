@@ -94,4 +94,9 @@ class WallSettingsTest {
         assertTrue(text.contains("ascii") && text.contains("9") && text.contains("40") && text.contains("on"))
         assertNotEquals(d.describe(), text)
     }
+
+    @Test fun rainIsAWallMode() {
+        assertEquals(WallMode.RAIN, apply("mode", "rain").getOrThrow().mode)
+        assertTrue(apply("mode", "bad").exceptionOrNull()?.message?.contains("rain") == true)
+    }
 }

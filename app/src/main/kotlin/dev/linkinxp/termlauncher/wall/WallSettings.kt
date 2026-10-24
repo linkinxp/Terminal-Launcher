@@ -2,7 +2,7 @@ package dev.linkinxp.termlauncher.wall
 
 import kotlin.random.Random
 
-enum class WallMode { SOLID, SYSTEM, ASCII }
+enum class WallMode { SOLID, SYSTEM, ASCII, RAIN }
 
 data class WallSettings(
     val mode: WallMode = WallMode.SOLID,

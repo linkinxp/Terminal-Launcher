@@ -130,4 +130,18 @@ class CommandParserTest {
         assertEquals(Command.ThemeRm(""), parseCommand("theme rm"))
         assertEquals(Command.Theme("matrix"), parseCommand("theme matrix"))
     }
+
+    @Test fun matrixEasterEggs() {
+        assertEquals(Command.Matrix, parseCommand("matrix"))
+        assertEquals(Command.Wake, parseCommand("matrix wake"))
+        assertEquals(Command.Wake, parseCommand("MATRIX  Wake"))
+        assertEquals(Command.Query("matrix foo"), parseCommand("matrix foo"))
+        assertEquals(Command.Pill(null), parseCommand("pill"))
+        assertEquals(Command.Pill("red"), parseCommand("PILL red"))
+        assertEquals(Command.Pill("red blue"), parseCommand("pill red blue"))
+        assertEquals(Command.Rabbit, parseCommand("follow the white rabbit"))
+        assertEquals(Command.Rabbit, parseCommand("Follow White Rabbit."))
+        assertEquals(Command.Spoon, parseCommand("there is no spoon"))
+        assertEquals(Command.Query("follow me"), parseCommand("follow me"))
+    }
 }

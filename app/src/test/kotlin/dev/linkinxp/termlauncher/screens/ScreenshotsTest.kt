@@ -354,4 +354,11 @@ class ScreenshotsTest {
     @Test fun paletteCatppuccin() = home("home-catppuccin", ThemeRegistry.byName("catppuccin")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
     @Test fun paletteMonokai() = home("home-monokai", ThemeRegistry.byName("monokai")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
     @Test fun paletteOneDark() = home("home-one-dark", ThemeRegistry.byName("one-dark")!!, quick = listOf(pkg("Phone"), pkg("Messages")))
+
+    // The rain wallpaper (a still frame: animations are switched off so the test clock does not spin on the ticker).
+    @Test fun rainWallpaper() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        android.provider.Settings.Global.putFloat(app.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+        home("home-rain", ThemeRegistry.byName("matrix")!!, wall = WallSettings(mode = WallMode.RAIN, dim = 40), quick = listOf(pkg("Phone")))
+    }
 }

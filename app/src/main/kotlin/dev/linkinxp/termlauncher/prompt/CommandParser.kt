@@ -25,6 +25,10 @@ sealed interface Command {
     data object Fortune : Command
     data object Clear : Command
     data object Matrix : Command
+    data object Wake : Command
+    data class Pill(val arg: String?) : Command
+    data object Rabbit : Command
+    data object Spoon : Command
     data object Settings : Command
     data object Help : Command
     data class Query(val text: String) : Command
@@ -42,6 +46,10 @@ fun parseCommand(input: String): Command {
         word == "wx" -> parseWx(args)
         word == "quick" -> parseQuick(args)
         word == "clock" -> parseClock(args)
+        word == "matrix" && args.lowercase() == "wake" -> Command.Wake
+        word == "pill" -> Command.Pill(args.ifEmpty { null })
+        text.lowercase().trimEnd('.', '!').let { it == "follow the white rabbit" || it == "follow white rabbit" } -> Command.Rabbit
+        text.lowercase().trimEnd('.', '!') == "there is no spoon" -> Command.Spoon
         word == "sudo" && args.isNotEmpty() -> Command.Sudo(args)
         args.isEmpty() && word in SIMPLE -> SIMPLE.getValue(word)
         word == "ls" && args.isEmpty() -> Command.Ls(false)

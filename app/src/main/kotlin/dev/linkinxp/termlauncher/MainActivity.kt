@@ -52,6 +52,7 @@ import dev.linkinxp.termlauncher.ui.FolderPanel
 import dev.linkinxp.termlauncher.ui.BootLogOverlay
 import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.ui.MatrixRain
+import dev.linkinxp.termlauncher.ui.WakeUpOverlay
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.ImportDialog
 import dev.linkinxp.termlauncher.sys.expandNotificationShade
@@ -243,6 +244,7 @@ class MainActivity : ComponentActivity() {
             val wall by remember { derivedStateOf { uiState.value.wall } }
             val fx by remember { derivedStateOf { uiState.value.fx } }
             val showMatrix by remember { derivedStateOf { uiState.value.matrix } }
+            val showWake by remember { derivedStateOf { uiState.value.wake } }
             val showBoot by remember { derivedStateOf { uiState.value.boot } }
             // What the home screen shows: the state minus the drawer/filter parts (equal when only those change).
             val homeUi by remember {
@@ -253,7 +255,7 @@ class MainActivity : ComponentActivity() {
                 derivedStateOf {
                     uiState.value.copy(
                         prompt = PromptState(), historyAll = emptyList(), calendar = PanelData.Off, weather = PanelData.Off,
-                        matrix = false, boot = false, fx = FxSettings(), quick = emptyList(), panels = PanelSettings(),
+                        matrix = false, wake = false, boot = false, fx = FxSettings(), quick = emptyList(), panels = PanelSettings(),
                         wx = WxSettings(), drawerOpen = false,
                     )
                 }
@@ -337,6 +339,7 @@ class MainActivity : ComponentActivity() {
                 EffectsOverlay(fx, theme, rememberReduceMotion())
                 if (showMatrix) MatrixRain(onDone = vm::stopMatrix)
                 if (showBoot) BootLogOverlay(onDone = vm::endBoot)
+                if (showWake) WakeUpOverlay(onDone = vm::stopWake)
             }
         }
     }

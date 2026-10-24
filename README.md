@@ -25,6 +25,13 @@ command word, and at most 8 custom themes fit; adding an existing name replaces 
 the theme but prints `theme: low contrast`. `theme rm <name>` removes one (the active theme then falls back to `classy-black`). Custom themes
 show in the settings theme list with `+` and `[rm]`, and are part of the backup.
 
+## Matrix
+- `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head
+  per streak. `wall dim` sets how strong it is. It only moves while the launcher is on screen and is a single still frame with animations off.
+- `matrix wake`: "Wake up, Neo..." typed out on black (tap to leave). `matrix` alone is still the 6-second full-screen rain.
+- `pill red` switches to the `matrix` theme with the rain wallpaper; `pill blue` goes back to `classy-black` and a solid background.
+  Also `follow the white rabbit` and `there is no spoon`.
+
 ## Clock
 `clock auto|24|12` sets the hour format (`auto` follows the phone; 12-hour drops the leading zero and adds `am`/`pm`, also in the status
 line, calendar and `date`). `clock style pixel|segment|figlet|binary|hex|epoch|plain` picks how the clock looks (`binary`, `hex` and
@@ -32,7 +39,7 @@ line, calendar and `date`). `clock style pixel|segment|figlet|binary|hex|epoch|p
 and in the backup. A bare `clock` shows the current values.
 
 ## Prompt commands
-`theme <name>` | `theme add|rm ...` | `clock ...` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
+`theme <name>` | `theme add|rm ...` | `clock ...` | `pill red|blue` | `matrix wake` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
 `mv <folder> <newname>` (rename) | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help` |
 `fx [name on|off]` | `settings` | `wall ...` | `panel <cal|wx|search|quick> on|off` | `quick ...` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
 Any other text fuzzy-matches installed apps; Enter launches the top match. `⇥` completes the input;

@@ -83,7 +83,9 @@ fun AppDrawer(
 
     var filterValue by remember { mutableStateOf(TextFieldValue(ui.filter)) }
     // Solid: opaque as before. Otherwise the wall shows through with a fixed 35% readability layer.
-    val drawerBg = theme.background.color().let { if (ui.wall.mode == WallMode.SOLID) it else it.copy(alpha = 0.35f) }
+    val drawerBg = theme.background.color().let {
+        when (ui.wall.mode) { WallMode.SOLID -> it; WallMode.RAIN -> it.copy(alpha = 0.85f); else -> it.copy(alpha = 0.35f) } // moving code behind text needs a stronger veil
+    }
     val filtering = ui.filter.isNotBlank()
     val folders = if (ui.showHidden) emptyList() else filterFolders(ui.filter, ui.layout.folders())
     val showFolders = folders.isNotEmpty()
