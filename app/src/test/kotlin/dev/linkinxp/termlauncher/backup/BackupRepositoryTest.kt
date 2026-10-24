@@ -6,6 +6,9 @@ import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.WidgetSize
+import dev.linkinxp.termlauncher.quick.quickAdd
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -79,5 +82,26 @@ class BackupRepositoryTest {
         assertEquals(setOf(9), stored.widgetIds())
         assertEquals(sample().layout.dock, stored.dock)
         assertEquals(emptySet<Int>(), repo.snapshot().layout.widgetIds()) // still never exported
+    }
+
+    @Test fun theQuickListIsBackedUpAndRestored() = runBlocking {
+        repo.apply(sample().copy(quick = listOf("com.a", "com.b")))
+        assertEquals(listOf("com.a", "com.b"), repo.snapshot().quick)
+        repo.apply(sample().copy(quick = null)) // null = back to the defaults
+        assertEquals(null, repo.snapshot().quick)
+    }
+
+    @Test fun editQuickStartsFromTheDefaultsWhenNothingIsStored() = runBlocking {
+        prefs.setQuick(null)
+        prefs.editQuick { stored -> (stored ?: listOf("default.dialer")) + "extra" }
+        assertEquals(listOf("default.dialer", "extra"), prefs.quick.first())
+        prefs.setQuick(null)
+        assertEquals(null, prefs.quick.first())
+    }
+
+    @Test fun quickEditsAreAtomicAndCappedAtEight() = runBlocking {
+        prefs.setQuick(emptyList())
+        (1..12).map { i -> async { prefs.editQuick { l -> quickAdd(l ?: emptyList(), "p$i") } } }.awaitAll()
+        assertEquals(8, prefs.quick.first()!!.size)
     }
 }

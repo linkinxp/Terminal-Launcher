@@ -106,4 +106,11 @@ class CommandParserTest {
         assertEquals(Command.Settings, parseCommand("settings"))
         assertEquals(Command.Query("settings x"), parseCommand("settings x"))
     }
+
+    @Test fun quickCommands() {
+        assertEquals(Command.Quick(null, null), parseCommand("quick"))
+        assertEquals(Command.Quick("add", "google maps"), parseCommand("quick add Google Maps".lowercase()))
+        assertEquals(Command.Quick("rm", "Chrome"), parseCommand("QUICK RM Chrome"))
+        assertEquals(Command.Quick("clear", null), parseCommand("quick clear"))
+    }
 }

@@ -136,6 +136,7 @@ fun SettingsScreen(
 
             TermPanel("panels", Modifier.padding(top = 4.dp)) {
                 ToggleRow("search", ui.panels.search, "panel-search") { vm.togglePanel("search") }
+                ToggleRow("quick", ui.panels.quick, "panel-quick") { vm.togglePanel("quick") }
                 ToggleRow("calendar", ui.panels.cal, "panel-cal") { vm.togglePanel("cal") }
                 ToggleRow("weather", ui.panels.wx, "panel-wx") { vm.togglePanel("wx") }
                 SettingRow("units", if (ui.wx.fahrenheit) "fahrenheit" else "celsius", "wx-units") { vm.setWxUnits(!vm.ui.value.wx.fahrenheit) }
@@ -154,6 +155,30 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f).testTag("wx-city"),
                     )
                     TermText("[set]", Modifier.clickable { if (city.isNotBlank()) { vm.setWxCity(city.trim()); city = "" } }.padding(start = 8.dp))
+                }
+            }
+
+            TermPanel("quick tiles", Modifier.padding(top = 4.dp)) {
+                var picking by remember { mutableStateOf(false) }
+                if (ui.quick.isEmpty()) TermText("no tiles yet", dim = true)
+                ui.quick.forEach { pkg ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        TermText(ui.apps[pkg]?.label?.lowercase() ?: pkg, Modifier.weight(1f))
+                        TermText("[^]", Modifier.testTag("quick-up-$pkg").clickable { vm.moveQuickUp(pkg) }.padding(horizontal = 8.dp))
+                        TermText("[rm]", Modifier.testTag("quick-rm-$pkg").clickable { vm.removeQuick(pkg) }.padding(start = 8.dp))
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    TermText("[+ add]", Modifier.testTag("quick-add").clickable { picking = !picking }.padding(end = 16.dp), bold = true)
+                    TermText("[reset]", Modifier.testTag("quick-reset").clickable { vm.resetQuick() }, dim = true)
+                }
+                if (picking) {
+                    ui.apps.values.filter { it.pkg !in ui.quick && it.pkg !in ui.hidden }.sortedBy { it.label.lowercase() }.forEach { app ->
+                        TermText(
+                            "  + ${app.label.lowercase()}",
+                            Modifier.fillMaxWidth().clickable { vm.addQuick(app.pkg); picking = false }.padding(vertical = 5.dp),
+                        )
+                    }
                 }
             }
 

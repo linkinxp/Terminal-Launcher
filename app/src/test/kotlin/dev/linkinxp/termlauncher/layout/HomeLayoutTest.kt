@@ -297,4 +297,8 @@ class HomeLayoutTest {
         val both = fresh.addWidget(0, w(1))
         assertEquals(both, both.withWidgetsFrom(empty.addWidget(0, w(1))))
     }
+
+    @Test fun mkdirRejectsQuick() {
+        assertTrue(empty.mkdir("quick").isFailure)
+    }
 }

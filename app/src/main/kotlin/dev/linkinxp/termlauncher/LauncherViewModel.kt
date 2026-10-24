@@ -61,6 +61,13 @@ import dev.linkinxp.termlauncher.sys.readSystemStats
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import dev.linkinxp.termlauncher.quick.MAX_QUICK
+import dev.linkinxp.termlauncher.quick.QuickAction
+import dev.linkinxp.termlauncher.quick.QuickDefaults
+import dev.linkinxp.termlauncher.quick.parseQuickAction
+import dev.linkinxp.termlauncher.quick.quickAdd
+import dev.linkinxp.termlauncher.quick.quickMoveUp
+import dev.linkinxp.termlauncher.quick.quickRemove
 import dev.linkinxp.termlauncher.prompt.Command
 import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
@@ -109,6 +116,8 @@ data class LauncherUi(
     val calendar: PanelData = PanelData.Off,
     val weather: PanelData = PanelData.Off,
     val wx: WxSettings = WxSettings(),
+    /** The quick tiles as package names, already limited to apps installed here. */
+    val quick: List<String> = emptyList(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -148,7 +157,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph, prefs.wx) { p, apps, e, wx ->
+    private class Extras(val wx: WxSettings, val quick: List<String>?)
+
+    private val extras = combine(prefs.wx, prefs.quick) { wx, quick -> Extras(wx, quick) }
+
+    /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
+    private val quickDefaults: List<String> by lazy { QuickDefaults(application).packages() }
+
+    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph, extras) { p, apps, e, x ->
         val installed = apps.map { it.pkg }.toSet()
         LauncherUi(
             theme = p.theme,
@@ -170,7 +186,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             panels = p.panels,
             calendar = if (p.panels.cal) e.calendar else PanelData.Off,
             weather = if (p.panels.wx) e.weather else PanelData.Off,
-            wx = wx,
+            wx = x.wx,
+            quick = (x.quick ?: quickDefaults).filter { it in installed },
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
@@ -230,6 +247,36 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun cancelImport() { _importPreview.value = null }
 
+    // ---- quick tiles ----
+
+    /** Applies [op] to the stored tile list (or, if never set, to the defaults that are installed here), atomically. */
+    private fun quickEdit(op: (List<String>) -> List<String>) {
+        viewModelScope.launch { prefs.editQuick { stored -> op(stored ?: quickDefaults.filter { it in ui.value.apps }) } }
+    }
+
+    fun addQuick(pkg: String) = quickEdit { quickAdd(it, pkg) }
+    fun removeQuick(pkg: String) = quickEdit { quickRemove(it, pkg) }
+    fun moveQuickUp(pkg: String) = quickEdit { quickMoveUp(it, pkg) }
+    fun resetQuick() { viewModelScope.launch { prefs.setQuick(null) } }
+
+    private fun handleQuick(action: QuickAction, cur: LauncherUi): String? = when (action) {
+        QuickAction.Show ->
+            if (cur.quick.isEmpty()) "quick: empty (quick add <app>)"
+            else cur.quick.joinToString("\n") { "  " + (cur.apps[it]?.label?.lowercase() ?: it) }
+        is QuickAction.Add -> withApp(action.name, cur) { app ->
+            if (app.pkg in cur.quick) "quick: ${app.label.lowercase()}: already there"
+            else if (cur.quick.size >= MAX_QUICK) "quick: full ($MAX_QUICK tiles): quick rm <app> first"
+            else { addQuick(app.pkg); null }
+        }
+        is QuickAction.Remove -> {
+            val labels = cur.quick.map { cur.apps[it]?.label ?: it }
+            val hit = fuzzyRank(action.name, labels).firstOrNull()
+            if (hit == null) "quick: no tile named ${action.name}" else { removeQuick(cur.quick[hit]); null }
+        }
+        QuickAction.Clear -> { quickEdit { emptyList() }; null }
+        QuickAction.Reset -> { resetQuick(); null }
+    }
+
     // ---- settings (used by the settings screen and the `settings` command) ----
 
     private val _settingsRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -272,7 +319,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setPanel(name: String, on: Boolean) = changePanels { applyPanel(it, name, on).getOrDefault(it) }
 
     fun togglePanel(name: String) = changePanels { p ->
-        val now = when (name.lowercase()) { "cal" -> p.cal; "wx" -> p.wx; "search" -> p.search; else -> return@changePanels p }
+        val now = when (name.lowercase()) { "cal" -> p.cal; "wx" -> p.wx; "search" -> p.search; "quick" -> p.quick; else -> return@changePanels p }
         applyPanel(p, name, !now).getOrDefault(p)
     }
 
@@ -485,6 +532,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 onSuccess = { action -> handleWx(action); null },
                 onFailure = { it.message },
             )
+            is Command.Quick -> parseQuickAction(cmd.sub, cmd.arg).fold(
+                onSuccess = { action -> handleQuick(action, cur) },
+                onFailure = { it.message },
+            )
             is Command.Settings -> { _settingsRequests.tryEmit(Unit); null }
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
@@ -630,19 +681,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick",
         )
         val HELP = listOf(
             "theme <name>       change theme",
             "pin|hide <app>     dock / hide",
             "mkdir|rmdir <f>    folders",
-            "mv <app> <f>       file app",
-            "mv <f> <new>       rename folder",
+            "mv <app>|<f> <f|new>  file / rename",
             "ls [-a]            drawer / hidden",
             "fx [name on|off]   effects",
             "wall <sub> [arg]   wallpaper",
-            "panel <cal|wx|search> on|off  panels",
+            "panel <p> on|off  cal wx search quick",
             "wx [city <n>|units c|f]  weather",
+            "quick [add|rm <app>|clear|reset]",
             "history neofetch whoami uptime date",
             "fortune clear sudo matrix help settings",
         ).joinToString("\n")

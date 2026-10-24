@@ -1,12 +1,20 @@
 package dev.linkinxp.termlauncher.panel
 
-/** Which home-page panels are shown: `cal` and `wx` are off by default, the `search` bar is on. */
-data class PanelSettings(val cal: Boolean = false, val wx: Boolean = false, val search: Boolean = true) {
+/** Which home-page panels are shown: `cal` and `wx` are off by default, `search` and `quick` are on. */
+data class PanelSettings(
+    val cal: Boolean = false,
+    val wx: Boolean = false,
+    val search: Boolean = true,
+    val quick: Boolean = true,
+) {
     fun describe(): String = listOf(
-        "cal    ${if (cal) "on" else "off"}",
-        "wx     ${if (wx) "on" else "off"}",
-        "search ${if (search) "on" else "off"}",
+        "cal    ${onOff(cal)}",
+        "wx     ${onOff(wx)}",
+        "search ${onOff(search)}",
+        "quick  ${onOff(quick)}",
     ).joinToString("\n")
+
+    private fun onOff(b: Boolean) = if (b) "on" else "off"
 }
 
 /**
@@ -19,14 +27,15 @@ fun applyPanel(current: PanelSettings, name: String?, on: Boolean?): Result<Pane
     if (key !in PANELS) {
         return Result.failure(IllegalArgumentException("panel: $name: no such panel (${PANELS.joinToString(" ")})"))
     }
-    if (on == null) return Result.failure(IllegalArgumentException("usage: panel <cal|wx|search> on|off"))
+    if (on == null) return Result.failure(IllegalArgumentException("usage: panel <cal|wx|search|quick> on|off"))
     return Result.success(
         when (key) {
             "cal" -> current.copy(cal = on)
             "wx" -> current.copy(wx = on)
-            else -> current.copy(search = on)
+            "search" -> current.copy(search = on)
+            else -> current.copy(quick = on)
         },
     )
 }
 
-private val PANELS = listOf("cal", "wx", "search")
+private val PANELS = listOf("cal", "wx", "search", "quick")

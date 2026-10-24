@@ -109,4 +109,12 @@ class LauncherBackupTest {
         assertEquals(listOf<Item>(Item.App("x")), l.withoutWidgets().pages[0].items)
         assertEquals(l.dock, l.withoutWidgets().dock)
     }
+
+    @Test fun theQuickListRoundTripsAndNullMeansDefaults() {
+        val custom = sample().copy(quick = listOf("com.a", "com.b"))
+        assertEquals(listOf("com.a", "com.b"), decodeBackup(encodeBackup(custom)).getOrThrow().quick)
+        assertEquals(null, decodeBackup(encodeBackup(sample())).getOrThrow().quick)
+        val json = """{"format":"terminal-launcher-backup","version":1,"quick":"not a list"}"""
+        assertEquals(null, decodeBackup(json).getOrThrow().quick)
+    }
 }

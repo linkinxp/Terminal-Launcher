@@ -82,6 +82,7 @@ class ScreenshotsTest {
         filter: String = "",
         calendar: PanelData = PanelData.Off,
         weather: PanelData = PanelData.Off,
+        quick: List<String> = emptyList(),
     ): LauncherUi {
         val layout = HomeLayout(
             dock = listOf("Phone", "Messages", "Chrome", "Camera").map { Item.App(pkg(it)) },
@@ -99,6 +100,7 @@ class ScreenshotsTest {
             filter = filter,
             calendar = calendar,
             weather = weather,
+            quick = quick,
             drawerOpen = drawer,
             prompt = prompt,
             fx = fx,
@@ -116,11 +118,12 @@ class ScreenshotsTest {
         wall: WallSettings = WallSettings(),
         calendar: PanelData = PanelData.Off,
         weather: PanelData = PanelData.Off,
+        quick: List<String> = emptyList(),
     ) {
         val vm = vm()
         rule.setContent {
             TermTheme(theme, wall) {
-                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall, calendar = calendar, weather = weather)
+                val ui = ui(theme, prompt = prompt, fx = fx, wall = wall, calendar = calendar, weather = weather, quick = quick)
                 PagerHome(ui, vm, {}, {}, {}, {})
                 EffectsOverlay(ui.fx, theme, reduceMotion = true)
             }
@@ -306,4 +309,14 @@ class ScreenshotsTest {
         }
         rule.onRoot().captureRoboImage("build/shots/import-preview.png")
     }
+
+    @Test fun quickPanelNeonCity() = home(
+        "quick-neon-city", ThemeRegistry.byName("neon-city")!!,
+        quick = listOf("Phone", "Messages", "Camera", "Maps", "Chrome", "Garmin Connect").map { pkg(it) },
+    )
+
+    @Test fun quickPanelMatrixFullEight() = home(
+        "quick-matrix-eight", ThemeRegistry.byName("matrix")!!,
+        quick = listOf("Phone", "Messages", "Camera", "Maps", "Chrome", "Spotify", "Signal", "Notes").map { pkg(it) },
+    )
 }

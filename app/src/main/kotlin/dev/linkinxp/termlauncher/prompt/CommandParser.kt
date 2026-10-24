@@ -13,6 +13,7 @@ sealed interface Command {
     data class Wall(val sub: String?, val arg: String?) : Command
     data class Panel(val name: String?, val on: Boolean?) : Command
     data class Wx(val sub: String?, val arg: String?) : Command
+    data class Quick(val sub: String?, val arg: String?) : Command
     data object History : Command
     data object Neofetch : Command
     data object Whoami : Command
@@ -36,6 +37,7 @@ fun parseCommand(input: String): Command {
         word == "wall" -> parseWall(args)
         word == "panel" -> parsePanel(args)
         word == "wx" -> parseWx(args)
+        word == "quick" -> parseQuick(args)
         word == "sudo" && args.isNotEmpty() -> Command.Sudo(args)
         args.isEmpty() && word in SIMPLE -> SIMPLE.getValue(word)
         word == "ls" && args.isEmpty() -> Command.Ls(false)
@@ -90,4 +92,12 @@ private fun parseWx(args: String): Command.Wx {
     val sub = args.substringBefore(' ').lowercase()
     val rest = args.substringAfter(' ', "").trim()
     return Command.Wx(sub, rest.ifEmpty { null })
+}
+
+/** `quick`, `quick add google maps`: like `wx`, the argument is the rest of the line (app names have spaces). */
+private fun parseQuick(args: String): Command.Quick {
+    if (args.isEmpty()) return Command.Quick(null, null)
+    val sub = args.substringBefore(' ').lowercase()
+    val rest = args.substringAfter(' ', "").trim()
+    return Command.Quick(sub, rest.ifEmpty { null })
 }

@@ -4,7 +4,9 @@ import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -32,7 +34,12 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val animate: Boolean = false,
 )
 
-@Serializable data class PanelBackup(val cal: Boolean = false, val wx: Boolean = false, val search: Boolean = true)
+@Serializable data class PanelBackup(
+    val cal: Boolean = false,
+    val wx: Boolean = false,
+    val search: Boolean = true,
+    val quick: Boolean = true,
+)
 
 @Serializable data class WxBackup(
     val city: String? = null,
@@ -54,6 +61,8 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val wx: WxBackup = WxBackup(),
     val drawerSort: String = "AZ",
     val iconMode: String = "TEXT",
+    /** The `quick` tiles as package names; `null` = the defaults found on the device. */
+    val quick: List<String>? = null,
 )
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
@@ -96,6 +105,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 wx = section("wx", WxBackup.serializer(), WxBackup()),
                 drawerSort = section("drawerSort", String.serializer(), "AZ"),
                 iconMode = section("iconMode", String.serializer(), "TEXT"),
+                quick = section("quick", ListSerializer(String.serializer()).nullable, null),
             ),
         )
     } catch (e: Exception) {

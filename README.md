@@ -20,7 +20,7 @@ Switch the default Home app back in Settings, or `adb uninstall dev.linkinxp.ter
 ## Prompt commands
 `theme <name>` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
 `mv <folder> <newname>` (rename) | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help` |
-`fx [name on|off]` | `settings` | `wall ...` | `panel <cal|wx|search> on|off` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
+`fx [name on|off]` | `settings` | `wall ...` | `panel <cal|wx|search|quick> on|off` | `quick ...` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
 Any other text fuzzy-matches installed apps; Enter launches the top match. `⇥` completes the input;
 with an empty prompt your last 5 commands are offered. Output appears in the `out` panel (12 lines, tap to dismiss).
 
@@ -60,6 +60,11 @@ The open drawer shows the wallpaper/art with an extra 35% readability layer.
 ## Search bar
 A `g> search google` row under the clock: type a query and press Search or `[go]` to open Google in your browser or the Google app.
 `panel search off` hides it (on by default).
+
+## Quick tiles (`quick` panel, on by default)
+Your important apps as big text tiles under the search bar, four per row, up to 8. First run: the phone's own dialer, messages, camera and
+maps apps. Tap launches, long-press opens the app menu (pin to dock, hide, info...). Change them in settings (`quick tiles`: move up, remove,
+add, reset) or with `quick add <app>`, `quick rm <app>`, `quick clear`, `quick reset`; `panel quick off` hides the panel. Included in backups.
 
 ## Panels (page 1, under `sys`; calendar and weather off by default)
 - `panel cal on|off`: the next 6 calendar events within 7 days, e.g. `today 10:05  Standup`, `now  Standup`, `tmrw all day  Holiday`.

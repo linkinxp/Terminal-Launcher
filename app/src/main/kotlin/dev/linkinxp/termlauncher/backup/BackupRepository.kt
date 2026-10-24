@@ -30,10 +30,11 @@ class BackupRepository(private val prefs: Prefs) {
             theme = prefs.theme.first().name,
             fx = FxBackup(fx.scanlines, fx.flicker, fx.glitch, fx.cursor, fx.boot),
             wall = WallBackup(wall.mode.name, wall.style.name, wall.seed, wall.dim, wall.animate),
-            panels = PanelBackup(panels.cal, panels.wx, panels.search),
+            panels = PanelBackup(panels.cal, panels.wx, panels.search, panels.quick),
             wx = WxBackup(wx.city, wx.lat, wx.lon, wx.fahrenheit),
             drawerSort = prefs.sort.first().name,
             iconMode = prefs.iconMode.first().name,
+            quick = prefs.quick.first(),
         )
     }
 
@@ -57,7 +58,8 @@ class BackupRepository(private val prefs: Prefs) {
                 animate = b.wall.animate,
             ),
         )
-        prefs.setPanels(PanelSettings(b.panels.cal, b.panels.wx, b.panels.search))
+        prefs.setPanels(PanelSettings(b.panels.cal, b.panels.wx, b.panels.search, b.panels.quick))
+        prefs.setQuick(b.quick)
         prefs.setWx(WxSettings(b.wx.city, b.wx.lat, b.wx.lon, b.wx.fahrenheit))
         prefs.clearWxCache()
         prefs.setSort(enumOr(b.drawerSort, DrawerSort.AZ))

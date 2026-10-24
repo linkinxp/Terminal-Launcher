@@ -19,6 +19,9 @@ import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.prompt.CommandHistory
+import dev.linkinxp.termlauncher.quick.MAX_QUICK
+import dev.linkinxp.termlauncher.quick.decodeQuick
+import dev.linkinxp.termlauncher.quick.encodeQuick
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.wall.WallSettings
@@ -61,6 +64,8 @@ class Prefs(private val context: Context) {
     private val panelCalKey = booleanPreferencesKey("panel_cal")
     private val panelWxKey = booleanPreferencesKey("panel_wx")
     private val panelSearchKey = booleanPreferencesKey("panel_search")
+    private val panelQuickKey = booleanPreferencesKey("panel_quick")
+    private val quickKey = stringPreferencesKey("quick")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
     private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
@@ -89,6 +94,8 @@ class Prefs(private val context: Context) {
         if (json != null && at != null) json to at else null
     }
     val panels: Flow<PanelSettings> = data.map(::panelsFrom)
+    /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
+    val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
@@ -147,6 +154,19 @@ class Prefs(private val context: Context) {
             result = old to new
         }
         return result
+    }
+
+    /** `null` removes the stored list so the defaults apply again. */
+    suspend fun setQuick(list: List<String>?) {
+        safeEdit { p -> if (list == null) p.remove(quickKey) else p[quickKey] = encodeQuick(list.take(MAX_QUICK)) }
+    }
+
+    /** Atomic read-modify-write of the quick list ([op] gets the stored list or null, returns the new one or null). */
+    suspend fun editQuick(op: (List<String>?) -> List<String>?) {
+        safeEdit { p ->
+            val next = op(decodeQuick(p[quickKey]))
+            if (next == null) p.remove(quickKey) else p[quickKey] = encodeQuick(next.take(MAX_QUICK))
+        }
     }
 
     suspend fun setFx(fx: FxSettings) { safeEdit { writeFx(it, fx) } }
@@ -211,12 +231,16 @@ class Prefs(private val context: Context) {
     }
 
     private fun panelsFrom(p: Preferences) =
-        PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false, search = p[panelSearchKey] ?: true)
+        PanelSettings(
+            cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false,
+            search = p[panelSearchKey] ?: true, quick = p[panelQuickKey] ?: true,
+        )
 
     private fun writePanels(p: MutablePreferences, panels: PanelSettings) {
         p[panelCalKey] = panels.cal
         p[panelWxKey] = panels.wx
         p[panelSearchKey] = panels.search
+        p[panelQuickKey] = panels.quick
     }
 
     private fun decodeStats(raw: String?): Map<String, AppStat> =

@@ -79,6 +79,9 @@ private fun ClockHeader(
     weather: PanelData,
     showSearch: Boolean,
     onSearch: (String) -> Unit,
+    ui: LauncherUi,
+    onQuickTap: (String) -> Unit,
+    onQuickLongPress: (String) -> Unit,
 ) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
@@ -90,6 +93,7 @@ private fun ClockHeader(
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
         if (showSearch) SearchBar(onSearch)
+        QuickPanel(ui, onQuickTap, onQuickLongPress)
         SysPanel(snapshot)
         PanelBlock("cal", calendar)
         PanelBlock("wx", weather)
@@ -139,7 +143,7 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll, enabled = scroll.maxValue > 0),
             ) {
-                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
+                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch, ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) })
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
