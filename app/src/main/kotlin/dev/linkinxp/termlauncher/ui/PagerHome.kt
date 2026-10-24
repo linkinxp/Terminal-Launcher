@@ -79,9 +79,6 @@ private fun ClockHeader(
     weather: PanelData,
     showSearch: Boolean,
     onSearch: (String) -> Unit,
-    ui: LauncherUi,
-    onQuickTap: (String) -> Unit,
-    onQuickLongPress: (String) -> Unit,
 ) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
@@ -93,7 +90,6 @@ private fun ClockHeader(
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
         if (showSearch) SearchBar(onSearch)
-        QuickPanel(ui, onQuickTap, onQuickLongPress)
         SysPanel(snapshot)
         PanelBlock("cal", calendar)
         PanelBlock("wx", weather)
@@ -143,7 +139,7 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll, enabled = scroll.maxValue > 0),
             ) {
-                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch, ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) })
+                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
@@ -155,6 +151,8 @@ fun PagerHome(
             }
         }
         StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
+        // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
+        QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
         Dock(ui, onItemTap, onItemLongPress)
         PromptBar(ui, vm)
     }
