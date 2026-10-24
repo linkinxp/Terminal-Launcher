@@ -141,4 +141,9 @@ class LauncherBackupTest {
         assertNull(decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().customThemes)
         assertNull(decodeBackup("""{"format":"terminal-launcher-backup","version":1,"customThemes":"junk"}""").getOrThrow().customThemes)
     }
+
+    @Test fun theHomeStyleRoundTripsAndDefaultsToClassic() {
+        assertEquals("GRID", decodeBackup(encodeBackup(sample().copy(homeStyle = "GRID"))).getOrThrow().homeStyle)
+        assertEquals("CLASSIC", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().homeStyle)
+    }
 }

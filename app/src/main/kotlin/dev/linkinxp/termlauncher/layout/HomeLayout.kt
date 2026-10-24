@@ -100,6 +100,32 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     fun withDefaultPanels(): HomeLayout =
         copy(pages = pages.mapIndexed { i, p -> if (i == 0) Page(DEFAULT_PANELS + p.items) else p })
 
+    /**
+     * Moves the panels off page one onto a page of their own right after it (the "glance" page); when all five pages
+     * exist they go on top of the current second page. Nothing changes when page one has no panels.
+     */
+    fun appsFirst(): HomeLayout {
+        val moving = pages[0].items.filterIsInstance<Item.Panel>()
+        if (moving.isEmpty()) return this
+        val rest = pages[0].copy(items = pages[0].items.filterNot { it is Item.Panel })
+        val tail = pages.drop(1)
+        return if (pages.size < MAX_PAGES) copy(pages = listOf(rest, Page(moving)) + tail)
+        else copy(pages = listOf(rest, Page(moving + tail[0].items)) + tail.drop(1))
+    }
+
+    /** The reverse: every panel back on top of page one in the original order; pages emptied by that disappear. */
+    fun panelsHome(): HomeLayout {
+        val order = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX)
+        val placed = placedPanels()
+        if (placed.isEmpty()) return this
+        val cleaned = pages.mapIndexedNotNull { i, p ->
+            val items = p.items.filterNot { it is Item.Panel }
+            if (items.isEmpty() && i > 0 && p.items.any { it is Item.Panel }) null else Page(items)
+        }
+        val top = order.filter { it in placed }.map { Item.Panel(it) }
+        return copy(pages = cleaned.mapIndexed { i, p -> if (i == 0) Page(top + p.items) else p })
+    }
+
     fun addPage(): HomeLayout = if (pages.size >= MAX_PAGES) this else copy(pages = pages + Page(emptyList()))
 
     fun removePage(index: Int): HomeLayout =
@@ -211,7 +237,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         private val DEFAULT_PANELS: List<Item> = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX).map { Item.Panel(it) }
         val RESERVED_WORDS = setOf(
             "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
-            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill",
+            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout",
         )
         private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 

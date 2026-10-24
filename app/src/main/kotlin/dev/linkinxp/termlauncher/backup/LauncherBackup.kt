@@ -76,6 +76,7 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val drawerKeyboard: Boolean = true,
     val clockFormat: String = "AUTO",
     val clockStyle: String = "PIXEL",
+    val homeStyle: String = "CLASSIC",
     /** True when [layout] lists the info panels itself; an older backup does not, and gets the default panels. */
     val panelItems: Boolean = false,
     /** The user's own themes; `null` (an older backup) leaves the ones on this phone alone. */
@@ -126,6 +127,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), true),
                 clockFormat = section("clockFormat", String.serializer(), "AUTO"),
                 clockStyle = section("clockStyle", String.serializer(), "PIXEL"),
+                homeStyle = section("homeStyle", String.serializer(), "CLASSIC"),
                 panelItems = section("panelItems", Boolean.serializer(), false),
                 customThemes = section("customThemes", ListSerializer(CustomThemeBackup.serializer()).nullable, null),
             ),

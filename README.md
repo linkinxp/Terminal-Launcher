@@ -25,6 +25,12 @@ command word, and at most 8 custom themes fit; adding an existing name replaces 
 the theme but prints `theme: low contrast`. `theme rm <name>` removes one (the active theme then falls back to `classy-black`). Custom themes
 show in the settings theme list with `+` and `[rm]`, and are part of the backup.
 
+## Home layout
+`layout apps-first` splits the home screen in two: page one is an apps page (a one-line clock, then your apps and folders in two columns
+anchored to the bottom, next to your thumb) and page two is a glance page (big clock, search, sys, calendar and weather). `layout classic`
+puts everything back on page one; `layout bottom` and `layout grid` change only how the items are arranged (one or two columns, anchored
+to the bottom). Also in settings under `home`. The dock shows full app names (`messages`), cut at nine characters.
+
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head
   per streak. `wall dim` sets how strong it is. It only moves while the launcher is on screen and is a single still frame with animations off.

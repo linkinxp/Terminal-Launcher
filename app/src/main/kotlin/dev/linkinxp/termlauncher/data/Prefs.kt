@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.data
 
 import dev.linkinxp.termlauncher.clock.ClockFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
@@ -73,6 +74,7 @@ class Prefs(private val context: Context) {
     private val quickKey = stringPreferencesKey("quick")
     private val clockFormatKey = stringPreferencesKey("clock_format")
     private val customThemesKey = stringPreferencesKey("custom_themes")
+    private val homeStyleKey = stringPreferencesKey("home_style")
     private val clockStyleKey = stringPreferencesKey("clock_style")
     private val drawerKeyboardKey = booleanPreferencesKey("drawer_keyboard")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
@@ -110,6 +112,7 @@ class Prefs(private val context: Context) {
     /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
     val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
     val clockFormat: Flow<ClockFormat> = data.map { ClockFormat.fromName(it[clockFormatKey]) }.distinctUntilChanged()
+    val homeStyle: Flow<HomeStyle> = data.map { HomeStyle.fromName(it[homeStyleKey]) }.distinctUntilChanged()
     val clockStyle: Flow<ClockStyle> = data.map { ClockStyle.fromName(it[clockStyleKey]) }.distinctUntilChanged()
     val drawerKeyboard: Flow<Boolean> = data.map { it[drawerKeyboardKey] ?: true }.distinctUntilChanged()
     val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }
@@ -190,6 +193,7 @@ class Prefs(private val context: Context) {
     }
 
     suspend fun setClockFormat(f: ClockFormat) { safeEdit { it[clockFormatKey] = f.name } }
+    suspend fun setHomeStyle(s: HomeStyle) { safeEdit { it[homeStyleKey] = s.name } }
     suspend fun setClockStyle(s: ClockStyle) { safeEdit { it[clockStyleKey] = s.name } }
     suspend fun setDrawerKeyboard(on: Boolean) { safeEdit { it[drawerKeyboardKey] = on } }
 

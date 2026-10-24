@@ -176,4 +176,13 @@ class SettingsScreenTest {
         settle()
         assertEquals(listOf("c"), vm.ui.value.customThemes.map { it.name })
     }
+
+    @Test fun theHomeLayoutRowCyclesClassicBottomGrid() {
+        val vm = show()
+        val styles = dev.linkinxp.termlauncher.layout.HomeStyle.entries
+        assertEquals(styles[0], vm.ui.value.homeStyle)
+        for (next in styles.drop(1) + styles[0]) {
+            click("home-style-row"); until({ "style=${vm.ui.value.homeStyle}" }) { vm.ui.value.homeStyle == next }
+        }
+    }
 }

@@ -23,6 +23,11 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.unit.sp
+import dev.linkinxp.termlauncher.clock.formatClockTime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.PanelKind
 import dev.linkinxp.termlauncher.panel.PanelData
@@ -111,6 +117,18 @@ private fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, on
     }
 }
 
+@Composable
+private fun CompactClock(now: LocalDateTime, h24: Boolean) {
+    val date = now.toLocalDate()
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+        TermText(formatClockTime(now.hour, now.minute, h24), size = 40.sp, bold = true)
+        TermText(
+            "  ${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} ${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()}",
+            Modifier.padding(bottom = 6.dp), dim = true,
+        )
+    }
+}
+
 /** Pager of home pages (page 0 carries the clock), then page indicator, dock and prompt. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -125,9 +143,11 @@ fun PagerHome(
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
     onSwipeDown: () -> Unit = {},
+    style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
+    val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
     // A Home press scrolls back to the first page.
@@ -167,22 +187,60 @@ fun PagerHome(
     Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().nestedScroll(edgeSwipes)) {
     Column(Modifier.fillMaxSize()) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
-            // Always a scroll container: what the page cannot scroll any further reaches edgeSwipes as the swipe.
             val scroll = rememberScrollState()
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 16.dp)
-                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
-                    .verticalScroll(scroll),
-            ) {
-                if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch)
-                ui.layout.pages[index].items.forEach { item ->
-                    if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
-                    if (item is Item.Panel) { PanelItem(item.kind, ui, snapshot, onSearch); return@forEach }
-                    val label = itemLabel(item, ui) ?: return@forEach
-                    TermText(
-                        "${if (item is Item.Folder) "" else "> "}$label",
-                        Modifier.fillMaxWidth().combinedClickable(onClick = { onItemTap(item) }, onLongClick = { onItemLongPress(item) }).padding(vertical = 8.dp),
-                    )
+            val tapPadding = if (style == HomeStyle.CLASSIC) 8.dp else 12.dp
+            val content: @Composable () -> Unit = {
+                val items = ui.layout.pages[index].items
+                // Apps and folders in rows of one or two; panels and widgets always take the full width.
+                val perRow = if (style == HomeStyle.GRID) 2 else 1
+                val run = ArrayList<Item>()
+                @Composable fun flush() {
+                    run.chunked(perRow).forEach { row ->
+                        Row(Modifier.fillMaxWidth()) {
+                            row.forEach { item ->
+                                val label = itemLabel(item, ui) ?: return@forEach
+                                TermText(
+                                    "${if (item is Item.Folder) "" else "> "}$label",
+                                    Modifier.weight(1f).combinedClickable(onClick = { onItemTap(item) }, onLongClick = { onItemLongPress(item) }).padding(vertical = tapPadding),
+                                )
+                            }
+                            repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                    run.clear()
+                }
+                items.forEach { item ->
+                    when (item) {
+                        is Item.Widget -> { flush(); key(item.id) { WidgetPanel(item, vm) } }
+                        is Item.Panel -> { flush(); PanelItem(item.kind, ui, snapshot, onSearch) }
+                        else -> run += item
+                    }
+                }
+                flush()
+            }
+            val tapEdit = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
+            // The big clock heads the first page with panels (the glance page); with a non-classic style page one keeps a one-line clock.
+            val header: @Composable () -> Unit = {
+                if (style == HomeStyle.CLASSIC) { if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch) }
+                else if (index == bigClockPage) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch)
+                else if (index == 0) CompactClock(now, h24)
+            }
+            val topDown = style == HomeStyle.CLASSIC || ui.layout.pages[index].items.any { it is Item.Panel }
+            // Always a scroll container: what the page cannot scroll any further reaches edgeSwipes as the swipe.
+            if (topDown) {
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).then(tapEdit).verticalScroll(scroll)) {
+                    header()
+                    content()
+                }
+            } else {
+                // The clock stays put at the top; the apps are anchored to the bottom, next to the thumb.
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).then(tapEdit)) {
+                    header()
+                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().heightIn(min = maxHeight).verticalScroll(scroll), verticalArrangement = Arrangement.Bottom) {
+                            content()
+                        }
+                    }
                 }
             }
         }

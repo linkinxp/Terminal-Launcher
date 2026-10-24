@@ -185,6 +185,10 @@ fun SettingsScreen(
                 }
             }
 
+            TermPanel("home", Modifier.padding(top = 4.dp)) {
+                SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
+            }
+
             TermPanel("clock", Modifier.padding(top = 4.dp)) {
                 SettingRow("format", ui.clockFormat.name.lowercase().removePrefix("h").let { if (it == "auto") it else "${it}h" }, "clock-row") { vm.cycleClockFormat() }
                 SettingRow("style", ui.clockStyle.name.lowercase(), "clock-style-row") { vm.cycleClockStyle() }

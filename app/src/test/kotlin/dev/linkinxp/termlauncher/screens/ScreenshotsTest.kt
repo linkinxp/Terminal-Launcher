@@ -2,6 +2,8 @@ package dev.linkinxp.termlauncher.screens
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -52,6 +54,8 @@ import dev.linkinxp.termlauncher.layout.Page
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.ui.AppDrawer
+import dev.linkinxp.termlauncher.layout.PanelKind
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.TermTheme
 import org.junit.Rule
@@ -360,5 +364,54 @@ class ScreenshotsTest {
         val app = ApplicationProvider.getApplicationContext<Application>()
         android.provider.Settings.Global.putFloat(app.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
         home("home-rain", ThemeRegistry.byName("matrix")!!, wall = WallSettings(mode = WallMode.RAIN, dim = 40), quick = listOf(pkg("Phone")))
+    }
+
+    // ---- home layout mockups ----
+    private fun mock(name: String, style: HomeStyle, theme: String = "tokyo-night", clockStyle: ClockStyle = ClockStyle.PIXEL, panelsOnly: Boolean = false, appsOnly: Boolean = false) {
+        val vm = vm()
+        val th = ThemeRegistry.byName(theme)!!
+        val items = listOf(
+            Item.Panel(PanelKind.SYS), Item.Panel(PanelKind.CAL), Item.Panel(PanelKind.WX),
+            Item.Folder("media", listOf(pkg("Spotify"), pkg("Bandcamp"))), Item.App(pkg("Maps")), Item.App(pkg("Garmin Connect")),
+            Item.App(pkg("Notes")), Item.App(pkg("Signal")), Item.App(pkg("Files")), Item.App(pkg("Photos")),
+        )
+        val shown = when { panelsOnly -> items.filterIsInstance<Item.Panel>(); appsOnly -> items.filterNot { it is Item.Panel } + Item.App(pkg("Chrome")) + Item.App(pkg("Spotify")); else -> items }
+        rule.setContent {
+            TermTheme(th) {
+                val base = ui(th, quick = listOf(pkg("Phone"), pkg("Messages"), pkg("Maps"), pkg("Camera")), calendar = agenda(), weather = weather(0, true, 12.0))
+                val ui = base.copy(
+                    layout = base.layout.copy(pages = listOf(Page(shown), Page(emptyList()))),
+                    panels = base.panels.copy(cal = true, wx = true), clockStyle = clockStyle,
+                    clockFormat = ClockFormat.H24,
+                )
+                PagerHome(ui, vm, {}, {}, {}, {}, style = style)
+            }
+        }
+        rule.onRoot().captureRoboImage("build/shots/$name.png")
+    }
+
+    @Test fun mockClassic() = mock("mock-home-classic", HomeStyle.CLASSIC)
+    @Test fun mockBottom() = mock("mock-home-bottom", HomeStyle.BOTTOM)
+    @Test fun mockGrid() = mock("mock-home-grid", HomeStyle.GRID)
+    @Test fun mockAppsPageGrid() = mock("mock-apps-grid", HomeStyle.GRID, appsOnly = true)
+    @Test fun mockAppsPageList() = mock("mock-apps-list", HomeStyle.BOTTOM, appsOnly = true)
+    @Test fun mockGlancePage() = mock("mock-glance", HomeStyle.CLASSIC, panelsOnly = true)
+
+    @Test fun appsFirstGlancePage() {
+        val vm = vm()
+        val th = ThemeRegistry.byName("tokyo-night")!!
+        val items = listOf(Item.Panel(PanelKind.SEARCH), Item.Panel(PanelKind.SYS), Item.Panel(PanelKind.CAL), Item.Panel(PanelKind.WX),
+            Item.App(pkg("Maps")), Item.App(pkg("Notes")), Item.App(pkg("Signal")), Item.App(pkg("Files")))
+        rule.setContent {
+            TermTheme(th) {
+                val base = ui(th, quick = listOf(pkg("Phone"), pkg("Messages"), pkg("Maps"), pkg("Camera")), calendar = agenda(), weather = weather(0, true, 12.0))
+                val ui = base.copy(layout = base.layout.copy(pages = listOf(Page(items))).appsFirst(), panels = base.panels.copy(cal = true, wx = true), homeStyle = HomeStyle.GRID)
+                PagerHome(ui, vm, {}, {}, {}, {})
+            }
+        }
+        rule.onRoot().captureRoboImage("build/shots/apps-first-page1.png")
+        rule.onNodeWithText("2:", substring = true).performClick()
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/shots/apps-first-page2.png")
     }
 }

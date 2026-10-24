@@ -71,4 +71,37 @@ class PanelItemsTest {
         assertEquals(listOf<Item>(s), l.prune(emptySet()).withoutWidgets().pages[0].items)
         assertTrue(l.removePage(0) == l) // single page can't go
     }
+
+    // ---- apps-first: panels move to their own glance page ----
+
+    @Test fun appsFirstMovesThePanelsToANewSecondPageInOrder() {
+        val l = layout(listOf(s, sys, Item.App("a"), cal, wx, Item.App("b"))).appsFirst()
+        assertEquals(listOf<Item>(Item.App("a"), Item.App("b")), l.pages[0].items)
+        assertEquals(listOf<Item>(s, sys, cal, wx), l.pages[1].items)
+        assertEquals(2, l.pages.size)
+    }
+
+    @Test fun appsFirstUsesTheExistingSecondPageWhenThereAreNoPagesLeft() {
+        val full = HomeLayout(emptyList(), (1..HomeLayout.MAX_PAGES).map { Page(if (it == 1) listOf(s, Item.App("a")) else listOf(Item.App("p$it"))) })
+        val l = full.appsFirst()
+        assertEquals(HomeLayout.MAX_PAGES, l.pages.size)
+        assertEquals(listOf<Item>(Item.App("a")), l.pages[0].items)
+        assertEquals(listOf<Item>(s, Item.App("p2")), l.pages[1].items)
+    }
+
+    @Test fun appsFirstChangesNothingWithoutPanelsOrWhenAlreadyApart() {
+        val none = layout(listOf(Item.App("a")))
+        assertEquals(none, none.appsFirst())
+        val apart = layout(listOf(Item.App("a")), listOf(s, wx))
+        assertEquals(apart, apart.appsFirst())
+    }
+
+    @Test fun backToClassicPutsThePanelsOnPageOneInTheOldOrderAndDropsTheEmptiedPage() {
+        val l = layout(listOf(Item.App("a")), listOf(wx, s, cal, sys)).panelsHome()
+        assertEquals(listOf<Item>(s, sys, cal, wx, Item.App("a")), l.pages[0].items)
+        assertEquals(1, l.pages.size)
+        val keep = layout(listOf(Item.App("a")), listOf(wx, Item.App("b"))).panelsHome()
+        assertEquals(2, keep.pages.size)
+        assertEquals(listOf<Item>(Item.App("b")), keep.pages[1].items)
+    }
 }

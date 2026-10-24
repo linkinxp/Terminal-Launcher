@@ -10,12 +10,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.LauncherUi
-import dev.linkinxp.termlauncher.apps.shortName
 import dev.linkinxp.termlauncher.layout.Item
 
-/** Short dock tab text: vowel-stripped app name (`msgs`) or `~folder`; null when an app is gone. */
+/** The first word of an app name, lowercase, at most nine characters (`messages`, `garmin`). */
+fun dockName(label: String): String = label.trim().substringBefore(' ').lowercase().take(9)
+
+/** Dock tab text: the app name (`messages`) or `~folder`; null when an app is gone. */
 fun dockLabel(item: Item, ui: LauncherUi): String? = when (item) {
-    is Item.App -> ui.apps[item.pkg]?.label?.let(::shortName)
+    is Item.App -> ui.apps[item.pkg]?.label?.let(::dockName)
     is Item.Folder -> "~${item.name}"
     is Item.Widget -> null
     is Item.Panel -> null

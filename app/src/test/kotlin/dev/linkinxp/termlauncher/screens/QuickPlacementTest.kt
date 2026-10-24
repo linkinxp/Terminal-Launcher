@@ -49,7 +49,7 @@ class QuickPlacementTest {
     @Test fun theTileSitsAboveThePinnedAppsAndBelowTheHomeContent() {
         show()
         val tile = rule.onNodeWithTag("quick-pkg.phone").assertIsDisplayed().getUnclippedBoundsInRoot()
-        val dock = rule.onNodeWithText("mps").getUnclippedBoundsInRoot() // the dock tab for Maps
+        val dock = rule.onNodeWithText("maps").getUnclippedBoundsInRoot() // the dock tab for Maps
         val sys = rule.onNodeWithText("sys").getUnclippedBoundsInRoot()
         assertTrue("tile ${tile.bottom} must end above the dock ${dock.top}", tile.bottom <= dock.top)
         assertTrue("tile ${tile.top} must be below the sys panel title ${sys.top}", tile.top > sys.top)

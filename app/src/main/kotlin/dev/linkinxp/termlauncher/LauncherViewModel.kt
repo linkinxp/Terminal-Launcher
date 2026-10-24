@@ -24,7 +24,10 @@ import kotlin.random.Random
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.PanelKind
+import dev.linkinxp.termlauncher.layout.Restructure
+import dev.linkinxp.termlauncher.layout.layoutPlan
 import android.Manifest
 import android.os.Build
 import dev.linkinxp.termlauncher.backup.BackupRepository
@@ -139,6 +142,7 @@ data class LauncherUi(
     val clockFormat: ClockFormat = ClockFormat.AUTO,
     val clockStyle: ClockStyle = ClockStyle.PIXEL,
     val customThemes: List<Theme> = emptyList(),
+    val homeStyle: HomeStyle = HomeStyle.CLASSIC,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -179,11 +183,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes) { a ->
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle) { a ->
         @Suppress("UNCHECKED_CAST")
-        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>)
+        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle)
     }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
@@ -227,6 +231,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             clockFormat = x.clockFormat,
             clockStyle = x.clockStyle,
             customThemes = x.customThemes,
+            homeStyle = x.homeStyle,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
@@ -598,6 +603,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 onSuccess = { action -> handleWx(action); null },
                 onFailure = { it.message },
             )
+            is Command.Layout -> handleLayout(cmd.arg, cur)
             is Command.Clock -> handleClock(cmd.sub, cmd.arg, cur)
             is Command.Quick -> parseQuickAction(cmd.sub, cmd.arg).fold(
                 onSuccess = { action -> handleQuick(action, cur) },
@@ -679,6 +685,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setClockFormat(f: ClockFormat) { viewModelScope.launch { prefs.setClockFormat(f) } }
+    fun setHomeStyle(s: HomeStyle) { viewModelScope.launch { prefs.setHomeStyle(s) } }
+    fun cycleHomeStyle() { setHomeStyle(HomeStyle.entries.let { it[(it.indexOf(ui.value.homeStyle) + 1) % it.size] }) }
+
+    private fun handleLayout(arg: String?, cur: LauncherUi): String {
+        if (arg == null) return "layout  ${cur.homeStyle.name.lowercase()}"
+        val plan = layoutPlan(arg)
+        plan.style?.let { style ->
+            setHomeStyle(style)
+            when (plan.restructure) {
+                Restructure.APPS_FIRST -> edit { it.appsFirst() }
+                Restructure.CLASSIC -> edit { it.panelsHome() }
+                Restructure.NONE -> {}
+            }
+        }
+        return plan.message
+    }
+
     fun setClockStyle(s: ClockStyle) { viewModelScope.launch { prefs.setClockStyle(s) } }
     fun cycleClockStyle() { setClockStyle(ClockStyle.entries.let { it[(it.indexOf(ui.value.clockStyle) + 1) % it.size] }) }
     fun cycleClockFormat() { setClockFormat(ClockFormat.entries.let { it[(it.indexOf(ui.value.clockFormat) + 1) % it.size] }) }
@@ -785,14 +808,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT_12: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy hh:mm:ss a", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout",
         )
         val HELP = listOf(
             "theme <n>|add <n> bg fg acc dim|rm <n>",
             "clock [auto|24|12|style <name>]",
             "pin|hide <app>  ls [-a]  dock/hidden",
-            "mkdir|rmdir <f>    folders",
-            "mv <app>|<f> <f|new>  file / rename",
+            "mkdir|rmdir <f>  mv <app>|<f> <f|new>",
             "fx [n on|off]  wall <sub> [arg]",
             "panel <p> on|off  cal wx search quick",
             "wx [city <n>|units c|f]  weather",
@@ -800,6 +822,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "history neofetch whoami uptime date",
             "fortune clear help settings sudo",
             "matrix [wake]  pill red|blue",
+            "layout classic|bottom|grid|apps-first",
         ).joinToString("\n")
     }
 }

@@ -144,4 +144,10 @@ class CommandParserTest {
         assertEquals(Command.Spoon, parseCommand("there is no spoon"))
         assertEquals(Command.Query("follow me"), parseCommand("follow me"))
     }
+
+    @Test fun layoutCommand() {
+        assertEquals(Command.Layout(null), parseCommand("layout"))
+        assertEquals(Command.Layout("Apps-First"), parseCommand("LAYOUT Apps-First"))
+        assertEquals(Command.Layout("grid now"), parseCommand("layout grid now"))
+    }
 }
