@@ -51,7 +51,9 @@ fun formatAgenda(events: List<AgendaEvent>, nowMs: Long, zone: ZoneId, maxLines:
 private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
     today -> "today"
     today.plusDays(1) -> "tmrw"
-    else -> date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()
+    // Up to six days ahead the weekday is unambiguous; beyond that the date is.
+    else -> if (date.isAfter(today.plusDays(6))) "${date.dayOfMonth} ${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()}"
+    else date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()
 }
 
 /** `prefix  title` cut to [width] UTF-16 units, ending in `…` when the title was shortened (never mid-surrogate). */

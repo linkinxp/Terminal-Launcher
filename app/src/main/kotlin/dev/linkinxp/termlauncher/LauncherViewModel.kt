@@ -531,7 +531,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val now = System.currentTimeMillis()
                     val zone = ZoneId.systemDefault()
                     val (from, to) = calendarQueryWindow(now, zone, CAL_DAYS)
-                    PanelData.Lines(formatAgenda(calendarRepo.events(from, to), now, zone, h24 = h24()))
+                    PanelData.Lines(formatAgenda(calendarRepo.events(from, to), now, zone, maxLines = CAL_LINES, h24 = h24()))
                 }
             }
             eph.update { it.copy(calendar = data) }
@@ -779,7 +779,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     companion object {
         const val LAUNCHER_VERSION = "0.6.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
-        private const val CAL_DAYS = 7L
+        private const val CAL_DAYS = 30L
+        private const val CAL_LINES = 40
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val DATE_FORMAT_12: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy hh:mm:ss a", Locale.ENGLISH)
         val COMMANDS = listOf(

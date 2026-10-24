@@ -122,4 +122,20 @@ class AgendaTest {
         )
         assertEquals(listOf("today 10:05am  Standup", "today 11:30pm  Late", "tmrw 12:30am  Night"), lines)
     }
+
+    @Test fun farAwayDaysShowTheDateInsteadOfAnAmbiguousWeekday() {
+        val lines = fmt(
+            timed("Six", "2026-10-29T14:30:00Z", "2026-10-29T15:00:00Z"),   // thursday, 6 days out
+            timed("Seven", "2026-10-30T14:30:00Z", "2026-10-30T15:00:00Z"), // a friday again
+            timed("Ten", "2026-11-02T14:30:00Z", "2026-11-02T15:00:00Z"),
+            allDay("Trip", "2026-11-12T00:00:00Z", "2026-11-13T00:00:00Z"),
+        )
+        assertEquals(listOf("thu 14:30  Six", "30 oct 14:30  Seven", "2 nov 14:30  Ten", "12 nov all day  Trip"), lines)
+    }
+
+    @Test fun manyEventsFitWhenAskedFor() {
+        val many = (1..30).map { timed("E$it", "2026-10-24T10:%02d:00Z".format(it), "2026-10-24T11:00:00Z") }
+        assertEquals(30, fmt(*many.toTypedArray(), maxLines = 40).size)
+        assertEquals(6, fmt(*many.toTypedArray()).size)
+    }
 }

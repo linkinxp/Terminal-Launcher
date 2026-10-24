@@ -106,7 +106,7 @@ private fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, on
     when (kind) {
         PanelKind.SEARCH -> if (ui.panels.search) SearchBar(onSearch)
         PanelKind.SYS -> SysPanel(snapshot)
-        PanelKind.CAL -> PanelBlock("cal", ui.calendar)
+        PanelKind.CAL -> PanelBlock("cal", ui.calendar, scrollAfter = 6)
         PanelKind.WX -> PanelBlock("wx", ui.weather)
     }
 }
