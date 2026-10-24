@@ -14,6 +14,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +57,8 @@ import java.time.LocalDateTime
 import java.time.format.TextStyle
 import java.time.temporal.IsoFields
 import java.util.Locale
+
+private const val SWIPE_PX = 120f
 
 @Composable
 private fun rememberNow(): LocalDateTime {
@@ -130,29 +138,38 @@ fun PagerHome(
     val canPull = ui.panels.quick && ui.quick.isNotEmpty()
     LaunchedEffect(homeSignal) { pulled = false }
     BackHandler(enabled = pulled) { pulled = false }
-    Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-    Column(
-        Modifier.fillMaxSize()
-            .pointerInput(canPull) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
-                    onDragEnd = {
-                        when {
-                            total < -120f -> if (pulled) pulled = false else onSwipeUp()
-                            total > 120f -> if (canPull) pulled = true
-                        }
-                    },
-                ) { _, dy -> total += dy }
-            },
-    ) {
+    // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
+    // pulling down at the top shows the quick panel, pushing up at the bottom opens the drawer.
+    val overscroll = remember { floatArrayOf(0f) }
+    val swipes by rememberUpdatedState({ dy: Float ->
+        when {
+            dy < -SWIPE_PX -> if (pulled) pulled = false else onSwipeUp()
+            dy > SWIPE_PX -> if (canPull) pulled = true
+        }
+    })
+    val edgeSwipes = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput) overscroll[0] += available.y
+                return Offset.Zero
+            }
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val dy = overscroll[0]
+                overscroll[0] = 0f
+                swipes(dy)
+                return Velocity.Zero
+            }
+        }
+    }
+    Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().nestedScroll(edgeSwipes)) {
+    Column(Modifier.fillMaxSize()) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
-            // Scrolls only when the page overflows, so a page that fits does not swallow the drawer's swipe-up.
+            // Always a scroll container: what the page cannot scroll any further reaches edgeSwipes as the swipe.
             val scroll = rememberScrollState()
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
-                    .verticalScroll(scroll, enabled = scroll.maxValue > 0),
+                    .verticalScroll(scroll),
             ) {
                 if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
                 ui.layout.pages[index].items.forEach { item ->
@@ -165,11 +182,19 @@ fun PagerHome(
                 }
             }
         }
-        StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
-        // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
-        QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
-        Dock(ui, onItemTap, onItemLongPress)
-        PromptBar(ui, vm)
+        // The bars below the pager are not scrollable, so they read the swipe directly.
+        Column(
+            Modifier.pointerInput(canPull) {
+                var total = 0f
+                detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { swipes(total) }) { _, dy -> total += dy }
+            },
+        ) {
+            StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
+            // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
+            QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
+            Dock(ui, onItemTap, onItemLongPress)
+            PromptBar(ui, vm)
+        }
     }
     if (pulled && canPull) {
         QuickPanel(
