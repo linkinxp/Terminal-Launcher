@@ -94,9 +94,9 @@ Long-press an empty page area -> `[+widget]` on a page lists the installed widge
 Per widget in edit mode: size `S M L` and `[rm]`. Pages scroll when their content overflows; the swipe-up for the drawer works from the bottom area.
 
 ## Gestures
-Swipe up: app drawer (anywhere on home; on a page that scrolls, once it is at the bottom). Swipe down: the quick tiles slide in from the top (at the top of a scrolling page); swipe up, tap a tile, Back or Home closes them. Swipe left/right: pages. Long-press an app: menu. Long-press empty page area: edit pages.
+Swipe up: app drawer (anywhere on home; on a page that scrolls, once it is at the bottom). Swipe down: the notification shade (at the top of a scrolling page). Swipe left/right: pages. Long-press an app: menu. Long-press empty page area: edit pages.
 
 ## Permissions
-`REQUEST_DELETE_PACKAGES` (uninstall from the app menu), `ACCESS_NETWORK_STATE` (network type in the sys panel), `READ_CALENDAR` (calendar panel, asked at runtime), `INTERNET` (weather panel only).
+`REQUEST_DELETE_PACKAGES` (uninstall from the app menu), `EXPAND_STATUS_BAR` (swipe down opens the notification shade), `ACCESS_NETWORK_STATE` (network type in the sys panel), `READ_CALENDAR` (calendar panel, asked at runtime), `INTERNET` (weather panel only).
 
 Font: JetBrains Mono (SIL OFL, see JetBrainsMono-OFL.txt).

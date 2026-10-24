@@ -126,6 +126,7 @@ fun PagerHome(
     homeSignal: Int = 0,
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
+    onSwipeDown: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
@@ -139,19 +140,13 @@ fun PagerHome(
     val snapshot = remember(now) { readSystemStats(context) }
     // Panels that read live data refresh on every minute tick.
     LaunchedEffect(now.minute, ui.clockFormat) { vm.refreshPanels() } // the agenda times follow the clock format
-    // Swiping down slides the quick tiles in from the top, where a thumb can reach them.
-    var pulled by remember { mutableStateOf(false) }
-    val canPull = ui.panels.quick && ui.quick.isNotEmpty()
-    LaunchedEffect(homeSignal) { pulled = false }
-    LaunchedEffect(canPull) { if (!canPull) pulled = false }
-    BackHandler(enabled = pulled) { pulled = false }
     // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
-    // pulling down at the top shows the quick panel, pushing up at the bottom opens the drawer.
+    // pulling down at the top opens the notification shade, pushing up at the bottom opens the drawer.
     val overscroll = remember { floatArrayOf(0f) }
     val swipes by rememberUpdatedState({ dy: Float ->
         when {
-            dy < -SWIPE_PX -> if (pulled) pulled = false else onSwipeUp()
-            dy > SWIPE_PX -> if (canPull) pulled = true
+            dy < -SWIPE_PX -> onSwipeUp()
+            dy > SWIPE_PX -> onSwipeDown()
         }
     })
     val edgeSwipes = remember {
@@ -191,7 +186,7 @@ fun PagerHome(
         }
         // The bars below the pager are not scrollable, so they read the swipe directly.
         Column(
-            Modifier.pointerInput(canPull) {
+            Modifier.pointerInput(Unit) {
                 var total = 0f
                 detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { swipes(total) }) { _, dy -> total += dy }
             },
@@ -202,13 +197,6 @@ fun PagerHome(
             Dock(ui, onItemTap, onItemLongPress)
             PromptBar(ui, vm)
         }
-    }
-    if (pulled && canPull) {
-        QuickPanel(
-            ui, { pulled = false; onItemTap(Item.App(it)) }, { pulled = false; onItemLongPress(Item.App(it)) },
-            Modifier.align(Alignment.TopCenter).background(LocalTheme.current.background.color()).padding(horizontal = 16.dp),
-            tagPrefix = "pull-quick-",
-        )
     }
     }
 }

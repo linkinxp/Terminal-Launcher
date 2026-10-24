@@ -54,6 +54,7 @@ import dev.linkinxp.termlauncher.ui.EffectsOverlay
 import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.ImportDialog
+import dev.linkinxp.termlauncher.sys.expandNotificationShade
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
@@ -295,6 +296,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onSwipeUp = { vm.openDrawer() },
+                    onSwipeDown = { expandNotificationShade(this@MainActivity) },
                     onEdit = { editing = true },
                     homeSignal = homeSignal,
                     onSearch = ::openSearch,
