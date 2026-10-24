@@ -121,6 +121,7 @@ data class LauncherUi(
     val wx: WxSettings = WxSettings(),
     /** The quick tiles as package names, already limited to apps installed here. */
     val quick: List<String> = emptyList(),
+    val drawerKeyboard: Boolean = false,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -160,9 +161,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean)
 
-    private val extras = combine(prefs.wx, prefs.quick) { wx, quick -> Extras(wx, quick) }
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard) { wx, quick, kbd -> Extras(wx, quick, kbd) }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
     private val quickDefaults: List<String> by lazy { QuickDefaults(application).packages() }
@@ -200,6 +201,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             weather = if (p.panels.wx) e.weather else PanelData.Off,
             wx = x.wx,
             quick = (x.quick ?: quickDefaults).filter { it in installed },
+            drawerKeyboard = x.drawerKeyboard,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
@@ -614,6 +616,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun closeDrawer() = eph.update { it.copy(drawerOpen = false, showHidden = false, filter = "") }
     fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
+    fun toggleDrawerKeyboard() { viewModelScope.launch { prefs.setDrawerKeyboard(!ui.value.drawerKeyboard) } }
     fun setIconMode(mode: IconMode) { viewModelScope.launch { prefs.setIconMode(mode) } }
     fun toggleHidden(pkg: String) {
         val h = ui.value.hidden

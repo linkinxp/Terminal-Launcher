@@ -104,4 +104,11 @@ class BackupRepositoryTest {
         (1..12).map { i -> async { prefs.editQuick { l -> quickAdd(l ?: emptyList(), "p$i") } } }.awaitAll()
         assertEquals(8, prefs.quick.first()!!.size)
     }
+
+    @Test fun theDrawerKeyboardSettingIsBackedUpAndRestored() = runBlocking {
+        repo.apply(sample().copy(drawerKeyboard = true))
+        assertEquals(true, repo.snapshot().drawerKeyboard)
+        repo.apply(sample())
+        assertEquals(false, repo.snapshot().drawerKeyboard)
+    }
 }

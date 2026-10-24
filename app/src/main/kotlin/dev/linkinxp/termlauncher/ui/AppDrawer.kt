@@ -32,6 +32,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -39,6 +41,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -49,10 +53,13 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.wall.WallMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val KEYBOARD_DELAY_MS = 250L
+private const val HIDDEN_OFFSET_PX = 100_000f
 
 private val SORT_LABEL = mapOf(DrawerSort.AZ to "a-z", DrawerSort.RECENTLY_INSTALLED to "new", DrawerSort.MOST_USED to "used")
 private val ICON_LABEL = mapOf(IconMode.TEXT to "txt", IconMode.GLYPH to "gly", IconMode.ICON to "ico")
@@ -65,13 +72,14 @@ fun AppDrawer(
     onAppLongPress: (String) -> Unit,
     onFolderTap: (String) -> Unit,
     onSettings: () -> Unit = {},
+    open: () -> Boolean = { true },
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalTheme.current
     val d = ui.drawer
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    BackHandler { vm.closeDrawer() }
+    DrawerBackHandler(open) { vm.closeDrawer() }
 
     var filterValue by remember { mutableStateOf(TextFieldValue(ui.filter)) }
     // Solid: opaque as before. Otherwise the wall shows through with a fixed 35% readability layer.
@@ -82,8 +90,24 @@ fun AppDrawer(
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
     // Opening the drawer puts the cursor in the search field with the keyboard up: just start typing.
-    // Short delay: let the drawer draw its first frames before the keyboard resizes the window.
-    LaunchedEffect(Unit) { delay(KEYBOARD_DELAY_MS); focus.requestFocus(); keyboard?.show() }
+    val focusManager = LocalFocusManager.current
+    val keyboardOnOpen by rememberUpdatedState(ui.drawerKeyboard)
+    LaunchedEffect(Unit) {
+        // `open` is observed here (not read during composition), so opening/closing never recomposes the drawer.
+        snapshotFlow { open() }.collect { isOpen ->
+            if (isOpen) {
+                // Opt-in (settings > drawer > keyboard): showing the keyboard is a blocking call that stalls the opening.
+                if (keyboardOnOpen) { delay(KEYBOARD_DELAY_MS); withContext(Dispatchers.Main) { focus.requestFocus(); keyboard?.show() } }
+            } else {
+                // Views and focus may only be touched on the main thread (the state observer can resume elsewhere).
+                withContext(Dispatchers.Main) {
+                    keyboard?.hide(); focusManager.clearFocus()
+                    filterValue = TextFieldValue("")
+                    listState.scrollToItem(0)
+                }
+            }
+        }
+    }
     // Scrolling the list tucks the keyboard away.
     val hideKeyboardOnScroll = remember(keyboard) {
         object : NestedScrollConnection {
@@ -103,7 +127,9 @@ fun AppDrawer(
     }
 
     Box(
-        modifier.fillMaxSize().background(drawerBg)
+        // The drawer is composed ahead of time and kept off-screen while closed, so opening it is a layer move,
+        // not a composition + layout of the whole app list. Off-screen content receives no touches.
+        modifier.fillMaxSize().graphicsLayer { translationX = if (open()) 0f else HIDDEN_OFFSET_PX }.background(drawerBg)
             // Swallow taps/long-presses the rows do not handle, so they cannot reach the home screen underneath.
             .pointerInput(Unit) { detectTapGestures(onTap = {}, onLongPress = {}) }
             .statusBarsPadding().navigationBarsPadding().imePadding(),
@@ -192,4 +218,10 @@ fun AppDrawer(
             )
         }
     }
+}
+
+/** Own composable so that only this small scope reads `open()` during composition. */
+@Composable
+private fun DrawerBackHandler(open: () -> Boolean, onBack: () -> Unit) {
+    BackHandler(enabled = open(), onBack = onBack)
 }

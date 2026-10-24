@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,6 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,6 +36,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.linkinxp.termlauncher.apps.DrawerState
+import dev.linkinxp.termlauncher.fx.FxSettings
+import dev.linkinxp.termlauncher.panel.PanelData
+import dev.linkinxp.termlauncher.panel.PanelSettings
+import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.importer.FavRow
 import dev.linkinxp.termlauncher.importer.FavoritesReader
 import dev.linkinxp.termlauncher.layout.Item
@@ -112,6 +119,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        val EMPTY_DRAWER = DrawerState(emptyList(), emptyList())
+        const val DRAWER_WARMUP_MS = 1_500L
         const val REQ_CONFIGURE = 4711
         const val MAX_IMPORT_BYTES = 5 * 1024 * 1024
         const val BACKUP_FILE = "terminal-launcher-backup.json"
@@ -226,7 +235,32 @@ class MainActivity : ComponentActivity() {
             this, unlockReceiver, IntentFilter(Intent.ACTION_USER_PRESENT), ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         setContent {
-            val ui by vm.ui.collectAsState()
+            val uiState = vm.ui.collectAsState()
+            // The root reads only these narrow derived values (each changes only when its own part changes), so a
+            // change elsewhere in the UI state (a keystroke, a panel refresh, the drawer flipping) leaves it alone.
+            val theme by remember { derivedStateOf { uiState.value.theme } }
+            val wall by remember { derivedStateOf { uiState.value.wall } }
+            val fx by remember { derivedStateOf { uiState.value.fx } }
+            val showMatrix by remember { derivedStateOf { uiState.value.matrix } }
+            val showBoot by remember { derivedStateOf { uiState.value.boot } }
+            // What the home screen shows: the state minus the drawer/filter parts (equal when only those change).
+            val homeUi by remember {
+                derivedStateOf { uiState.value.copy(drawerOpen = false, showHidden = false, filter = "", drawer = EMPTY_DRAWER) }
+            }
+            // The drawer only needs its own slice (not the prompt text, panels, effects...).
+            val drawerUi by remember {
+                derivedStateOf {
+                    uiState.value.copy(
+                        prompt = PromptState(), historyAll = emptyList(), calendar = PanelData.Off, weather = PanelData.Off,
+                        matrix = false, boot = false, fx = FxSettings(), quick = emptyList(), panels = PanelSettings(),
+                        wx = WxSettings(), drawerOpen = false,
+                    )
+                }
+            }
+            // Compose the drawer shortly after start-up (while idle) so the first open does not pay for it.
+            var drawerWarm by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { delay(DRAWER_WARMUP_MS); drawerWarm = true }
+            val drawerComposed by remember { derivedStateOf { drawerWarm || uiState.value.drawerOpen } }
             var menuPkg by remember { mutableStateOf<String?>(null) }
             var folderName by remember { mutableStateOf<String?>(null) }
             var editing by remember { mutableStateOf(false) }
@@ -235,14 +269,14 @@ class MainActivity : ComponentActivity() {
                 if (homeSignal > 0) { menuPkg = null; folderName = null; editing = false }
             }
             // The system wallpaper is only composited behind the window in SYSTEM mode (saves power otherwise).
-            LaunchedEffect(ui.wall.mode) {
+            LaunchedEffect(wall.mode) {
                 window.setFlags(
-                    if (ui.wall.mode == WallMode.SYSTEM) WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER else 0,
+                    if (wall.mode == WallMode.SYSTEM) WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER else 0,
                     WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER,
                 )
             }
             BackHandler { /* a launcher stays home */ }
-            TermTheme(ui.theme, ui.wall) {
+            TermTheme(theme, wall) {
                 val tap = { item: Item ->
                     when (item) {
                         is Item.App -> vm.launch(item.pkg)
@@ -251,7 +285,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 PagerHome(
-                    ui, vm,
+                    homeUi, vm,
                     onItemTap = tap,
                     onItemLongPress = { item ->
                         when (item) {
@@ -267,21 +301,22 @@ class MainActivity : ComponentActivity() {
                     onSettings = { settingsOpen.value = true },
                     // Kept composed but invisible under the drawer so the wall shows and the page is kept.
                     // A permanent layer whose alpha is read at draw time: opening the drawer neither recomposes nor re-records home.
-                    modifier = Modifier.graphicsLayer { alpha = if (ui.drawerOpen) 0f else 1f },
+                    modifier = Modifier.graphicsLayer { alpha = if (uiState.value.drawerOpen) 0f else 1f },
                 )
-                if (ui.drawerOpen) {
+                if (drawerComposed) {
                     AppDrawer(
-                        ui, vm,
+                        drawerUi, vm,
+                        open = { uiState.value.drawerOpen },
                         onAppLongPress = { menuPkg = it },
                         onFolderTap = { folderName = it },
                         onSettings = { vm.closeDrawer(); settingsOpen.value = true },
                     )
                 }
-                menuPkg?.let { AppMenu(it, ui, vm) { menuPkg = null } }
-                folderName?.let { FolderPanel(it, ui, vm) { folderName = null } }
+                menuPkg?.let { AppMenu(it, uiState.value, vm) { menuPkg = null } }
+                folderName?.let { FolderPanel(it, uiState.value, vm) { folderName = null } }
                 if (settingsOpen.value) {
                     SettingsScreen(
-                        ui, vm,
+                        uiState.value, vm,
                         onExport = { exportLauncher.launch(BACKUP_FILE) },
                         onImport = { importLauncher.launch(arrayOf("*/*")) },
                         onImportLauncher = { launcherImportLauncher.launch(arrayOf("*/*")) },
@@ -289,17 +324,17 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val preview by vm.importPreview.collectAsState()
-                preview?.let { ImportDialog(ui.theme, it, onReplace = vm::confirmImport, onCancel = vm::cancelImport) }
+                preview?.let { ImportDialog(theme, it, onReplace = vm::confirmImport, onCancel = vm::cancelImport) }
                 if (editing) {
                     EditMode(
-                        ui, vm,
+                        uiState.value, vm,
                         onAddWidget = ::beginAddWidget,
                         onOpenSettings = { editing = false; settingsOpen.value = true },
                     ) { editing = false }
                 }
-                EffectsOverlay(ui.fx, ui.theme, rememberReduceMotion())
-                if (ui.matrix) MatrixRain(onDone = vm::stopMatrix)
-                if (ui.boot) BootLogOverlay(onDone = vm::endBoot)
+                EffectsOverlay(fx, theme, rememberReduceMotion())
+                if (showMatrix) MatrixRain(onDone = vm::stopMatrix)
+                if (showBoot) BootLogOverlay(onDone = vm::endBoot)
             }
         }
     }

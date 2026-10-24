@@ -67,6 +67,7 @@ class Prefs(private val context: Context) {
     private val panelSearchKey = booleanPreferencesKey("panel_search")
     private val panelQuickKey = booleanPreferencesKey("panel_quick")
     private val quickKey = stringPreferencesKey("quick")
+    private val drawerKeyboardKey = booleanPreferencesKey("drawer_keyboard")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
     private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
@@ -98,6 +99,7 @@ class Prefs(private val context: Context) {
     val panels: Flow<PanelSettings> = data.map(::panelsFrom).distinctUntilChanged()
     /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
     val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
+    val drawerKeyboard: Flow<Boolean> = data.map { it[drawerKeyboardKey] ?: false }.distinctUntilChanged()
     val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }
     val stats: Flow<Map<String, AppStat>> = data.map { it[statsKey] }.distinctUntilChanged().map { decodeStats(it) }
 
@@ -170,6 +172,8 @@ class Prefs(private val context: Context) {
             if (next == null) p.remove(quickKey) else p[quickKey] = encodeQuick(next.take(MAX_QUICK))
         }
     }
+
+    suspend fun setDrawerKeyboard(on: Boolean) { safeEdit { it[drawerKeyboardKey] = on } }
 
     suspend fun setFx(fx: FxSettings) { safeEdit { writeFx(it, fx) } }
 

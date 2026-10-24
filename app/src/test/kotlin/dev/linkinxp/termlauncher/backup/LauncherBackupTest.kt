@@ -117,4 +117,10 @@ class LauncherBackupTest {
         val json = """{"format":"terminal-launcher-backup","version":1,"quick":"not a list"}"""
         assertEquals(null, decodeBackup(json).getOrThrow().quick)
     }
+
+    @Test fun theDrawerKeyboardSettingRoundTripsAndDefaultsOff() {
+        assertEquals(true, decodeBackup(encodeBackup(sample().copy(drawerKeyboard = true))).getOrThrow().drawerKeyboard)
+        val json = """{"format":"terminal-launcher-backup","version":1}"""
+        assertEquals(false, decodeBackup(json).getOrThrow().drawerKeyboard)
+    }
 }

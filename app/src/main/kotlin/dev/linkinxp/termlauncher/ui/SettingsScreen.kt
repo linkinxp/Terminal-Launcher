@@ -184,6 +184,7 @@ fun SettingsScreen(
 
             TermPanel("drawer", Modifier.padding(top = 4.dp)) {
                 SettingRow("sort", ui.sort.name.lowercase().replace('_', ' '), "drawer-sort") { vm.setSort(DrawerSort.entries.after(vm.ui.value.sort)) }
+                ToggleRow("keyboard", ui.drawerKeyboard, "drawer-keyboard") { vm.toggleDrawerKeyboard() }
                 SettingRow("icons", ui.iconMode.name.lowercase(), "drawer-icons") { vm.setIconMode(IconMode.entries.after(vm.ui.value.iconMode)) }
             }
 

@@ -130,4 +130,11 @@ class SettingsScreenTest {
         settle()
         assertEquals(false, vm.ui.value.fx.cursor)
     }
+
+    @Test fun theDrawerKeyboardSettingStartsOffAndToggles() {
+        val vm = show()
+        assertEquals(false, vm.ui.value.drawerKeyboard)
+        click("drawer-keyboard"); until({ "kbd=${vm.ui.value.drawerKeyboard}" }) { vm.ui.value.drawerKeyboard }
+        click("drawer-keyboard"); until({ "kbd=${vm.ui.value.drawerKeyboard}" }) { !vm.ui.value.drawerKeyboard }
+    }
 }
