@@ -18,6 +18,10 @@ sealed interface Item {
 @Serializable
 data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
 
+    /** The same layout without any hosted widgets (their host ids are only meaningful on this install). */
+    fun withoutWidgets(): HomeLayout =
+        copy(dock = dock.filterNot { it is Item.Widget }, pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget }) })
+
     fun widgetIds(): Set<Int> = pages.flatMap { it.items }.filterIsInstance<Item.Widget>().map { it.id }.toSet()
 
     /** Adds [widget] to [page]; a missing page or an id that is already on a page leaves the layout unchanged. */
