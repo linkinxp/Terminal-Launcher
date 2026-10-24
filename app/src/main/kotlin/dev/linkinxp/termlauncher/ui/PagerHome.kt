@@ -68,7 +68,7 @@ import java.time.format.TextStyle
 import java.time.temporal.IsoFields
 import java.util.Locale
 
-private const val SWIPE_PX = 120f
+private const val SWIPE_PX = 80f
 
 @Composable
 private fun rememberNow(): LocalDateTime {

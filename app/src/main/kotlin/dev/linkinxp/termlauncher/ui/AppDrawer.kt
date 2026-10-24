@@ -58,7 +58,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val KEYBOARD_DELAY_MS = 80L
 private const val HIDDEN_OFFSET_PX = 100_000f
 
 private val SORT_LABEL = mapOf(DrawerSort.AZ to "a-z", DrawerSort.RECENTLY_INSTALLED to "new", DrawerSort.MOST_USED to "used")
@@ -99,7 +98,7 @@ fun AppDrawer(
         snapshotFlow { open() }.collect { isOpen ->
             if (isOpen) {
                 // Settings > drawer > keyboard (on by default). Showing the keyboard is a blocking call, so it waits for the slide-in.
-                if (keyboardOnOpen) { delay(KEYBOARD_DELAY_MS); withContext(Dispatchers.Main) { focus.requestFocus(); keyboard?.show() } }
+                if (keyboardOnOpen) { withContext(Dispatchers.Main) { focus.requestFocus(); keyboard?.show() } }
             } else {
                 // Views and focus may only be touched on the main thread (the state observer can resume elsewhere).
                 withContext(Dispatchers.Main) {

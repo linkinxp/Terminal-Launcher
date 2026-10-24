@@ -679,8 +679,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun uninstall(pkg: String) = repo.uninstall(pkg)
     fun appInfo(pkg: String) = repo.appInfo(pkg)
 
-    fun openDrawer(showHidden: Boolean = false) =
+    fun openDrawer(showHidden: Boolean = false) {
         eph.update { it.copy(drawerOpen = true, showHidden = showHidden, filter = "") }
+    }
     fun closeDrawer() = eph.update { it.copy(drawerOpen = false, showHidden = false, filter = "") }
     fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }

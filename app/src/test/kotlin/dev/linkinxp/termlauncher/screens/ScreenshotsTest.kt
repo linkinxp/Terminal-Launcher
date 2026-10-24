@@ -410,7 +410,7 @@ class ScreenshotsTest {
             }
         }
         rule.onRoot().captureRoboImage("build/shots/apps-first-page1.png")
-        rule.onNodeWithText("2:", substring = true).performClick()
+        rule.onNodeWithText("2:two").performClick()
         rule.waitForIdle()
         rule.onRoot().captureRoboImage("build/shots/apps-first-page2.png")
     }
