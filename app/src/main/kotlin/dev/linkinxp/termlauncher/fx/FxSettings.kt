@@ -19,6 +19,9 @@ data class FxSettings(
         else -> Result.failure(IllegalArgumentException("fx: $name: no such effect (${NAMES.joinToString(" ")})"))
     }
 
+    /** Sets scanlines explicitly, or `null` to follow the theme again. */
+    fun withScanlines(value: Boolean?): FxSettings = copy(scanlines = value)
+
     fun scanlinesOn(theme: Theme): Boolean = scanlines ?: theme.cyber
 
     /** One `name on|off` line per effect (scanlines notes when it follows the theme). */

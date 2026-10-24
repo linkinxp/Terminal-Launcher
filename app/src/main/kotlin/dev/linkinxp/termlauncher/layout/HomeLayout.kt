@@ -156,7 +156,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         private const val VERSION = 1
         private val COMMAND_WORDS = setOf(
             "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
-            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx",
+            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings",
         )
         private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 

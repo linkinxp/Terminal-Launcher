@@ -33,7 +33,7 @@ class CommandParserTest {
     }
 
     @Test fun commandWordWithoutArgsIsAQuery() {
-        assertEquals(Command.Query("theme"), parseCommand("theme"))
+        assertEquals(Command.Theme(null), parseCommand("theme")) // a bare theme lists the themes
         assertEquals(Command.Query("mv"), parseCommand("mv"))
     }
 
@@ -97,5 +97,13 @@ class CommandParserTest {
         assertEquals(Command.Wx("units", "f"), parseCommand("wx units f"))
         assertEquals(Command.Wx("city", "São Paulo"), parseCommand("wx city São Paulo"))
         assertEquals(Command.Wx("city", "new york"), parseCommand("WX City  new york "))
+    }
+
+    @Test fun fxAutoAndSettingsCommands() {
+        assertEquals(Command.Fx("scanlines", null, auto = true), parseCommand("fx scanlines auto"))
+        assertEquals(Command.Fx("glitch", null, auto = true), parseCommand("FX Glitch AUTO"))
+        assertEquals(Command.Fx("scanlines", null), parseCommand("fx scanlines"))
+        assertEquals(Command.Settings, parseCommand("settings"))
+        assertEquals(Command.Query("settings x"), parseCommand("settings x"))
     }
 }

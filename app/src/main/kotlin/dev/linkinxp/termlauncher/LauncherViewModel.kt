@@ -57,6 +57,7 @@ import dev.linkinxp.termlauncher.prompt.Command
 import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
+import dev.linkinxp.termlauncher.theme.describeThemes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -306,7 +307,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val cur = ui.value
         val message: String? = when (val cmd = parseCommand(text)) {
             is Command.Help -> HELP
-            is Command.Theme -> ThemeRegistry.byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
+            is Command.Theme -> if (cmd.name == null) describeThemes(cur.theme.name) else ThemeRegistry.byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
                 ?: "theme: ${cmd.name}: no such theme (${ThemeRegistry.all.joinToString(" ") { it.name }})"
             is Command.Pin -> withApp(cmd.app, cur) { app -> pinApp(app); null }
             is Command.Hide -> withApp(cmd.app, cur) { app ->
@@ -330,6 +331,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             is Command.Ls -> { openDrawer(cmd.hidden); null }
             is Command.Fx -> when {
                 cmd.name == null -> cur.fx.describe(cur.theme)
+                cmd.auto ->
+                    if (cmd.name.lowercase() == "scanlines") { viewModelScope.launch { prefs.setFx(cur.fx.withScanlines(null)) }; null }
+                    else "fx: ${cmd.name}: auto is only for scanlines"
                 cmd.on == null -> cur.fx.with(cmd.name, true).fold(
                     onSuccess = { "usage: fx <name> on|off" }, onFailure = { it.message },
                 )
@@ -354,6 +358,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 onSuccess = { action -> handleWx(action); null },
                 onFailure = { it.message },
             )
+            is Command.Settings -> null // opened by the settings screen task
             is Command.Wall ->
                 if (cmd.sub == null) cur.wall.describe()
                 else applyWall(cur.wall, cmd.sub, cmd.arg, Random.Default).fold(
@@ -498,7 +503,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy HH:mm:ss", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings",
         )
         val HELP = listOf(
             "theme <name>       change theme",
@@ -512,7 +517,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "panel <cal|wx|search> on|off  panels",
             "wx [city <n>|units c|f]  weather",
             "history neofetch whoami uptime date",
-            "fortune clear sudo matrix help",
+            "fortune clear sudo matrix help settings",
         ).joinToString("\n")
     }
 }

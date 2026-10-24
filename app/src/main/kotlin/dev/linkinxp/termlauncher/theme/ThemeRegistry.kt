@@ -17,3 +17,7 @@ object ThemeRegistry {
 
     fun byName(name: String): Theme? = all.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
 }
+
+/** One line per theme, `* name` for [current] and `  name` for the others, in registry order. */
+fun describeThemes(current: String): String =
+    ThemeRegistry.all.joinToString("\n") { (if (it.name.equals(current, ignoreCase = true)) "* " else "  ") + it.name }

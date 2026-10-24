@@ -271,4 +271,8 @@ class HomeLayoutTest {
         val back = l.unfile("x").rmdir("a").pinFolder("nope")
         assertEquals(setOf(1), back.widgetIds())
     }
+
+    @Test fun mkdirRejectsSettings() {
+        assertTrue(empty.mkdir("settings").isFailure)
+    }
 }

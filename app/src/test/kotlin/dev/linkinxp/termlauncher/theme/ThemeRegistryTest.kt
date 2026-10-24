@@ -55,4 +55,12 @@ class ThemeRegistryTest {
             ThemeRegistry.all.filter { it.cyber }.map { it.name },
         )
     }
+
+    @Test fun describeThemesMarksOnlyTheCurrentOne() {
+        val lines = describeThemes("matrix").lines()
+        assertEquals(9, lines.size)
+        assertEquals(listOf("* matrix"), lines.filter { it.startsWith("*") })
+        assertTrue(lines.filterNot { it.startsWith("*") }.all { it.startsWith("  ") })
+        assertEquals(ThemeRegistry.all.map { it.name }, lines.map { it.drop(2) })
+    }
 }

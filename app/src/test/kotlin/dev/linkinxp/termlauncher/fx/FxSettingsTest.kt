@@ -44,4 +44,10 @@ class FxSettingsTest {
         val text = FxSettings().describe(ThemeRegistry.default)
         listOf("scanlines", "flicker", "glitch", "cursor", "boot").forEach { assertTrue(text.contains(it)) }
     }
+
+    @Test fun withScanlinesSetsAndClearsTheExplicitValue() {
+        assertEquals(true, FxSettings().withScanlines(true).scanlines)
+        assertEquals(false, FxSettings().withScanlines(false).scanlines)
+        assertEquals(null, FxSettings(scanlines = true).withScanlines(null).scanlines)
+    }
 }
