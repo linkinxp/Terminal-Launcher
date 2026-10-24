@@ -86,7 +86,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     private fun nameError(name: String, cmd: String, except: String?): String? = when {
         name.isBlank() || name.any { it.isWhitespace() || it == '/' } || name.length > MAX_FOLDER_NAME ->
             "$cmd: '$name': invalid name"
-        name.lowercase() in COMMAND_WORDS -> "$cmd: $name: reserved word"
+        name.lowercase() in RESERVED_WORDS -> "$cmd: $name: reserved word"
         folders().any { it.name.equals(name, ignoreCase = true) && !it.name.equals(except, ignoreCase = true) } ->
             "$cmd: $name: already exists"
         else -> null
@@ -158,7 +158,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         const val MAX_PAGES = 5
         const val MAX_FOLDER_NAME = 24
         private const val VERSION = 1
-        private val COMMAND_WORDS = setOf(
+        val RESERVED_WORDS = setOf(
             "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
             "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings",
         )
