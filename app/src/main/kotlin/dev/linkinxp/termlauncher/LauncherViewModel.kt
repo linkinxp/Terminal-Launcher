@@ -25,6 +25,8 @@ import dev.linkinxp.termlauncher.backup.decodeBackup
 import dev.linkinxp.termlauncher.backup.describeBackup
 import dev.linkinxp.termlauncher.backup.encodeBackup
 import dev.linkinxp.termlauncher.calendar.CalendarRepository
+import dev.linkinxp.termlauncher.importer.FavRow
+import dev.linkinxp.termlauncher.importer.mapFavorites
 import dev.linkinxp.termlauncher.calendar.calendarQueryWindow
 import dev.linkinxp.termlauncher.calendar.formatAgenda
 import dev.linkinxp.termlauncher.panel.PanelData
@@ -190,6 +192,29 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 _importPreview.value = ImportPreview("import backup", describeBackup(b, ui.value.apps.keys)) { backups.apply(b) }
             },
             onFailure = { say(it.message ?: "import: not a launcher backup") },
+        )
+    }
+
+    /** A Nova/Lawnchair backup was read ([rows] or the failure message): preview what would be imported. */
+    fun startLauncherImport(rows: Result<List<FavRow>>) {
+        rows.fold(
+            onSuccess = { list ->
+                val m = mapFavorites(list, ui.value.apps.keys)
+                if (m.apps == 0) {
+                    say("import: nothing to import (none of its apps are installed here)")
+                } else {
+                    val lines = listOf(
+                        "pages: ${m.layout.pages.size}",
+                        "dock: ${m.layout.dock.size}",
+                        "folders: ${m.folders}",
+                        "apps found: ${m.apps}",
+                        "apps not installed here: ${m.missingApps}",
+                        "widgets skipped: ${m.skippedWidgets}",
+                    )
+                    _importPreview.value = ImportPreview("import layout", lines) { prefs.editLayout { Result.success(m.layout) } }
+                }
+            },
+            onFailure = { say(it.message ?: "import: could not read that file") },
         )
     }
 

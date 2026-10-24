@@ -34,6 +34,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.linkinxp.termlauncher.importer.FavRow
+import dev.linkinxp.termlauncher.importer.FavoritesReader
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.ui.AppDrawer
@@ -131,6 +133,19 @@ class MainActivity : ComponentActivity() {
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) lifecycleScope.launch { vm.startImport(readText(uri)) }
+    }
+
+    private val launcherImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) lifecycleScope.launch { vm.startLauncherImport(readLauncherBackup(uri)) }
+    }
+
+    private suspend fun readLauncherBackup(uri: Uri): Result<List<FavRow>> = withContext(Dispatchers.IO) {
+        try {
+            contentResolver.openInputStream(uri)?.use { FavoritesReader.read(it, cacheDir) }
+                ?: Result.failure(java.io.IOException("import: could not read that file"))
+        } catch (_: Exception) {
+            Result.failure(java.io.IOException("import: could not read that file"))
+        }
     }
 
     private suspend fun writeBackup(uri: Uri) {
@@ -261,7 +276,7 @@ class MainActivity : ComponentActivity() {
                         ui, vm,
                         onExport = { exportLauncher.launch(BACKUP_FILE) },
                         onImport = { importLauncher.launch(arrayOf("*/*")) },
-                        onImportLauncher = {},
+                        onImportLauncher = { launcherImportLauncher.launch(arrayOf("*/*")) },
                         onClose = { settingsOpen.value = false },
                     )
                 }
