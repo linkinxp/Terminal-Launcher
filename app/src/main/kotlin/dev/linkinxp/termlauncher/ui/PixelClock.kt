@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -51,7 +52,8 @@ fun PixelClock(time: LocalTime, modifier: Modifier = Modifier, glitch: Boolean =
     }
     val p = progress.value
     val shown = if (p >= 1f) real else glitchFrame(real, p, time.hour * 60 + time.minute + (p * 14).toInt())
-    Canvas(modifier.fillMaxWidth().height(96.dp)) {
+    // Own render layer: the glow (a blur) is recorded once per change, not every time something else on the page redraws.
+    Canvas(modifier.fillMaxWidth().height(96.dp).graphicsLayer()) {
         // 4 digits of 3 cells, 1-cell gaps between digits, 2-cell gap between the pairs.
         val totalCells = 4 * 3 + 2 + 2
         val cell = minOf(size.width * 0.72f / totalCells, size.height / 5)

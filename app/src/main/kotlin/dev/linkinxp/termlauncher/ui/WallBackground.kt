@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -77,6 +78,6 @@ private fun AsciiBackground(wall: WallSettings, theme: Theme, reduceMotion: Bool
         val layout = remember(text, style, measurer) {
             measurer.measure(text, style, overflow = TextOverflow.Clip, softWrap = false)
         }
-        Canvas(Modifier.fillMaxSize()) { drawText(layout) }
+        Canvas(Modifier.fillMaxSize().graphicsLayer()) { drawText(layout) }
     }
 }

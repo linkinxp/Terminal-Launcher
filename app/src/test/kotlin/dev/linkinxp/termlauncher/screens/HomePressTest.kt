@@ -1,6 +1,7 @@
 package dev.linkinxp.termlauncher.screens
 
 import android.content.Intent
+import android.os.Looper
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import dev.linkinxp.termlauncher.LauncherViewModel
@@ -13,7 +14,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import android.os.Looper
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -21,16 +21,25 @@ import android.os.Looper
 class HomePressTest {
     private val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
 
+    /** The UI state is computed on a background thread now, so wait for it to arrive like the UI does. */
+    private fun waitFor(what: String, condition: () -> Boolean) {
+        val end = System.currentTimeMillis() + 10_000
+        while (!condition() && System.currentTimeMillis() < end) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(10)
+        }
+        assertTrue(what, condition())
+    }
+
     @Test fun homeIntentClosesTheOpenDrawer() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val vm = ViewModelProvider(activity)[LauncherViewModel::class.java]
                 vm.openDrawer()
-                shadowOf(Looper.getMainLooper()).idle()
-                assertTrue("drawer should be open", vm.ui.value.drawerOpen)
+                waitFor("drawer should be open") { vm.ui.value.drawerOpen }
                 activity.onNewIntent(homeIntent)
-                shadowOf(Looper.getMainLooper()).idle()
-                assertFalse("home press should close the drawer", vm.ui.value.drawerOpen)
+                waitFor("home press should close the drawer") { !vm.ui.value.drawerOpen }
+                assertFalse(vm.ui.value.drawerOpen)
             }
         }
     }
@@ -40,9 +49,9 @@ class HomePressTest {
             scenario.onActivity { activity ->
                 val vm = ViewModelProvider(activity)[LauncherViewModel::class.java]
                 vm.openDrawer()
-                shadowOf(Looper.getMainLooper()).idle()
+                waitFor("drawer should be open") { vm.ui.value.drawerOpen }
                 activity.onNewIntent(Intent(Intent.ACTION_MAIN))
-                shadowOf(Looper.getMainLooper()).idle()
+                repeat(20) { shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(10) } // give a wrong close time to happen
                 assertTrue(vm.ui.value.drawerOpen)
             }
         }

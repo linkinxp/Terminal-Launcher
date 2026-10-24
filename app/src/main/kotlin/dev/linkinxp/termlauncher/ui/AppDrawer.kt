@@ -49,7 +49,10 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.wall.WallMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val KEYBOARD_DELAY_MS = 250L
 
 private val SORT_LABEL = mapOf(DrawerSort.AZ to "a-z", DrawerSort.RECENTLY_INSTALLED to "new", DrawerSort.MOST_USED to "used")
 private val ICON_LABEL = mapOf(IconMode.TEXT to "txt", IconMode.GLYPH to "gly", IconMode.ICON to "ico")
@@ -79,7 +82,8 @@ fun AppDrawer(
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
     // Opening the drawer puts the cursor in the search field with the keyboard up: just start typing.
-    LaunchedEffect(Unit) { focus.requestFocus(); keyboard?.show() }
+    // Short delay: let the drawer draw its first frames before the keyboard resizes the window.
+    LaunchedEffect(Unit) { delay(KEYBOARD_DELAY_MS); focus.requestFocus(); keyboard?.show() }
     // Scrolling the list tucks the keyboard away.
     val hideKeyboardOnScroll = remember(keyboard) {
         object : NestedScrollConnection {

@@ -29,6 +29,7 @@ import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -77,27 +78,28 @@ class Prefs(private val context: Context) {
         if (e is IOException) emit(emptyPreferences()) else throw e
     }
 
-    val theme: Flow<Theme> = data.map { p -> p[themeKey]?.let(ThemeRegistry::byName) ?: ThemeRegistry.default }
-    val layout: Flow<HomeLayout> = data.map { HomeLayout.decode(it[layoutKey]) }
-    val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }
-    val sort: Flow<DrawerSort> = data.map { p -> enumOr(p[sortKey], DrawerSort.AZ) }
-    val iconMode: Flow<IconMode> = data.map { p -> enumOr(p[iconKey], IconMode.TEXT) }
-    val fx: Flow<FxSettings> = data.map(::fxFrom)
-    val wall: Flow<WallSettings> = data.map(::wallFrom)
+    val theme: Flow<Theme> = data.map { p -> p[themeKey]?.let(ThemeRegistry::byName) ?: ThemeRegistry.default }.distinctUntilChanged()
+    // Raw strings are compared first, so unrelated writes never trigger a JSON decode or a downstream rebuild.
+    val layout: Flow<HomeLayout> = data.map { it[layoutKey] }.distinctUntilChanged().map { HomeLayout.decode(it) }
+    val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }.distinctUntilChanged()
+    val sort: Flow<DrawerSort> = data.map { p -> enumOr(p[sortKey], DrawerSort.AZ) }.distinctUntilChanged()
+    val iconMode: Flow<IconMode> = data.map { p -> enumOr(p[iconKey], IconMode.TEXT) }.distinctUntilChanged()
+    val fx: Flow<FxSettings> = data.map(::fxFrom).distinctUntilChanged()
+    val wall: Flow<WallSettings> = data.map(::wallFrom).distinctUntilChanged()
     val wx: Flow<WxSettings> = data.map { p ->
         WxSettings(p[wxCityKey], p[wxLatKey], p[wxLonKey], p[wxFahrenheitKey] ?: false)
-    }
+    }.distinctUntilChanged()
     /** Last good forecast body and when it was fetched, or null. */
     val wxCache: Flow<Pair<String, Long>?> = data.map { p ->
         val json = p[wxCacheKey]
         val at = p[wxCacheAtKey]
         if (json != null && at != null) json to at else null
-    }
-    val panels: Flow<PanelSettings> = data.map(::panelsFrom)
+    }.distinctUntilChanged()
+    val panels: Flow<PanelSettings> = data.map(::panelsFrom).distinctUntilChanged()
     /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
-    val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }
-    val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
-    val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
+    val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
+    val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }
+    val stats: Flow<Map<String, AppStat>> = data.map { it[statsKey] }.distinctUntilChanged().map { decodeStats(it) }
 
     suspend fun setTheme(name: String) { safeEdit { it[themeKey] = name } }
     /**

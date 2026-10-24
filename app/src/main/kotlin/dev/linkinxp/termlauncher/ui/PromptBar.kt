@@ -86,7 +86,8 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
                 )
                 if (blockCursor) {
                     var lit by remember { mutableStateOf(true) }
-                    LaunchedEffect(Unit) { while (true) { delay(530); lit = !lit } }
+                    // No blinking (and no redraws) while the drawer covers the home screen.
+                    LaunchedEffect(ui.drawerOpen) { if (!ui.drawerOpen) while (true) { delay(530); lit = !lit } }
                     // Touches fall through to the field underneath; the block follows the text.
                     Row {
                         TermText(value.text, Modifier.weight(1f, fill = false))

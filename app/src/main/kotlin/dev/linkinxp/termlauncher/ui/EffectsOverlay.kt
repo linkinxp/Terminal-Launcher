@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -33,7 +34,8 @@ fun EffectsOverlay(settings: FxSettings, theme: Theme, reduceMotion: Boolean, mo
         }
     }
     if (!scanlines && flash == 0f) return
-    Canvas(modifier.fillMaxSize()) {
+    // Own render layer: ~700 scanlines + the vignette are recorded once, not on every invalidation underneath.
+    Canvas(modifier.fillMaxSize().graphicsLayer()) {
         if (scanlines) {
             val step = 3.dp.toPx()
             var y = 0f

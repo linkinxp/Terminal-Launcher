@@ -28,7 +28,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -266,7 +266,8 @@ class MainActivity : ComponentActivity() {
                     onSearch = ::openSearch,
                     onSettings = { settingsOpen.value = true },
                     // Kept composed but invisible under the drawer so the wall shows and the page is kept.
-                    modifier = Modifier.alpha(if (ui.drawerOpen) 0f else 1f),
+                    // A permanent layer whose alpha is read at draw time: opening the drawer neither recomposes nor re-records home.
+                    modifier = Modifier.graphicsLayer { alpha = if (ui.drawerOpen) 0f else 1f },
                 )
                 if (ui.drawerOpen) {
                     AppDrawer(

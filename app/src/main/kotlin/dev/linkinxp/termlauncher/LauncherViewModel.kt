@@ -73,6 +73,9 @@ import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.theme.describeThemes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -164,7 +167,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
     private val quickDefaults: List<String> by lazy { QuickDefaults(application).packages() }
 
-    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph, extras) { p, apps, e, x ->
+    /**
+     * The drawer rows depend only on the app list, hidden apps, usage stats, sort and the filter, so they are rebuilt
+     * only when one of those changes (not on every prompt keystroke, panel refresh or drawer open/close).
+     */
+    private val drawerState: Flow<DrawerState> = combine(
+        repo.apps, prefs.hidden, prefs.stats, prefs.sort,
+        eph.map { it.filter to it.showHidden }.distinctUntilChanged(),
+    ) { apps, hidden, stats, sort, fs -> buildDrawer(apps, hidden, stats, sort, fs.first, fs.second) }
+
+    val ui: StateFlow<LauncherUi> = combine(persisted, repo.apps, eph, extras, drawerState) { p, apps, e, x, drawer ->
         val installed = apps.map { it.pkg }.toSet()
         LauncherUi(
             theme = p.theme,
@@ -173,7 +185,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             hidden = p.hidden,
             sort = p.sort,
             iconMode = p.icons,
-            drawer = buildDrawer(apps, p.hidden, p.stats, p.sort, e.filter, e.showHidden),
+            drawer = drawer,
             drawerOpen = e.drawerOpen,
             showHidden = e.showHidden,
             filter = e.filter,
@@ -189,7 +201,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             wx = x.wx,
             quick = (x.quick ?: quickDefaults).filter { it in installed },
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
+    }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
+        .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
 
     // ---- backup and import ----
 
