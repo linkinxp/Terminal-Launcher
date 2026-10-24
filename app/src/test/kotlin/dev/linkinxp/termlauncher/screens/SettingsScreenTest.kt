@@ -10,6 +10,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import dev.linkinxp.termlauncher.LauncherViewModel
+import dev.linkinxp.termlauncher.backup.BackupRepository
+import dev.linkinxp.termlauncher.backup.LauncherBackup
+import dev.linkinxp.termlauncher.data.Prefs
+import kotlinx.coroutines.runBlocking
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
 import dev.linkinxp.termlauncher.wall.WallSettings
@@ -31,11 +35,15 @@ class SettingsScreenTest {
     @get:Rule val rule = createComposeRule()
 
     private fun show(): LauncherViewModel {
-        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        // The DataStore is shared by the tests of this JVM: start every test from the defaults.
+        runBlocking { BackupRepository(Prefs(app)).apply(LauncherBackup()) }
+        val vm = LauncherViewModel(app)
         rule.setContent {
             val ui by vm.ui.collectAsState()
             TermTheme(ui.theme, ui.wall) { SettingsScreen(ui, vm, {}, {}, {}, {}) }
         }
+        repeat(10) { shadowOf(Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(20) } // let the stores load
         return vm
     }
 

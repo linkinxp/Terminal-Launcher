@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.4.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 0.5.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest
@@ -20,7 +20,7 @@ Switch the default Home app back in Settings, or `adb uninstall dev.linkinxp.ter
 ## Prompt commands
 `theme <name>` | `pin <app>` | `hide <app>` (toggles) | `mkdir <folder>` | `mv <app> <folder>` |
 `mv <folder> <newname>` (rename) | `rmdir <folder>` | `ls` (drawer) | `ls -a` (hidden apps) | `help` |
-`fx [name on|off]` | `wall ...` | `panel <cal|wx> on|off` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
+`fx [name on|off]` | `settings` | `wall ...` | `panel <cal|wx|search> on|off` | `wx ...` | `history` | `neofetch` | `whoami` | `uptime` | `date` | `fortune` | `clear` | `sudo ...` | `matrix`.
 Any other text fuzzy-matches installed apps; Enter launches the top match. `⇥` completes the input;
 with an empty prompt your last 5 commands are offered. Output appears in the `out` panel (12 lines, tap to dismiss).
 
@@ -45,7 +45,23 @@ If system animations are off (animator scale 0), flicker, glitch, boot log and m
 A launcher cannot read the wallpaper files of Google's Wallpaper app; `system` mode shows whichever wallpaper is set.
 The open drawer shows the wallpaper/art with an extra 35% readability layer.
 
-## Panels (page 1, under `sys`; both off by default)
+## Settings, backup and import
+- `settings` (or `[settings]` at the bottom of edit mode) opens the settings screen: tap a theme to apply it, change the wallpaper,
+  effects (scanlines cycle `auto (theme)` / `on` / `off`), panels, drawer sort and icons, and use the backup section. A bare `theme`
+  lists the themes; `fx scanlines auto` returns scanlines to following the theme.
+- **Export / import layout** (settings > backup): saves `terminal-launcher-backup.json` (layout, folders, hidden apps, theme, effects,
+  wallpaper, panels, weather city/units, drawer options; never widgets) through the system file picker, and restores it with a preview
+  and `[replace]` / `[cancel]`.
+- **Import from Nova / Lawnchair**: pick a backup file (a ZIP containing `launcher.db`, or a raw SQLite file with a `favorites` table).
+  Pages, dock and folders come over; widgets are skipped (re-add them), apps not installed here are dropped, up to 5 pages. The reader
+  is best-effort and untested against real backup files so far.
+- **Pixel Launcher cannot be imported**: its layout is private (`ACCESS_LAUNCHER_DATA` is system-only), so there is no way for any app to read it.
+
+## Search bar
+A `g> search google` row under the clock: type a query and press Search or `[go]` to open Google in your browser or the Google app.
+`panel search off` hides it (on by default).
+
+## Panels (page 1, under `sys`; calendar and weather off by default)
 - `panel cal on|off`: the next 6 calendar events within 7 days, e.g. `today 10:05  Standup`, `now  Standup`, `tmrw all day  Holiday`.
   The first `panel cal on` asks for calendar read permission; if you deny it the panel says so and works once granted in Settings.
 - `panel wx on|off`: weather from Open-Meteo (free, no account). Set a city with `wx city <name>` (looked up once, switches the panel on),

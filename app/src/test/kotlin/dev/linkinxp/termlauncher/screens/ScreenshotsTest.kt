@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import dev.linkinxp.termlauncher.calendar.AgendaEvent
 import dev.linkinxp.termlauncher.calendar.formatAgenda
 import dev.linkinxp.termlauncher.panel.PanelData
+import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermPanel
+import dev.linkinxp.termlauncher.ui.TermText
 import dev.linkinxp.termlauncher.weather.Forecast
 import dev.linkinxp.termlauncher.weather.HourPoint
 import dev.linkinxp.termlauncher.weather.formatWeather
@@ -273,5 +275,35 @@ class ScreenshotsTest {
             }
         }
         rule.onRoot().captureRoboImage("build/shots/panels-widget-standin.png")
+    }
+
+    // ---- settings and import ----
+
+    private fun settings(name: String, theme: Theme, wall: WallSettings = WallSettings()) {
+        val vm = vm()
+        rule.setContent { TermTheme(theme, wall) { SettingsScreen(ui(theme, wall = wall), vm, {}, {}, {}, {}) } }
+        rule.onRoot().captureRoboImage("build/shots/$name.png")
+    }
+
+    @Test fun settingsNeonCity() = settings("settings-neon-city", ThemeRegistry.byName("neon-city")!!)
+
+    @Test fun settingsClassyBlackOverAsciiWall() =
+        settings("settings-classy-ascii", ThemeRegistry.default, ascii(AsciiStyle.STARS))
+
+    @Test fun importPreviewPanel() {
+        val theme = ThemeRegistry.byName("matrix")!!
+        rule.setContent {
+            TermTheme(theme) {
+                Column(Modifier.padding(16.dp)) {
+                    TermPanel("import layout", Modifier.fillMaxWidth()) {
+                        listOf("pages: 3", "dock: 4", "folders: 2", "apps found: 31", "apps not installed here: 5", "widgets skipped: 2")
+                            .forEach { TermText(it) }
+                        TermText("this replaces your current layout", Modifier.padding(top = 10.dp), dim = true)
+                        TermText("[replace]   [cancel]", Modifier.padding(top = 12.dp), bold = true)
+                    }
+                }
+            }
+        }
+        rule.onRoot().captureRoboImage("build/shots/import-preview.png")
     }
 }
