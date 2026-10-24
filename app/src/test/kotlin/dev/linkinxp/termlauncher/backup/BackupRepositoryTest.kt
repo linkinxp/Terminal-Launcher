@@ -106,9 +106,9 @@ class BackupRepositoryTest {
     }
 
     @Test fun theDrawerKeyboardSettingIsBackedUpAndRestored() = runBlocking {
-        repo.apply(sample().copy(drawerKeyboard = true))
-        assertEquals(true, repo.snapshot().drawerKeyboard)
-        repo.apply(sample())
+        repo.apply(sample().copy(drawerKeyboard = false))
         assertEquals(false, repo.snapshot().drawerKeyboard)
+        repo.apply(sample())
+        assertEquals(true, repo.snapshot().drawerKeyboard) // on by default
     }
 }

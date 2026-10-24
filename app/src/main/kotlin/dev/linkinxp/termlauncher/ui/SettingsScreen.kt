@@ -74,7 +74,7 @@ fun SettingsScreen(
 ) {
     val theme = LocalTheme.current
     BackHandler(onBack = onClose)
-    val bg = theme.background.color().let { if (ui.wall.mode == WallMode.SOLID) it else it.copy(alpha = 0.55f) }
+    val bg = theme.background.color() // always solid: settings must stay readable over any wallpaper
     Box(
         Modifier.fillMaxSize().background(bg)
             .pointerInput(Unit) { detectTapGestures(onTap = {}, onLongPress = {}) }

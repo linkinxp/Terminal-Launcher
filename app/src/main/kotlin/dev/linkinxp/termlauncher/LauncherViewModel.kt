@@ -121,7 +121,7 @@ data class LauncherUi(
     val wx: WxSettings = WxSettings(),
     /** The quick tiles as package names, already limited to apps installed here. */
     val quick: List<String> = emptyList(),
-    val drawerKeyboard: Boolean = false,
+    val drawerKeyboard: Boolean = true,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {

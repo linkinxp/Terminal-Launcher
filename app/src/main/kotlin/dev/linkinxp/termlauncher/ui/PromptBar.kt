@@ -55,17 +55,6 @@ fun PromptBar(ui: LauncherUi, vm: LauncherViewModel, modifier: Modifier = Modifi
                 Modifier.fillMaxWidth().clickable { vm.launch(app.pkg); value = TextFieldValue(""); vm.onPromptChange("") }.padding(vertical = 6.dp),
             )
         }
-        if (value.text.isEmpty() && p.suggestions.isEmpty()) {
-            p.history.forEach { line ->
-                TermText(
-                    "^ $line",
-                    Modifier.fillMaxWidth().clickable {
-                        value = TextFieldValue(line, TextRange(line.length)); vm.onPromptChange(line)
-                    }.padding(vertical = 4.dp),
-                    dim = true,
-                )
-            }
-        }
         Row {
             TermText("$PROMPT ", color = theme.accent.color(), bold = true)
             Box(Modifier.weight(1f)) {

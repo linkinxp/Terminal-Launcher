@@ -63,8 +63,8 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val iconMode: String = "TEXT",
     /** The `quick` tiles as package names; `null` = the defaults found on the device. */
     val quick: List<String>? = null,
-    /** Whether the drawer raises the keyboard for its search field when it opens (off by default: it is slow). */
-    val drawerKeyboard: Boolean = false,
+    /** Whether the drawer raises the keyboard for its search field when it opens (on by default). */
+    val drawerKeyboard: Boolean = true,
 )
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
@@ -108,7 +108,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 drawerSort = section("drawerSort", String.serializer(), "AZ"),
                 iconMode = section("iconMode", String.serializer(), "TEXT"),
                 quick = section("quick", ListSerializer(String.serializer()).nullable, null),
-                drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), false),
+                drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), true),
             ),
         )
     } catch (e: Exception) {

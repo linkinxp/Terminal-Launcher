@@ -96,7 +96,7 @@ fun AppDrawer(
         // `open` is observed here (not read during composition), so opening/closing never recomposes the drawer.
         snapshotFlow { open() }.collect { isOpen ->
             if (isOpen) {
-                // Opt-in (settings > drawer > keyboard): showing the keyboard is a blocking call that stalls the opening.
+                // Settings > drawer > keyboard (on by default). Showing the keyboard is a blocking call, so it waits for the slide-in.
                 if (keyboardOnOpen) { delay(KEYBOARD_DELAY_MS); withContext(Dispatchers.Main) { focus.requestFocus(); keyboard?.show() } }
             } else {
                 // Views and focus may only be touched on the main thread (the state observer can resume elsewhere).
