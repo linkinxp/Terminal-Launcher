@@ -47,17 +47,20 @@ class SettingsScreenTest {
         return vm
     }
 
+    /** Lets writes that were started by a tap (even a no-op one) finish before the test writes something else. */
+    private fun settle() = repeat(15) { shadowOf(Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(20) }
+
     // The screen scrolls: bring the control into view first, as a user would.
     private fun click(tag: String) = rule.onNodeWithTag(tag).performScrollTo().performClick()
     /** DataStore writes run on a background thread and results come back through the main looper: pump both. */
-    private fun until(condition: () -> Boolean) {
-        val end = System.currentTimeMillis() + 5_000
+    private fun until(describe: () -> String = { "" }, condition: () -> Boolean) {
+        val end = System.currentTimeMillis() + 10_000
         while (!condition() && System.currentTimeMillis() < end) {
             shadowOf(Looper.getMainLooper()).idle()
             rule.waitForIdle()
             Thread.sleep(20)
         }
-        assertTrue("condition not met in 5 s", condition())
+        assertTrue("condition not met in 10 s: ${describe()}", condition())
     }
 
     @Test fun showsEverySection() {
@@ -81,12 +84,12 @@ class SettingsScreenTest {
         vm.setWall(WallSettings(dim = 98))
         until { vm.ui.value.wall.dim == 98 }
         click("dim-plus"); until { vm.ui.value.wall.dim == 100 }
-        click("dim-plus"); rule.waitForIdle()
+        click("dim-plus"); settle()
         assertEquals(100, vm.ui.value.wall.dim)
         vm.setWall(WallSettings(dim = 3))
-        until { vm.ui.value.wall.dim == 3 }
+        until({ "wall=${vm.ui.value.wall}" }) { vm.ui.value.wall.dim == 3 }
         click("dim-minus"); until { vm.ui.value.wall.dim == 0 }
-        click("dim-minus"); rule.waitForIdle()
+        click("dim-minus"); settle()
         assertEquals(0, vm.ui.value.wall.dim)
     }
 

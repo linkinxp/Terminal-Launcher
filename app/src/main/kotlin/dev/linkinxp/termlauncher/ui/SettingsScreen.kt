@@ -102,26 +102,30 @@ fun SettingsScreen(
 
             val w = ui.wall
             TermPanel("wallpaper", Modifier.padding(top = 4.dp)) {
+                // Handlers read the current state when tapped (not the last composed one), so quick taps never reuse a stale value.
                 SettingRow("mode", w.mode.name.lowercase(), "wall-mode") {
-                    vm.setWall(w.copy(mode = WallMode.entries.after(w.mode)))
+                    val c = vm.ui.value.wall
+                    vm.setWall(c.copy(mode = WallMode.entries.after(c.mode)))
                 }
                 SettingRow("style", w.style.name.lowercase(), "wall-style") {
-                    vm.setWall(w.copy(style = AsciiStyle.entries.after(w.style)))
+                    val c = vm.ui.value.wall
+                    vm.setWall(c.copy(style = AsciiStyle.entries.after(c.style)))
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     TermText("seed".padEnd(11), dim = true)
                     TermText("${w.seed}  ", bold = true)
                     TermText("[random]", Modifier.testTag("wall-random").clickable {
-                        vm.setWall(applyWall(w, "random", null, Random.Default).getOrDefault(w))
+                        val c = vm.ui.value.wall
+                        vm.setWall(applyWall(c, "random", null, Random.Default).getOrDefault(c))
                     })
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     TermText("dim".padEnd(11), dim = true)
                     TermText("${w.dim}  ", bold = true)
-                    TermText("[-]", Modifier.testTag("dim-minus").clickable { vm.setWall(w.copy(dim = (w.dim - DIM_STEP).coerceIn(0, 100))) }.padding(end = 10.dp))
-                    TermText("[+]", Modifier.testTag("dim-plus").clickable { vm.setWall(w.copy(dim = (w.dim + DIM_STEP).coerceIn(0, 100))) })
+                    TermText("[-]", Modifier.testTag("dim-minus").clickable { vm.ui.value.wall.let { c -> vm.setWall(c.copy(dim = (c.dim - DIM_STEP).coerceIn(0, 100))) } }.padding(end = 10.dp))
+                    TermText("[+]", Modifier.testTag("dim-plus").clickable { vm.ui.value.wall.let { c -> vm.setWall(c.copy(dim = (c.dim + DIM_STEP).coerceIn(0, 100))) } })
                 }
-                ToggleRow("animate", w.animate, "wall-animate") { vm.setWall(w.copy(animate = !w.animate)) }
+                ToggleRow("animate", w.animate, "wall-animate") { vm.ui.value.wall.let { c -> vm.setWall(c.copy(animate = !c.animate)) } }
             }
 
             val fx = ui.fx
@@ -130,18 +134,18 @@ fun SettingsScreen(
                     "scanlines",
                     when (fx.scanlines) { null -> "auto (theme)"; true -> "on"; false -> "off" },
                     "scanlines-row",
-                ) { vm.setScanlines(when (fx.scanlines) { null -> true; true -> false; false -> null }) }
-                ToggleRow("flicker", fx.flicker, "flicker-row") { vm.setFx("flicker", !fx.flicker) }
-                ToggleRow("glitch", fx.glitch, "glitch-row") { vm.setFx("glitch", !fx.glitch) }
-                ToggleRow("cursor", fx.cursor, "cursor-row") { vm.setFx("cursor", !fx.cursor) }
-                ToggleRow("boot log", fx.boot, "boot-row") { vm.setFx("boot", !fx.boot) }
+                ) { vm.setScanlines(when (vm.ui.value.fx.scanlines) { null -> true; true -> false; false -> null }) }
+                ToggleRow("flicker", fx.flicker, "flicker-row") { vm.setFx("flicker", !vm.ui.value.fx.flicker) }
+                ToggleRow("glitch", fx.glitch, "glitch-row") { vm.setFx("glitch", !vm.ui.value.fx.glitch) }
+                ToggleRow("cursor", fx.cursor, "cursor-row") { vm.setFx("cursor", !vm.ui.value.fx.cursor) }
+                ToggleRow("boot log", fx.boot, "boot-row") { vm.setFx("boot", !vm.ui.value.fx.boot) }
             }
 
             TermPanel("panels", Modifier.padding(top = 4.dp)) {
-                ToggleRow("search", ui.panels.search, "panel-search") { vm.setPanel("search", !ui.panels.search) }
-                ToggleRow("calendar", ui.panels.cal, "panel-cal") { vm.setPanel("cal", !ui.panels.cal) }
-                ToggleRow("weather", ui.panels.wx, "panel-wx") { vm.setPanel("wx", !ui.panels.wx) }
-                SettingRow("units", if (ui.wx.fahrenheit) "fahrenheit" else "celsius", "wx-units") { vm.setWxUnits(!ui.wx.fahrenheit) }
+                ToggleRow("search", ui.panels.search, "panel-search") { vm.setPanel("search", !vm.ui.value.panels.search) }
+                ToggleRow("calendar", ui.panels.cal, "panel-cal") { vm.setPanel("cal", !vm.ui.value.panels.cal) }
+                ToggleRow("weather", ui.panels.wx, "panel-wx") { vm.setPanel("wx", !vm.ui.value.panels.wx) }
+                SettingRow("units", if (ui.wx.fahrenheit) "fahrenheit" else "celsius", "wx-units") { vm.setWxUnits(!vm.ui.value.wx.fahrenheit) }
                 var city by remember { mutableStateOf("") }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     TermText("city".padEnd(11), dim = true)
@@ -161,8 +165,8 @@ fun SettingsScreen(
             }
 
             TermPanel("drawer", Modifier.padding(top = 4.dp)) {
-                SettingRow("sort", ui.sort.name.lowercase().replace('_', ' '), "drawer-sort") { vm.setSort(DrawerSort.entries.after(ui.sort)) }
-                SettingRow("icons", ui.iconMode.name.lowercase(), "drawer-icons") { vm.setIconMode(IconMode.entries.after(ui.iconMode)) }
+                SettingRow("sort", ui.sort.name.lowercase().replace('_', ' '), "drawer-sort") { vm.setSort(DrawerSort.entries.after(vm.ui.value.sort)) }
+                SettingRow("icons", ui.iconMode.name.lowercase(), "drawer-icons") { vm.setIconMode(IconMode.entries.after(vm.ui.value.iconMode)) }
             }
 
             TermPanel("backup", Modifier.padding(top = 4.dp)) {
