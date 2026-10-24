@@ -141,6 +141,7 @@ fun PagerHome(
     // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
     // pulling down at the top opens the notification shade, pushing up at the bottom opens the drawer.
     val overscroll = remember { floatArrayOf(0f) }
+    val fired = remember { booleanArrayOf(false) } // one swipe per drag, fired the moment it is long enough, not on release
     val swipes by rememberUpdatedState({ dy: Float ->
         when {
             dy < -SWIPE_PX -> onSwipeUp()
@@ -150,13 +151,15 @@ fun PagerHome(
     val edgeSwipes = remember {
         object : NestedScrollConnection {
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (source == NestedScrollSource.UserInput) overscroll[0] += available.y
+                if (source == NestedScrollSource.UserInput) {
+                    overscroll[0] += available.y
+                    if (!fired[0] && kotlin.math.abs(overscroll[0]) > SWIPE_PX) { fired[0] = true; swipes(overscroll[0]) }
+                }
                 return Offset.Zero
             }
             override suspend fun onPreFling(available: Velocity): Velocity {
-                val dy = overscroll[0]
                 overscroll[0] = 0f
-                swipes(dy)
+                fired[0] = false
                 return Velocity.Zero
             }
         }
@@ -187,7 +190,11 @@ fun PagerHome(
         Column(
             Modifier.pointerInput(Unit) {
                 var total = 0f
-                detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { swipes(total) }) { _, dy -> total += dy }
+                var done = false
+                detectVerticalDragGestures(onDragStart = { total = 0f; done = false }) { _, dy ->
+                    total += dy
+                    if (!done && kotlin.math.abs(total) > SWIPE_PX) { done = true; swipes(total) }
+                }
             },
         ) {
             StatusLine(pageCount, pager.currentPage, snapshot, now, h24, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)

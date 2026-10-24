@@ -58,7 +58,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val KEYBOARD_DELAY_MS = 250L
+private const val KEYBOARD_DELAY_MS = 80L
 private const val HIDDEN_OFFSET_PX = 100_000f
 
 private val SORT_LABEL = mapOf(DrawerSort.AZ to "a-z", DrawerSort.RECENTLY_INSTALLED to "new", DrawerSort.MOST_USED to "used")

@@ -1,6 +1,7 @@
 package dev.linkinxp.termlauncher.screens
 
 import android.app.Application
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -74,5 +75,31 @@ class SwipeDownTest {
         rule.onRoot().performTouchInput { swipeUp(startY = height * 0.6f, endY = height * 0.1f) }
         rule.waitForIdle()
         assertEquals(0, drawers)
+    }
+
+    @Test fun theDrawerOpensWhileTheFingerIsStillMovingAndOnlyOnce() {
+        show()
+        rule.onRoot().performTouchInput {
+            down(Offset(width / 2f, height - 20f))
+            moveBy(Offset(0f, -300f))
+        }
+        rule.waitForIdle()
+        assertEquals("opens before the finger lifts", 1, drawers)
+        rule.onRoot().performTouchInput { moveBy(Offset(0f, -300f)); up() }
+        rule.waitForIdle()
+        assertEquals(1, drawers)
+    }
+
+    @Test fun theShadeOpensWhileTheFingerIsStillMoving() {
+        show()
+        rule.onRoot().performTouchInput {
+            down(Offset(width / 2f, 40f))
+            moveBy(Offset(0f, 300f))
+        }
+        rule.waitForIdle()
+        assertEquals(1, shades)
+        rule.onRoot().performTouchInput { up() }
+        rule.waitForIdle()
+        assertEquals(1, shades)
     }
 }
