@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.data
 
 import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -76,23 +77,8 @@ class Prefs(private val context: Context) {
     val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }
     val sort: Flow<DrawerSort> = data.map { p -> enumOr(p[sortKey], DrawerSort.AZ) }
     val iconMode: Flow<IconMode> = data.map { p -> enumOr(p[iconKey], IconMode.TEXT) }
-    val fx: Flow<FxSettings> = data.map { p ->
-        val d = FxSettings()
-        FxSettings(
-            scanlines = p[fxScanKey], flicker = p[fxFlickerKey] ?: d.flicker, glitch = p[fxGlitchKey] ?: d.glitch,
-            cursor = p[fxCursorKey] ?: d.cursor, boot = p[fxBootKey] ?: d.boot,
-        )
-    }
-    val wall: Flow<WallSettings> = data.map { p ->
-        val d = WallSettings()
-        WallSettings(
-            mode = enumOr(p[wallModeKey], d.mode),
-            style = enumOr(p[wallStyleKey], d.style),
-            seed = p[wallSeedKey] ?: d.seed,
-            dim = p[wallDimKey]?.takeIf { it in 0..100 } ?: d.dim,
-            animate = p[wallAnimateKey] ?: d.animate,
-        )
-    }
+    val fx: Flow<FxSettings> = data.map(::fxFrom)
+    val wall: Flow<WallSettings> = data.map(::wallFrom)
     val wx: Flow<WxSettings> = data.map { p ->
         WxSettings(p[wxCityKey], p[wxLatKey], p[wxLonKey], p[wxFahrenheitKey] ?: false)
     }
@@ -102,7 +88,7 @@ class Prefs(private val context: Context) {
         val at = p[wxCacheAtKey]
         if (json != null && at != null) json to at else null
     }
-    val panels: Flow<PanelSettings> = data.map { p -> PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false, search = p[panelSearchKey] ?: true) }
+    val panels: Flow<PanelSettings> = data.map(::panelsFrom)
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
@@ -127,15 +113,10 @@ class Prefs(private val context: Context) {
     suspend fun setSort(sort: DrawerSort) { safeEdit { it[sortKey] = sort.name } }
     suspend fun setIconMode(mode: IconMode) { safeEdit { it[iconKey] = mode.name } }
 
-    suspend fun setWall(w: WallSettings) {
-        safeEdit { p ->
-            p[wallModeKey] = w.mode.name
-            p[wallStyleKey] = w.style.name
-            p[wallSeedKey] = w.seed
-            p[wallDimKey] = w.dim
-            p[wallAnimateKey] = w.animate
-        }
-    }
+    suspend fun setWall(w: WallSettings) { safeEdit { writeWall(it, w) } }
+
+    /** Atomic read-modify-write of the wallpaper settings: rapid edits never overwrite each other. */
+    suspend fun editWall(op: (WallSettings) -> WallSettings) { safeEdit { p -> writeWall(p, op(wallFrom(p))) } }
 
     suspend fun setWx(wx: WxSettings) {
         safeEdit { p ->
@@ -154,23 +135,24 @@ class Prefs(private val context: Context) {
         safeEdit { p -> p.remove(wxCacheKey); p.remove(wxCacheAtKey) }
     }
 
-    suspend fun setPanels(panels: PanelSettings) {
+    suspend fun setPanels(panels: PanelSettings) { safeEdit { writePanels(it, panels) } }
+
+    /** Atomic read-modify-write of the panel switches; returns the (old, new) pair that was applied, or null on I/O failure. */
+    suspend fun editPanels(op: (PanelSettings) -> PanelSettings): Pair<PanelSettings, PanelSettings>? {
+        var result: Pair<PanelSettings, PanelSettings>? = null
         safeEdit { p ->
-            p[panelCalKey] = panels.cal
-            p[panelWxKey] = panels.wx
-            p[panelSearchKey] = panels.search
+            val old = panelsFrom(p)
+            val new = op(old)
+            writePanels(p, new)
+            result = old to new
         }
+        return result
     }
 
-    suspend fun setFx(fx: FxSettings) {
-        safeEdit { p ->
-            fx.scanlines?.let { p[fxScanKey] = it } ?: p.remove(fxScanKey)
-            p[fxFlickerKey] = fx.flicker
-            p[fxGlitchKey] = fx.glitch
-            p[fxCursorKey] = fx.cursor
-            p[fxBootKey] = fx.boot
-        }
-    }
+    suspend fun setFx(fx: FxSettings) { safeEdit { writeFx(it, fx) } }
+
+    /** Atomic read-modify-write of the effect switches: rapid edits never overwrite each other. */
+    suspend fun editFx(op: (FxSettings) -> FxSettings) { safeEdit { p -> writeFx(p, op(fxFrom(p))) } }
 
     /** Appends [line] to the persisted command history (atomic; blanks and consecutive duplicates are dropped). */
     suspend fun addHistory(line: String) {
@@ -189,8 +171,52 @@ class Prefs(private val context: Context) {
         }
     }
 
-    private suspend fun safeEdit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
+    private suspend fun safeEdit(block: (MutablePreferences) -> Unit) {
         try { context.store.edit(block) } catch (_: IOException) {}
+    }
+
+    private fun fxFrom(p: Preferences): FxSettings {
+        val d = FxSettings()
+        return FxSettings(
+            scanlines = p[fxScanKey], flicker = p[fxFlickerKey] ?: d.flicker, glitch = p[fxGlitchKey] ?: d.glitch,
+            cursor = p[fxCursorKey] ?: d.cursor, boot = p[fxBootKey] ?: d.boot,
+        )
+    }
+
+    private fun writeFx(p: MutablePreferences, fx: FxSettings) {
+        fx.scanlines?.let { p[fxScanKey] = it } ?: p.remove(fxScanKey)
+        p[fxFlickerKey] = fx.flicker
+        p[fxGlitchKey] = fx.glitch
+        p[fxCursorKey] = fx.cursor
+        p[fxBootKey] = fx.boot
+    }
+
+    private fun wallFrom(p: Preferences): WallSettings {
+        val d = WallSettings()
+        return WallSettings(
+            mode = enumOr(p[wallModeKey], d.mode),
+            style = enumOr(p[wallStyleKey], d.style),
+            seed = p[wallSeedKey] ?: d.seed,
+            dim = p[wallDimKey]?.takeIf { it in 0..100 } ?: d.dim,
+            animate = p[wallAnimateKey] ?: d.animate,
+        )
+    }
+
+    private fun writeWall(p: MutablePreferences, w: WallSettings) {
+        p[wallModeKey] = w.mode.name
+        p[wallStyleKey] = w.style.name
+        p[wallSeedKey] = w.seed
+        p[wallDimKey] = w.dim
+        p[wallAnimateKey] = w.animate
+    }
+
+    private fun panelsFrom(p: Preferences) =
+        PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false, search = p[panelSearchKey] ?: true)
+
+    private fun writePanels(p: MutablePreferences, panels: PanelSettings) {
+        p[panelCalKey] = panels.cal
+        p[panelWxKey] = panels.wx
+        p[panelSearchKey] = panels.search
     }
 
     private fun decodeStats(raw: String?): Map<String, AppStat> =

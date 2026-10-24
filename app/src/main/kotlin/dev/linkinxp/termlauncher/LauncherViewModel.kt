@@ -210,8 +210,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         "apps found: ${m.apps}",
                         "apps not installed here: ${m.missingApps}",
                         "widgets skipped: ${m.skippedWidgets}",
+                        "your current widgets stay: ${ui.value.layout.widgetIds().size}",
                     )
-                    _importPreview.value = ImportPreview("import layout", lines) { prefs.editLayout { Result.success(m.layout) } }
+                    _importPreview.value = ImportPreview("import layout", lines) { prefs.editLayout { current -> Result.success(m.layout.withWidgetsFrom(current)) } }
                 }
             },
             onFailure = { say(it.message ?: "import: could not read that file") },
@@ -240,23 +241,47 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         ThemeRegistry.byName(name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) } }
     }
 
-    fun setFx(name: String, on: Boolean) {
-        ui.value.fx.with(name, on).onSuccess { next -> viewModelScope.launch { prefs.setFx(next) } }
+    /** Atomic updates: the change is applied to the stored value inside one DataStore transaction. */
+    fun updateFx(op: (FxSettings) -> FxSettings) { viewModelScope.launch { prefs.editFx(op) } }
+
+    fun updateWall(op: (WallSettings) -> WallSettings) {
+        viewModelScope.launch { prefs.editWall { w -> op(w).let { it.copy(dim = it.dim.coerceIn(0, 100)) } } }
+    }
+
+    fun setFx(name: String, on: Boolean) = updateFx { it.with(name, on).getOrDefault(it) }
+
+    fun toggleFx(name: String) = updateFx { fx ->
+        val now = when (name.lowercase()) {
+            "flicker" -> fx.flicker
+            "glitch" -> fx.glitch
+            "cursor" -> fx.cursor
+            "boot" -> fx.boot
+            else -> return@updateFx fx
+        }
+        fx.with(name, !now).getOrDefault(fx)
     }
 
     /** `null` = follow the theme again. */
-    fun setScanlines(value: Boolean?) {
-        val next = ui.value.fx.withScanlines(value)
-        viewModelScope.launch { prefs.setFx(next) }
+    fun setScanlines(value: Boolean?) = updateFx { it.withScanlines(value) }
+
+    /** auto (theme) -> on -> off -> auto. */
+    fun cycleScanlines() = updateFx { it.withScanlines(when (it.scanlines) { null -> true; true -> false; false -> null }) }
+
+    fun setWall(w: WallSettings) = updateWall { w }
+
+    fun setPanel(name: String, on: Boolean) = changePanels { applyPanel(it, name, on).getOrDefault(it) }
+
+    fun togglePanel(name: String) = changePanels { p ->
+        val now = when (name.lowercase()) { "cal" -> p.cal; "wx" -> p.wx; "search" -> p.search; else -> return@changePanels p }
+        applyPanel(p, name, !now).getOrDefault(p)
     }
 
-    fun setWall(w: WallSettings) {
-        viewModelScope.launch { prefs.setWall(w.copy(dim = w.dim.coerceIn(0, 100))) }
-    }
-
-    fun setPanel(name: String, on: Boolean) {
-        val cur = ui.value.panels
-        applyPanel(cur, name, on).onSuccess { next -> savePanels(cur, next) }
+    private fun changePanels(op: (PanelSettings) -> PanelSettings) {
+        viewModelScope.launch {
+            prefs.editPanels(op)?.let { (old, new) ->
+                if (new.cal && !old.cal && !calendarRepo.hasPermission()) _permissionRequests.tryEmit(Manifest.permission.READ_CALENDAR)
+            }
+        }
     }
 
     fun setWxCity(name: String) { if (name.isNotBlank()) handleWx(WxAction.City(name.trim())) }

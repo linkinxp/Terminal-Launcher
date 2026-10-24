@@ -43,7 +43,8 @@ class BackupRepository(private val prefs: Prefs) {
      */
     suspend fun apply(b: LauncherBackup) {
         ThemeRegistry.byName(b.theme)?.let { prefs.setTheme(it.name) }
-        prefs.editLayout { Result.success(b.layout.withoutWidgets()) }
+        // The imported layout never has widgets; the ones configured on this device stay where they were.
+        prefs.editLayout { current -> Result.success(b.layout.withoutWidgets().withWidgetsFrom(current)) }
         prefs.setHidden(b.hidden)
         prefs.setFx(FxSettings(b.fx.scanlines, b.fx.flicker, b.fx.glitch, b.fx.cursor, b.fx.boot))
         val d = WallSettings()

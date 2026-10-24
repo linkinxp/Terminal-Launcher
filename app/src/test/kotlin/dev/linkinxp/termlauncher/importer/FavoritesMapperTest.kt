@@ -148,4 +148,13 @@ class FavoritesMapperTest {
         assertEquals(5, r.layout.pages.size)
         assertEquals(5000, r.apps)
     }
+
+    @Test fun nonBreakingSpacesAndCutEmojiInFolderTitlesAreHandled() {
+        fun name(title: String) =
+            map(listOf(folder(10, title), app("k", container = 10))).layout.folders().single().name
+        assertEquals("My-Apps", name("My\u00A0Apps"))
+        val cut = name("x".repeat(23) + "\uD83C\uDF89") // the emoji would be cut in half at 24 characters
+        assertEquals("x".repeat(23), cut)
+        assertTrue(cut.none { Character.isSurrogate(it) })
+    }
 }

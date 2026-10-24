@@ -176,6 +176,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) {
             vm.closeDrawer()
+            vm.cancelImport()
             settingsOpen.value = false
             homePresses.intValue++
         }

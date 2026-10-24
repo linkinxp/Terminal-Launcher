@@ -107,4 +107,27 @@ class SettingsScreenTest {
         click("flicker-row"); until { vm.ui.value.fx.flicker }
         assertEquals(true, vm.ui.value.fx.flicker)
     }
+
+    @Test fun rapidDimStepsAreAllApplied() {
+        val vm = show()
+        vm.setWall(WallSettings(dim = 55))
+        until { vm.ui.value.wall.dim == 55 }
+        repeat(4) { vm.updateWall { it.copy(dim = (it.dim + 5).coerceIn(0, 100)) } } // no waiting in between
+        until({ "wall=${vm.ui.value.wall}" }) { vm.ui.value.wall.dim == 75 }
+    }
+
+    @Test fun twoQuickEffectChangesBothStick() {
+        val vm = show()
+        vm.setFx("flicker", true)
+        vm.setFx("glitch", false)
+        until({ "fx=${vm.ui.value.fx}" }) { vm.ui.value.fx.flicker && !vm.ui.value.fx.glitch }
+    }
+
+    @Test fun quickTogglesOfTheSameEffectEndWhereTheyShould() {
+        val vm = show()
+        repeat(3) { vm.toggleFx("cursor") } // true -> false -> true -> false
+        until({ "fx=${vm.ui.value.fx}" }) { !vm.ui.value.fx.cursor }
+        settle()
+        assertEquals(false, vm.ui.value.fx.cursor)
+    }
 }

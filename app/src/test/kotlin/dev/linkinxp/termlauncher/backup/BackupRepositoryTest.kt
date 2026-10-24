@@ -6,6 +6,7 @@ import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.WidgetSize
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -21,7 +22,12 @@ class BackupRepositoryTest {
     private val repo = BackupRepository(prefs)
 
     // The DataStore is shared by the tests of this JVM: start every test from the defaults.
-    @Before fun resetStores() = runBlocking { repo.apply(LauncherBackup()) }
+    @Before fun resetStores() = runBlocking {
+        repo.apply(LauncherBackup())
+        // apply() keeps widgets on purpose, so clear the layout outright to start every test clean.
+        prefs.editLayout { Result.success(HomeLayout.default()) }
+        Unit
+    }
 
     private fun sample() = LauncherBackup(
         layout = HomeLayout.default().pin("a").mkdir("g").getOrThrow().mv("b", "g").getOrThrow(),
@@ -64,5 +70,14 @@ class BackupRepositoryTest {
     @Test fun applyingTheDefaultBackupDoesNotThrow() = runBlocking {
         repo.apply(LauncherBackup())
         assertEquals(LauncherBackup(), repo.snapshot())
+    }
+
+    @Test fun applyKeepsTheWidgetsThatAreOnTheDeviceNow() = runBlocking {
+        prefs.editLayout { Result.success(it.addWidget(0, Item.Widget(9, "p/.W", WidgetSize.LARGE))) }
+        repo.apply(sample())
+        val stored = prefs.layout.first()
+        assertEquals(setOf(9), stored.widgetIds())
+        assertEquals(sample().layout.dock, stored.dock)
+        assertEquals(emptySet<Int>(), repo.snapshot().layout.widgetIds()) // still never exported
     }
 }

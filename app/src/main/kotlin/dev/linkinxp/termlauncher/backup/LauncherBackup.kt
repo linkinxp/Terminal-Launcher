@@ -2,8 +2,13 @@ package dev.linkinxp.termlauncher.backup
 
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -59,17 +64,40 @@ fun encodeBackup(b: LauncherBackup): String =
 
 /**
  * Parses a backup. Anything that is not a backup of this app fails with `import: not a launcher backup`; a
- * newer format version fails with `import: backup is from a newer version`. Missing sections use defaults.
+ * newer format version fails with `import: backup is from a newer version` (checked before anything else is
+ * decoded). Each section is decoded on its own: a missing or invalid one falls back to its default and the
+ * valid ones are still applied.
  */
 fun decodeBackup(text: String?): Result<LauncherBackup> {
     fun fail(msg: String) = Result.failure<LauncherBackup>(IllegalArgumentException(msg))
     if (text.isNullOrBlank()) return fail(NOT_A_BACKUP)
     return try {
         // The format marker must really be present: a bare `{}` must not decode to an "empty backup".
-        val marker = json.parseToJsonElement(text).jsonObject["format"]?.jsonPrimitive?.content
-        if (marker != FORMAT) return fail(NOT_A_BACKUP)
-        val backup = json.decodeFromString(LauncherBackup.serializer(), text)
-        if (backup.version > VERSION) fail("import: backup is from a newer version") else Result.success(backup)
+        val root = json.parseToJsonElement(text).jsonObject
+        if (root["format"]?.jsonPrimitive?.content != FORMAT) return fail(NOT_A_BACKUP)
+        val versionElement = root["version"]
+        val version = if (versionElement == null) VERSION else versionElement.jsonPrimitive.intOrNull ?: return fail(NOT_A_BACKUP)
+        if (version > VERSION) return fail("import: backup is from a newer version")
+
+        fun <T> section(key: String, serializer: KSerializer<T>, default: T): T {
+            val element = root[key] ?: return default
+            return try { json.decodeFromJsonElement(serializer, element) } catch (_: Exception) { default }
+        }
+        val layout = section("layout", HomeLayout.serializer(), HomeLayout.default())
+        Result.success(
+            LauncherBackup(
+                version = version,
+                layout = if (layout.pages.isEmpty()) HomeLayout.default() else layout,
+                hidden = section("hidden", SetSerializer(String.serializer()), emptySet()),
+                theme = section("theme", String.serializer(), "classy-black"),
+                fx = section("fx", FxBackup.serializer(), FxBackup()),
+                wall = section("wall", WallBackup.serializer(), WallBackup()),
+                panels = section("panels", PanelBackup.serializer(), PanelBackup()),
+                wx = section("wx", WxBackup.serializer(), WxBackup()),
+                drawerSort = section("drawerSort", String.serializer(), "AZ"),
+                iconMode = section("iconMode", String.serializer(), "TEXT"),
+            ),
+        )
     } catch (e: Exception) {
         fail(NOT_A_BACKUP)
     }

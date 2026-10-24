@@ -101,7 +101,9 @@ fun mapFavorites(rows: List<FavRow>, installed: Set<String>): ImportedLayout {
 
 /** Whitespace -> `-`, `/` removed, at most 24 characters, never blank, never a command word. */
 private fun cleanFolderName(title: String?): String {
-    val cleaned = (title ?: "").trim().replace(Regex("\\s+"), "-").replace("/", "").take(MAX_FOLDER_NAME)
+    val spaced = (title ?: "").trim().replace(Regex("[\\s\\p{Z}]+"), "-").replace("/", "") // \p{Z}: no-break spaces too
+    val cut = spaced.take(MAX_FOLDER_NAME)
+    val cleaned = if (cut.isNotEmpty() && Character.isHighSurrogate(cut.last())) cut.dropLast(1) else cut
     val name = cleaned.ifEmpty { "folder" }
     return if (name.lowercase() in HomeLayout.RESERVED_WORDS) "${name}_" else name
 }

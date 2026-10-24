@@ -275,4 +275,26 @@ class HomeLayoutTest {
     @Test fun mkdirRejectsSettings() {
         assertTrue(empty.mkdir("settings").isFailure)
     }
+
+    @Test fun withWidgetsFromKeepsWidgetsOnTheSamePageIndex() {
+        val old = empty.addPage().addWidget(0, w(1)).addWidget(1, w(2, "q/.W", WidgetSize.SMALL))
+        val fresh = HomeLayout.default().addPage().pin("a").addToPage(0, Item.App("x"))
+        val merged = fresh.withWidgetsFrom(old)
+        assertEquals(listOf<Item>(Item.App("x"), w(1)), merged.pages[0].items)
+        assertEquals(listOf<Item>(w(2, "q/.W", WidgetSize.SMALL)), merged.pages[1].items)
+        assertEquals(fresh.dock, merged.dock)
+    }
+
+    @Test fun widgetsOfAPageThatNoLongerExistsGoToTheLastPage() {
+        val old = empty.addPage().addPage().addWidget(2, w(5))
+        val merged = HomeLayout.default().withWidgetsFrom(old)
+        assertEquals(listOf<Item>(w(5)), merged.pages.single().items)
+    }
+
+    @Test fun withWidgetsFromIsANoOpWithoutWidgetsAndSkipsIdsAlreadyThere() {
+        val fresh = HomeLayout.default().addToPage(0, Item.App("x"))
+        assertEquals(fresh, fresh.withWidgetsFrom(empty))
+        val both = fresh.addWidget(0, w(1))
+        assertEquals(both, both.withWidgetsFrom(empty.addWidget(0, w(1))))
+    }
 }

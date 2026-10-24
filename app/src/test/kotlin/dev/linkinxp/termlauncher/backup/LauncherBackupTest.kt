@@ -48,8 +48,41 @@ class LauncherBackupTest {
         assertEquals("import: backup is from a newer version", decodeBackup(json).exceptionOrNull()?.message)
     }
 
-    @Test fun wrongTypedFieldsFailCleanly() {
-        val json = """{"format":"terminal-launcher-backup","version":1,"theme":5}"""
+    @Test fun aWrongTypedSectionFallsBackToItsDefaultAndTheRestStays() {
+        val json = """{"format":"terminal-launcher-backup","version":1,"theme":"matrix","wall":{"dim":"x"},"fx":null,"hidden":["h"]}"""
+        val b = decodeBackup(json).getOrThrow()
+        assertEquals("matrix", b.theme)
+        assertEquals(setOf("h"), b.hidden)
+        assertEquals(WallBackup(), b.wall)
+        assertEquals(FxBackup(), b.fx)
+    }
+
+    @Test fun aWrongTypedThemeIsOnlyThatSectionBeingInvalid() {
+        val json = """{"format":"terminal-launcher-backup","version":1,"theme":5,"drawerSort":"MOST_USED"}"""
+        val b = decodeBackup(json).getOrThrow()
+        assertEquals("classy-black", b.theme)
+        assertEquals("MOST_USED", b.drawerSort)
+    }
+
+    @Test fun anUnknownLayoutItemTypeResetsOnlyTheLayout() {
+        val json = """{"format":"terminal-launcher-backup","version":1,"theme":"matrix","layout":{"dock":[],"pages":[{"items":[{"type":"alien"}]}]}}"""
+        val b = decodeBackup(json).getOrThrow()
+        assertEquals(HomeLayout.default(), b.layout)
+        assertEquals("matrix", b.theme)
+    }
+
+    @Test fun aLayoutWithoutPagesResetsToTheDefault() {
+        val json = """{"format":"terminal-launcher-backup","version":1,"layout":{"dock":[],"pages":[]}}"""
+        assertEquals(HomeLayout.default(), decodeBackup(json).getOrThrow().layout)
+    }
+
+    @Test fun aNewerVersionIsReportedEvenWhenTheRestHasChangedTypes() {
+        val json = """{"format":"terminal-launcher-backup","version":2,"theme":5,"layout":"new shape"}"""
+        assertEquals("import: backup is from a newer version", decodeBackup(json).exceptionOrNull()?.message)
+    }
+
+    @Test fun aNonNumericVersionIsNotABackup() {
+        val json = """{"format":"terminal-launcher-backup","version":"one"}"""
         assertEquals("import: not a launcher backup", decodeBackup(json).exceptionOrNull()?.message)
     }
 

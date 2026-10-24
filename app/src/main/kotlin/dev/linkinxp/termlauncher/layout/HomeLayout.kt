@@ -22,6 +22,18 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     fun withoutWidgets(): HomeLayout =
         copy(dock = dock.filterNot { it is Item.Widget }, pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget }) })
 
+    /**
+     * This layout plus the hosted widgets of [old], each on the page with the same index (or the last page if it
+     * no longer exists). Used when a restore/import replaces the layout, so configured widgets are not lost.
+     */
+    fun withWidgetsFrom(old: HomeLayout): HomeLayout {
+        var merged = this
+        old.pages.forEachIndexed { i, page ->
+            page.items.filterIsInstance<Item.Widget>().forEach { w -> merged = merged.addWidget(i.coerceAtMost(merged.pages.lastIndex), w) }
+        }
+        return merged
+    }
+
     fun widgetIds(): Set<Int> = pages.flatMap { it.items }.filterIsInstance<Item.Widget>().map { it.id }.toSet()
 
     /** Adds [widget] to [page]; a missing page or an id that is already on a page leaves the layout unchanged. */
