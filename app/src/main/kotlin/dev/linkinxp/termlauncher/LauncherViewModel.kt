@@ -76,7 +76,10 @@ import dev.linkinxp.termlauncher.quick.quickRemove
 import dev.linkinxp.termlauncher.prompt.Command
 import dev.linkinxp.termlauncher.prompt.parseCommand
 import dev.linkinxp.termlauncher.theme.Theme
+import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
+import dev.linkinxp.termlauncher.theme.addCustomTheme
+import dev.linkinxp.termlauncher.theme.removeCustomTheme
 import dev.linkinxp.termlauncher.theme.describeThemes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -129,6 +132,7 @@ data class LauncherUi(
     val drawerKeyboard: Boolean = true,
     val clockFormat: ClockFormat = ClockFormat.AUTO,
     val clockStyle: ClockStyle = ClockStyle.PIXEL,
+    val customThemes: List<Theme> = emptyList(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -168,9 +172,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle) { wx, quick, kbd, fmt, style -> Extras(wx, quick, kbd, fmt, style) }
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes) { a ->
+        @Suppress("UNCHECKED_CAST")
+        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>)
+    }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
     private val quickDefaults: List<String> by lazy { QuickDefaults(application).packages() }
@@ -211,6 +218,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             drawerKeyboard = x.drawerKeyboard,
             clockFormat = x.clockFormat,
             clockStyle = x.clockStyle,
+            customThemes = x.customThemes,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
@@ -309,7 +317,26 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val settingsRequests: SharedFlow<Unit> = _settingsRequests.asSharedFlow()
 
     fun setTheme(name: String) {
-        ThemeRegistry.byName(name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) } }
+        ThemeBook(ui.value.customThemes).byName(name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) } }
+    }
+
+    fun removeCustomTheme(name: String) { handleThemeRm(name, ui.value) }
+
+    private fun handleThemeAdd(args: List<String>, cur: LauncherUi): String {
+        val r = addCustomTheme(args, cur.customThemes)
+        r.list?.let { list -> viewModelScope.launch { prefs.editCustomThemes { list } } }
+        return r.message
+    }
+
+    private fun handleThemeRm(name: String, cur: LauncherUi): String {
+        val r = removeCustomTheme(name, cur.customThemes, cur.theme.name)
+        r.list?.let { list ->
+            viewModelScope.launch {
+                prefs.editCustomThemes { list }
+                if (r.wasActive) prefs.setTheme(ThemeRegistry.default.name)
+            }
+        }
+        return r.message
     }
 
     /** Atomic updates: the change is applied to the stored value inside one DataStore transaction. */
@@ -511,8 +538,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val cur = ui.value
         val message: String? = when (val cmd = parseCommand(text)) {
             is Command.Help -> HELP
-            is Command.Theme -> if (cmd.name == null) describeThemes(cur.theme.name) else ThemeRegistry.byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
-                ?: "theme: ${cmd.name}: no such theme (${ThemeRegistry.all.joinToString(" ") { it.name }})"
+            is Command.Theme -> if (cmd.name == null) describeThemes(cur.theme.name, cur.customThemes) else ThemeBook(cur.customThemes).byName(cmd.name)?.let { t -> viewModelScope.launch { prefs.setTheme(t.name) }; null }
+                ?: "theme: ${cmd.name}: no such theme (${ThemeBook(cur.customThemes).all.joinToString(" ") { it.name }})"
+            is Command.ThemeAdd -> handleThemeAdd(cmd.args, cur)
+            is Command.ThemeRm -> handleThemeRm(cmd.name, cur)
             is Command.Pin -> withApp(cmd.app, cur) { app -> pinApp(app); null }
             is Command.Hide -> withApp(cmd.app, cur) { app ->
                 val set = if (app.pkg in cur.hidden) cur.hidden - app.pkg else cur.hidden + app.pkg
@@ -731,11 +760,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock",
         )
         val HELP = listOf(
-            "theme <name> | clock auto|24|12|style",
+            "theme <n>|add <n> bg fg acc dim|rm <n>",
+            "clock [auto|24|12|style <name>]",
             "pin|hide <app>     dock / hide",
-            "mkdir|rmdir <f>    folders",
+            "mkdir|rmdir <f>  ls [-a]  folders",
             "mv <app>|<f> <f|new>  file / rename",
-            "ls [-a]            drawer / hidden",
             "fx [name on|off]   effects",
             "wall <sub> [arg]   wallpaper",
             "panel <p> on|off  cal wx search quick",

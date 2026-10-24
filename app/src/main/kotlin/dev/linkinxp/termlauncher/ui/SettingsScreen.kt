@@ -38,6 +38,7 @@ import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
+import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.wall.AsciiStyle
 import dev.linkinxp.termlauncher.wall.WallMode
@@ -87,7 +88,7 @@ fun SettingsScreen(
             }
 
             TermPanel("theme", Modifier.padding(top = 4.dp)) {
-                ThemeRegistry.all.forEach { t ->
+                ThemeBook(ui.customThemes).all.forEach { t ->
                     Row(
                         Modifier.fillMaxWidth().testTag("theme-${t.name}").clickable { vm.setTheme(t.name) }.padding(vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -95,7 +96,9 @@ fun SettingsScreen(
                         listOf(t.background, t.foreground, t.accent, t.dim).forEach {
                             Box(Modifier.padding(end = 3.dp).size(12.dp).background(Color(it)))
                         }
-                        TermText(" ${if (t.name == ui.theme.name) "*" else " "} ${t.name}", bold = t.name == ui.theme.name)
+                        val custom = ThemeRegistry.byName(t.name) == null
+                        TermText(" ${if (t.name == ui.theme.name) "*" else " "} ${t.name}${if (custom) " +" else ""}", Modifier.weight(1f), bold = t.name == ui.theme.name)
+                        if (custom) TermText("[rm]", Modifier.testTag("theme-rm-${t.name}").clickable { vm.removeCustomTheme(t.name) }.padding(horizontal = 6.dp), dim = true)
                     }
                 }
             }

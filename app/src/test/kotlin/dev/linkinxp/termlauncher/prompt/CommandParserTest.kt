@@ -121,4 +121,13 @@ class CommandParserTest {
         assertEquals(Command.Clock("style", "figlet"), parseCommand("clock style figlet"))
         assertEquals(Command.Clock("style", "nope now"), parseCommand("clock style nope now"))
     }
+
+    @Test fun themeAddAndRemove() {
+        assertEquals(Command.ThemeAdd(listOf("mine", "#000", "#0f0", "#0ff", "#066")), parseCommand("theme add mine #000 #0f0 #0ff #066"))
+        assertEquals(Command.ThemeAdd(emptyList()), parseCommand("theme add"))
+        assertEquals(Command.ThemeAdd(listOf("a", "b")), parseCommand("THEME  ADD   a   b"))
+        assertEquals(Command.ThemeRm("mine"), parseCommand("theme rm mine"))
+        assertEquals(Command.Theme("rm"), parseCommand("theme rm"))
+        assertEquals(Command.Theme("matrix"), parseCommand("theme matrix"))
+    }
 }

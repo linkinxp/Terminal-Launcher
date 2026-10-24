@@ -133,4 +133,11 @@ class LauncherBackupTest {
         assertEquals("FIGLET", decodeBackup(encodeBackup(sample().copy(clockStyle = "FIGLET"))).getOrThrow().clockStyle)
         assertEquals("PIXEL", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().clockStyle)
     }
+
+    @Test fun customThemesRoundTripAndBadEntriesAreIgnored() {
+        val themes = listOf(CustomThemeBackup("mine", "#000000", "#00ff00", "#00ffff", "#006666", "ROUNDED"))
+        assertEquals(themes, decodeBackup(encodeBackup(sample().copy(customThemes = themes))).getOrThrow().customThemes)
+        assertEquals(emptyList<CustomThemeBackup>(), decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().customThemes)
+        assertEquals(emptyList<CustomThemeBackup>(), decodeBackup("""{"format":"terminal-launcher-backup","version":1,"customThemes":"junk"}""").getOrThrow().customThemes)
+    }
 }

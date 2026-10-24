@@ -7,7 +7,14 @@ import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.panel.PanelSettings
+import dev.linkinxp.termlauncher.theme.BorderStyle
+import dev.linkinxp.termlauncher.theme.CustomThemes
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
+import dev.linkinxp.termlauncher.theme.buildCustomTheme
+import dev.linkinxp.termlauncher.theme.parseHexColor
+import dev.linkinxp.termlauncher.theme.validateCustomTheme
+import dev.linkinxp.termlauncher.theme.ThemeBook
+import dev.linkinxp.termlauncher.theme.hexString
 import dev.linkinxp.termlauncher.wall.AsciiStyle
 import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
@@ -40,6 +47,9 @@ class BackupRepository(private val prefs: Prefs) {
             drawerKeyboard = prefs.drawerKeyboard.first(),
             clockFormat = prefs.clockFormat.first().name,
             clockStyle = prefs.clockStyle.first().name,
+            customThemes = prefs.customThemes.first().map {
+                CustomThemeBackup(it.name, hexString(it.background), hexString(it.foreground), hexString(it.accent), hexString(it.dim), it.border.name)
+            },
         )
     }
 
@@ -48,7 +58,15 @@ class BackupRepository(private val prefs: Prefs) {
      * value field by field; the stored layout's widgets disappear with it (their host ids are then cleaned up).
      */
     suspend fun apply(b: LauncherBackup) {
-        ThemeRegistry.byName(b.theme)?.let { prefs.setTheme(it.name) }
+        // The user's own themes first, so a backed-up active custom theme can be found.
+        val custom = b.customThemes.mapNotNull { c ->
+            val border = BorderStyle.entries.firstOrNull { it.name == c.border } ?: return@mapNotNull null
+            val colors = listOf(c.bg, c.fg, c.accent, c.dim).map { parseHexColor(it) ?: return@mapNotNull null }
+            if (validateCustomTheme(c.name, emptyList(), ThemeRegistry.all.map { it.name }) != null) return@mapNotNull null
+            buildCustomTheme(c.name, colors[0], colors[1], colors[2], colors[3], border)
+        }.take(CustomThemes.MAX)
+        prefs.editCustomThemes { custom }
+        ThemeBook(custom).byName(b.theme)?.let { prefs.setTheme(it.name) }
         // The imported layout never has widgets; the ones configured on this device stay where they were.
         prefs.editLayout { current -> Result.success(b.layout.withoutWidgets().withWidgetsFrom(current)) }
         prefs.setHidden(b.hidden)

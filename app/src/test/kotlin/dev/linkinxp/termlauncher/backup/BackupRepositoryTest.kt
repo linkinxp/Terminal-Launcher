@@ -125,4 +125,14 @@ class BackupRepositoryTest {
         repo.apply(sample().copy(clockStyle = "nonsense"))
         assertEquals("PIXEL", repo.snapshot().clockStyle)
     }
+
+    @Test fun customThemesAndAnActiveCustomThemeSurviveBackupAndRestore() = runBlocking {
+        val mine = CustomThemeBackup("mine", "#101010", "#eeeeee", "#3366ff", "#888888", "DOUBLE")
+        repo.apply(sample().copy(customThemes = listOf(mine), theme = "mine"))
+        assertEquals(listOf(mine), repo.snapshot().customThemes)
+        assertEquals("mine", repo.snapshot().theme)
+        repo.apply(sample().copy(theme = "mine")) // the theme is gone with the list: falls back
+        assertEquals(emptyList<CustomThemeBackup>(), repo.snapshot().customThemes)
+        assertEquals("classy-black", repo.snapshot().theme)
+    }
 }

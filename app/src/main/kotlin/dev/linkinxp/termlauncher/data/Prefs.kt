@@ -27,6 +27,8 @@ import dev.linkinxp.termlauncher.quick.encodeQuick
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.wall.WallSettings
+import dev.linkinxp.termlauncher.theme.CustomThemes
+import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -70,6 +72,7 @@ class Prefs(private val context: Context) {
     private val panelQuickKey = booleanPreferencesKey("panel_quick")
     private val quickKey = stringPreferencesKey("quick")
     private val clockFormatKey = stringPreferencesKey("clock_format")
+    private val customThemesKey = stringPreferencesKey("custom_themes")
     private val clockStyleKey = stringPreferencesKey("clock_style")
     private val drawerKeyboardKey = booleanPreferencesKey("drawer_keyboard")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
@@ -83,7 +86,10 @@ class Prefs(private val context: Context) {
         if (e is IOException) emit(emptyPreferences()) else throw e
     }
 
-    val theme: Flow<Theme> = data.map { p -> p[themeKey]?.let(ThemeRegistry::byName) ?: ThemeRegistry.default }.distinctUntilChanged()
+    val customThemes: Flow<List<Theme>> = data.map { CustomThemes.decode(it[customThemesKey]) }.distinctUntilChanged()
+    val theme: Flow<Theme> = data.map { p ->
+        p[themeKey]?.let { ThemeBook(CustomThemes.decode(p[customThemesKey])).byName(it) } ?: ThemeRegistry.default
+    }.distinctUntilChanged()
     // Raw strings are compared first, so unrelated writes never trigger a JSON decode or a downstream rebuild.
     val layout: Flow<HomeLayout> = data.map { it[layoutKey] }.distinctUntilChanged().map { HomeLayout.decode(it) }
     val hidden: Flow<Set<String>> = data.map { it[hiddenKey] ?: emptySet() }.distinctUntilChanged()
@@ -109,6 +115,10 @@ class Prefs(private val context: Context) {
     val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }
     val stats: Flow<Map<String, AppStat>> = data.map { it[statsKey] }.distinctUntilChanged().map { decodeStats(it) }
 
+    /** Atomic edit of the user's own themes (kept to at most [CustomThemes.MAX]). */
+    suspend fun editCustomThemes(op: (List<Theme>) -> List<Theme>) {
+        safeEdit { p -> p[customThemesKey] = CustomThemes.encode(op(CustomThemes.decode(p[customThemesKey])).take(CustomThemes.MAX)) }
+    }
     suspend fun setTheme(name: String) { safeEdit { it[themeKey] = name } }
     /**
      * Atomically applies [op] to the stored layout (read-modify-write inside one DataStore transaction,

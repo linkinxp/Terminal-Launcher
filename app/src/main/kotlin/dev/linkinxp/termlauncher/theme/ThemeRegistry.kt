@@ -25,5 +25,9 @@ object ThemeRegistry {
 }
 
 /** One line per theme, `* name` for [current] and `  name` for the others, in registry order. */
-fun describeThemes(current: String): String =
-    ThemeRegistry.all.joinToString("\n") { (if (it.name.equals(current, ignoreCase = true)) "* " else "  ") + it.name }
+fun describeThemes(current: String, custom: List<Theme> = emptyList()): String {
+    val book = ThemeBook(custom)
+    return book.all.joinToString("\n") {
+        (if (it.name.equals(current, ignoreCase = true)) "* " else "  ") + it.name + if (it in book.custom && ThemeRegistry.byName(it.name) == null) " +" else ""
+    }
+}

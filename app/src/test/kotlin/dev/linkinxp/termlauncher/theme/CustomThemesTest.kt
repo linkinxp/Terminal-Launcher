@@ -92,4 +92,59 @@ class CustomThemesTest {
         assertEquals(ThemeRegistry.byName("matrix"), book.byName("matrix"))
         assertTrue(book.all.count { it.name == "matrix" } == 1)
     }
+
+    // ---- the `theme add` / `theme rm` commands as pure functions ----
+
+    private val args = listOf("mine", "#000000", "#00ff00", "#00ffff", "#006666")
+
+    @Test fun addingAppendsAndSays() {
+        val r = addCustomTheme(args, emptyList())
+        assertEquals(listOf("mine"), r.list?.map { it.name })
+        assertEquals("theme: added mine (theme mine to use it)", r.message)
+    }
+
+    @Test fun addingTheSameNameReplacesIt() {
+        val first = addCustomTheme(args, emptyList()).list!!
+        val r = addCustomTheme(listOf("mine", "#111111", "#eeeeee", "#ff0000", "#777777", "double"), first)
+        assertEquals(1, r.list!!.size)
+        assertEquals(0xFF111111, r.list!![0].background)
+        assertEquals(BorderStyle.DOUBLE, r.list!![0].border)
+    }
+
+    @Test fun lowContrastStillAddsWithAWarning() {
+        val r = addCustomTheme(listOf("dull", "#101010", "#181818", "#ff0000", "#777777"), emptyList())
+        assertEquals(listOf("dull"), r.list?.map { it.name })
+        assertTrue(r.message, r.message.endsWith("\ntheme: low contrast"))
+    }
+
+    @Test fun badInputChangesNothing() {
+        assertNull(addCustomTheme(listOf("mine", "#000", "#GGG", "#0ff", "#066"), emptyList()).list)
+        assertNull(addCustomTheme(listOf("Matrix", "#000", "#0f0", "#0ff", "#066"), emptyList()).list)
+        assertNull(addCustomTheme(emptyList(), emptyList()).list)
+        val eight = (1..8).map { theme("t$it") }
+        val r = addCustomTheme(args, eight)
+        assertNull(r.list)
+        assertEquals("theme: too many custom themes (8 max)", r.message)
+    }
+
+    @Test fun removingTakesItOutAndFlagsTheActiveOne() {
+        val list = listOf(theme("a"), theme("b"))
+        val r = removeCustomTheme("A", list, active = "a")
+        assertEquals(listOf("b"), r.list?.map { it.name })
+        assertTrue(r.wasActive)
+        assertEquals("theme: removed a", r.message)
+        assertEquals(false, removeCustomTheme("b", list, active = "a").wasActive)
+    }
+
+    @Test fun removingBuiltInsOrUnknownNamesIsRefused() {
+        assertNull(removeCustomTheme("matrix", emptyList(), "matrix").list)
+        assertEquals("theme: matrix is built-in", removeCustomTheme("matrix", emptyList(), "matrix").message)
+        assertEquals("theme: nope: no such custom theme", removeCustomTheme("nope", listOf(theme("a")), "a").message)
+    }
+
+    @Test fun describingMarksCustomThemes() {
+        val lines = describeThemes("mine", listOf(theme("mine"))).lines()
+        assertEquals(16, lines.size)
+        assertEquals("* mine +", lines.last())
+    }
 }

@@ -41,6 +41,15 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val quick: Boolean = true,
 )
 
+@Serializable data class CustomThemeBackup(
+    val name: String,
+    val bg: String,
+    val fg: String,
+    val accent: String,
+    val dim: String,
+    val border: String = "SINGLE",
+)
+
 @Serializable data class WxBackup(
     val city: String? = null,
     val lat: Double? = null,
@@ -67,6 +76,7 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val drawerKeyboard: Boolean = true,
     val clockFormat: String = "AUTO",
     val clockStyle: String = "PIXEL",
+    val customThemes: List<CustomThemeBackup> = emptyList(),
 )
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
@@ -113,6 +123,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), true),
                 clockFormat = section("clockFormat", String.serializer(), "AUTO"),
                 clockStyle = section("clockStyle", String.serializer(), "PIXEL"),
+                customThemes = section("customThemes", ListSerializer(CustomThemeBackup.serializer()), emptyList()),
             ),
         )
     } catch (e: Exception) {

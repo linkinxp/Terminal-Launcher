@@ -13,6 +13,8 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.backup.BackupRepository
 import dev.linkinxp.termlauncher.backup.LauncherBackup
 import dev.linkinxp.termlauncher.data.Prefs
+import dev.linkinxp.termlauncher.theme.BorderStyle
+import dev.linkinxp.termlauncher.theme.buildCustomTheme
 import kotlinx.coroutines.runBlocking
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
@@ -153,5 +155,14 @@ class SettingsScreenTest {
         for (next in order.drop(1) + order[0]) {
             click("clock-style-row"); until({ "style=${vm.ui.value.clockStyle}" }) { vm.ui.value.clockStyle == next }
         }
+    }
+
+    @Test fun aCustomThemeIsListedAppliesWhenTappedAndCanBeRemoved() {
+        val vm = show()
+        runBlocking { Prefs(ApplicationProvider.getApplicationContext<Application>()).editCustomThemes { it + buildCustomTheme("mine", 0xFF101010, 0xFFEEEEEE, 0xFF3366FF, 0xFF888888, BorderStyle.DOUBLE) } }
+        until({ "custom=${vm.ui.value.customThemes}" }) { vm.ui.value.customThemes.size == 1 }
+        click("theme-mine"); until({ "theme=${vm.ui.value.theme.name}" }) { vm.ui.value.theme.name == "mine" }
+        click("theme-rm-mine")
+        until({ "custom=${vm.ui.value.customThemes} theme=${vm.ui.value.theme.name}" }) { vm.ui.value.customThemes.isEmpty() && vm.ui.value.theme.name == "classy-black" }
     }
 }

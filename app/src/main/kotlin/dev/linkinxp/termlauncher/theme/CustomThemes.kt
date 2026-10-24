@@ -38,6 +38,26 @@ fun parseThemeAdd(args: List<String>): Result<CustomThemeSpec> {
 fun buildCustomTheme(name: String, bg: Long, fg: Long, accent: Long, dim: Long, border: BorderStyle): Theme =
     Theme(name, bg, fg, accent, dim, border, glow = false, cyber = false)
 
+class AddThemeResult(val list: List<Theme>?, val message: String)
+class RemoveThemeResult(val list: List<Theme>?, val wasActive: Boolean, val message: String)
+
+/** `theme add ...`: the new custom list (null when nothing changes) and the line to print. */
+fun addCustomTheme(args: List<String>, existing: List<Theme>): AddThemeResult {
+    val spec = parseThemeAdd(args).getOrElse { return AddThemeResult(null, it.message ?: ADD_USAGE) }
+    validateCustomTheme(spec.name, existing.map { it.name }, ThemeRegistry.all.map { it.name })?.let { return AddThemeResult(null, it) }
+    val theme = buildCustomTheme(spec.name, spec.bg, spec.fg, spec.accent, spec.dim, spec.border)
+    val list = existing.filterNot { it.name.equals(spec.name, ignoreCase = true) } + theme
+    val warn = if (contrastRatio(spec.fg, spec.bg) < 3.0) "\ntheme: low contrast" else ""
+    return AddThemeResult(list, "theme: added ${spec.name} (theme ${spec.name} to use it)$warn")
+}
+
+/** `theme rm <name>`: built-in themes cannot be removed; [wasActive] says the removed theme was the one in use. */
+fun removeCustomTheme(name: String, existing: List<Theme>, active: String): RemoveThemeResult {
+    val found = existing.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+        ?: return RemoveThemeResult(null, false, if (ThemeRegistry.byName(name) != null) "theme: ${name.trim().lowercase()} is built-in" else "theme: $name: no such custom theme")
+    return RemoveThemeResult(existing - found, found.name.equals(active, ignoreCase = true), "theme: removed ${found.name}")
+}
+
 /** Stored form of the user's own themes. */
 object CustomThemes {
     const val MAX = 8
