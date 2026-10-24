@@ -111,4 +111,11 @@ class BackupRepositoryTest {
         repo.apply(sample())
         assertEquals(true, repo.snapshot().drawerKeyboard) // on by default
     }
+
+    @Test fun theClockFormatIsBackedUpAndRestored() = runBlocking {
+        repo.apply(sample().copy(clockFormat = "H12"))
+        assertEquals("H12", repo.snapshot().clockFormat)
+        repo.apply(sample())
+        assertEquals("AUTO", repo.snapshot().clockFormat)
+    }
 }

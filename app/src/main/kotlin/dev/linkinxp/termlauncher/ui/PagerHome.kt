@@ -1,5 +1,7 @@
 package dev.linkinxp.termlauncher.ui
 
+import android.text.format.DateFormat
+import dev.linkinxp.termlauncher.clock.amPm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -85,6 +87,7 @@ private fun rememberNow(): LocalDateTime {
 @Composable
 private fun ClockHeader(
     now: LocalDateTime,
+    h24: Boolean,
     snapshot: SysSnapshot,
     glitch: Boolean,
     calendar: PanelData,
@@ -94,11 +97,11 @@ private fun ClockHeader(
 ) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
-        PixelClock(now.toLocalTime(), glitch = glitch)
+        PixelClock(now.toLocalTime(), glitch = glitch, h24 = h24)
         TermText(
             "${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} " +
                 "${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.year}  " +
-                "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}",
+                "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}" + if (h24) "" else "  ${amPm(now.hour)}",
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
         if (showSearch) SearchBar(onSearch)
@@ -130,9 +133,10 @@ fun PagerHome(
     LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.animateScrollToPage(0) }
     val context = LocalContext.current
     val now = rememberNow()
+    val h24 = ui.clockFormat.is24(DateFormat.is24HourFormat(context))
     val snapshot = remember(now) { readSystemStats(context) }
     // Panels that read live data refresh on every minute tick.
-    LaunchedEffect(now.minute) { vm.refreshPanels() }
+    LaunchedEffect(now.minute, ui.clockFormat) { vm.refreshPanels() } // the agenda times follow the clock format
     // Swiping down slides the quick tiles in from the top, where a thumb can reach them.
     var pulled by remember { mutableStateOf(false) }
     val canPull = ui.panels.quick && ui.quick.isNotEmpty()
@@ -171,7 +175,7 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll),
             ) {
-                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
+                if (index == 0) ClockHeader(now, h24, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
@@ -189,7 +193,7 @@ fun PagerHome(
                 detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { swipes(total) }) { _, dy -> total += dy }
             },
         ) {
-            StatusLine(pageCount, pager.currentPage, snapshot, now, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
+            StatusLine(pageCount, pager.currentPage, snapshot, now, h24, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
             // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
             QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
             Dock(ui, onItemTap, onItemLongPress)

@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.clock.BLANK
 import kotlin.random.Random
 
 /**
@@ -9,5 +10,5 @@ import kotlin.random.Random
  */
 fun glitchFrame(digits: List<Int>, progress: Float, seed: Int): List<Int> {
     val p = if (progress.isNaN()) 0f else progress
-    return digits.mapIndexed { i, d -> if (p >= (i + 1) / 5f) d else Random(seed + i).nextInt(10) }
+    return digits.mapIndexed { i, d -> if (d == BLANK || p >= (i + 1) / 5f) d else Random(seed + i).nextInt(10) }
 }

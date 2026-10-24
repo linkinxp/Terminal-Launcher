@@ -301,4 +301,8 @@ class HomeLayoutTest {
     @Test fun mkdirRejectsQuick() {
         assertTrue(empty.mkdir("quick").isFailure)
     }
+
+    @Test fun mkdirRejectsClock() {
+        assertTrue(empty.mkdir("clock").isFailure)
+    }
 }

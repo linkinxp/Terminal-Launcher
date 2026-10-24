@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.clock.clockDigits
 import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals

@@ -110,4 +110,16 @@ class AgendaTest {
         assertTrue("the provider only returns rows ending at or after the window start", holiday.endMs >= from)
         assertEquals(listOf("today all day  Today only"), formatAgenda(listOf(holiday), evening, la))
     }
+
+    @Test fun timesFollowTheTwelveHourSetting() {
+        val lines = formatAgenda(
+            listOf(
+                timed("Standup", "2026-10-23T10:05:00Z", "2026-10-23T10:35:00Z"),
+                timed("Late", "2026-10-23T23:30:00Z", "2026-10-23T23:59:00Z"),
+                timed("Night", "2026-10-24T00:30:00Z", "2026-10-24T01:00:00Z"),
+            ),
+            now, utc, h24 = false,
+        )
+        assertEquals(listOf("today 10:05am  Standup", "today 11:30pm  Late", "tmrw 12:30am  Night"), lines)
+    }
 }

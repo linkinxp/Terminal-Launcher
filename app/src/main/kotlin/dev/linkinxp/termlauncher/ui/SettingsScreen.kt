@@ -182,6 +182,10 @@ fun SettingsScreen(
                 }
             }
 
+            TermPanel("clock", Modifier.padding(top = 4.dp)) {
+                SettingRow("format", ui.clockFormat.name.lowercase().removePrefix("h").let { if (it == "auto") it else "${it}h" }, "clock-row") { vm.cycleClockFormat() }
+            }
+
             TermPanel("drawer", Modifier.padding(top = 4.dp)) {
                 SettingRow("sort", ui.sort.name.lowercase().replace('_', ' '), "drawer-sort") { vm.setSort(DrawerSort.entries.after(vm.ui.value.sort)) }
                 ToggleRow("keyboard", ui.drawerKeyboard, "drawer-keyboard") { vm.toggleDrawerKeyboard() }

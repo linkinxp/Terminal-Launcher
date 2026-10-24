@@ -113,4 +113,12 @@ class CommandParserTest {
         assertEquals(Command.Quick("rm", "Chrome"), parseCommand("QUICK RM Chrome"))
         assertEquals(Command.Quick("clear", null), parseCommand("quick clear"))
     }
+
+    @Test fun clockCommand() {
+        assertEquals(Command.Clock(null, null), parseCommand("clock"))
+        assertEquals(Command.Clock("12", null), parseCommand("clock 12"))
+        assertEquals(Command.Clock("auto", null), parseCommand("CLOCK AUTO"))
+        assertEquals(Command.Clock("style", "figlet"), parseCommand("clock style figlet"))
+        assertEquals(Command.Clock("style", "nope now"), parseCommand("clock style nope now"))
+    }
 }

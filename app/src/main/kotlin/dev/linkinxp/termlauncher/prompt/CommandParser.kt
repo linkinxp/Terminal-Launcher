@@ -13,6 +13,7 @@ sealed interface Command {
     data class Wall(val sub: String?, val arg: String?) : Command
     data class Panel(val name: String?, val on: Boolean?) : Command
     data class Wx(val sub: String?, val arg: String?) : Command
+    data class Clock(val sub: String?, val arg: String?) : Command
     data class Quick(val sub: String?, val arg: String?) : Command
     data object History : Command
     data object Neofetch : Command
@@ -38,6 +39,7 @@ fun parseCommand(input: String): Command {
         word == "panel" -> parsePanel(args)
         word == "wx" -> parseWx(args)
         word == "quick" -> parseQuick(args)
+        word == "clock" -> parseClock(args)
         word == "sudo" && args.isNotEmpty() -> Command.Sudo(args)
         args.isEmpty() && word in SIMPLE -> SIMPLE.getValue(word)
         word == "ls" && args.isEmpty() -> Command.Ls(false)
@@ -100,4 +102,12 @@ private fun parseQuick(args: String): Command.Quick {
     val sub = args.substringBefore(' ').lowercase()
     val rest = args.substringAfter(' ', "").trim()
     return Command.Quick(sub, rest.ifEmpty { null })
+}
+
+/** `clock`, `clock 12`, `clock style figlet`: sub-word plus the rest of the line. */
+private fun parseClock(args: String): Command.Clock {
+    if (args.isEmpty()) return Command.Clock(null, null)
+    val sub = args.substringBefore(' ').lowercase()
+    val rest = args.substringAfter(' ', "").trim()
+    return Command.Clock(sub, rest.ifEmpty { null })
 }

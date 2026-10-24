@@ -55,4 +55,10 @@ class FormatTest {
         assertEquals(true, compactPageLabels(3))
         assertEquals(true, compactPageLabels(5))
     }
+
+    @Test fun statusTailFollowsTheClockFormat() {
+        assertEquals("bat 66% │ 9:08pm", statusTail(66, false, 21, 8, h24 = false))
+        assertEquals("bat 66%+ │ 12:05am", statusTail(66, true, 0, 5, h24 = false))
+        assertEquals("bat 66% │ 21:08", statusTail(66, false, 21, 8, h24 = true))
+    }
 }

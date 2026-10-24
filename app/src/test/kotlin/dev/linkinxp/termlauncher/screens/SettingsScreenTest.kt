@@ -137,4 +137,12 @@ class SettingsScreenTest {
         click("drawer-keyboard"); until({ "kbd=${vm.ui.value.drawerKeyboard}" }) { !vm.ui.value.drawerKeyboard }
         click("drawer-keyboard"); until({ "kbd=${vm.ui.value.drawerKeyboard}" }) { vm.ui.value.drawerKeyboard }
     }
+
+    @Test fun theClockRowCyclesAutoTwentyFourTwelve() {
+        val vm = show()
+        assertEquals(dev.linkinxp.termlauncher.clock.ClockFormat.AUTO, vm.ui.value.clockFormat)
+        click("clock-row"); until { vm.ui.value.clockFormat == dev.linkinxp.termlauncher.clock.ClockFormat.H24 }
+        click("clock-row"); until { vm.ui.value.clockFormat == dev.linkinxp.termlauncher.clock.ClockFormat.H12 }
+        click("clock-row"); until { vm.ui.value.clockFormat == dev.linkinxp.termlauncher.clock.ClockFormat.AUTO }
+    }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.unit.dp
+import dev.linkinxp.termlauncher.clock.clockDigits
 import java.time.LocalTime
 
 // 3x5 bitmap digits, one string of 5 rows x 3 columns per digit.
@@ -35,13 +36,13 @@ private const val GLITCH_MS = 400
  * a minute change scrambles the digits for ~400 ms (locking in left to right) with a red/cyan split.
  */
 @Composable
-fun PixelClock(time: LocalTime, modifier: Modifier = Modifier, glitch: Boolean = false) {
+fun PixelClock(time: LocalTime, modifier: Modifier = Modifier, glitch: Boolean = false, h24: Boolean = true) {
     val theme = LocalTheme.current
     val reduce = rememberReduceMotion()
-    val real = clockDigits(time.hour, time.minute)
+    val real = clockDigits(time.hour, time.minute, h24)
     val progress = remember { Animatable(1f) }
     val lastMinute = remember { mutableIntStateOf(time.minute) }
-    LaunchedEffect(time.hour, time.minute) {
+    LaunchedEffect(time.hour, time.minute, h24) {
         if (lastMinute.intValue != time.minute) {
             lastMinute.intValue = time.minute
             if (glitch && !reduce) {
@@ -63,6 +64,7 @@ fun PixelClock(time: LocalTime, modifier: Modifier = Modifier, glitch: Boolean =
 
         fun cells(digits: List<Int>, dx: Float): List<Offset> = digits.flatMapIndexed { i, d ->
             val x0 = left + dx + cell * (i * 4 + if (i >= 2) 1 else 0)
+            if (d !in DIGITS.indices) return@flatMapIndexed emptyList()
             DIGITS[d].mapIndexedNotNull { bit, ch ->
                 if (ch == '1') Offset(x0 + (bit % 3) * cell, top + (bit / 3) * cell) else null
             }
@@ -89,6 +91,3 @@ fun PixelClock(time: LocalTime, modifier: Modifier = Modifier, glitch: Boolean =
         fill(on, color)
     }
 }
-
-/** The four clock digits as 0-9, computed arithmetically so a non-Latin-digit locale cannot break them. */
-fun clockDigits(hour: Int, minute: Int): List<Int> = listOf(hour / 10, hour % 10, minute / 10, minute % 10)

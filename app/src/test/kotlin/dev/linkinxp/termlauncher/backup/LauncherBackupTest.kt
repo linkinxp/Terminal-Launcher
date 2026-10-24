@@ -123,4 +123,9 @@ class LauncherBackupTest {
         val json = """{"format":"terminal-launcher-backup","version":1}"""
         assertEquals(true, decodeBackup(json).getOrThrow().drawerKeyboard)
     }
+
+    @Test fun theClockFormatRoundTripsAndDefaultsToAuto() {
+        assertEquals("H12", decodeBackup(encodeBackup(sample().copy(clockFormat = "H12"))).getOrThrow().clockFormat)
+        assertEquals("AUTO", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().clockFormat)
+    }
 }

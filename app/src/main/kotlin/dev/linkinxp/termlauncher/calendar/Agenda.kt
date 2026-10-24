@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.calendar
 
+import dev.linkinxp.termlauncher.clock.formatClockTime
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -18,7 +19,7 @@ private const val NO_TITLE = "(no title)"
  * most [width] characters (long titles end in `…`). All-day events follow the CalendarContract convention:
  * begin/end are UTC midnights (end exclusive) compared as dates with the local today.
  */
-fun formatAgenda(events: List<AgendaEvent>, nowMs: Long, zone: ZoneId, maxLines: Int = 6, width: Int = 34): List<String> {
+fun formatAgenda(events: List<AgendaEvent>, nowMs: Long, zone: ZoneId, maxLines: Int = 6, width: Int = 34, h24: Boolean = true): List<String> {
     val today = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
     val startOfToday = today.atStartOfDay(zone).toInstant().toEpochMilli()
 
@@ -38,7 +39,7 @@ fun formatAgenda(events: List<AgendaEvent>, nowMs: Long, zone: ZoneId, maxLines:
                 Entry(e.startMs, "now", title)
             } else {
                 val start = Instant.ofEpochMilli(e.startMs).atZone(zone)
-                val time = String.format(Locale.ROOT, "%02d:%02d", start.hour, start.minute)
+                val time = formatClockTime(start.hour, start.minute, h24)
                 Entry(e.startMs, "${dayLabel(start.toLocalDate(), today)} $time", title)
             }
         }

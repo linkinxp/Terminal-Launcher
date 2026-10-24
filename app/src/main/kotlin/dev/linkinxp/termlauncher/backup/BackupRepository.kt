@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.backup
 
+import dev.linkinxp.termlauncher.clock.ClockFormat
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.data.Prefs
@@ -36,6 +37,7 @@ class BackupRepository(private val prefs: Prefs) {
             iconMode = prefs.iconMode.first().name,
             quick = prefs.quick.first(),
             drawerKeyboard = prefs.drawerKeyboard.first(),
+            clockFormat = prefs.clockFormat.first().name,
         )
     }
 
@@ -62,6 +64,7 @@ class BackupRepository(private val prefs: Prefs) {
         prefs.setPanels(PanelSettings(b.panels.cal, b.panels.wx, b.panels.search, b.panels.quick))
         prefs.setQuick(b.quick)
         prefs.setDrawerKeyboard(b.drawerKeyboard)
+        prefs.setClockFormat(ClockFormat.fromName(b.clockFormat))
         prefs.setWx(WxSettings(b.wx.city, b.wx.lat, b.wx.lon, b.wx.fahrenheit))
         prefs.clearWxCache()
         prefs.setSort(enumOr(b.drawerSort, DrawerSort.AZ))
