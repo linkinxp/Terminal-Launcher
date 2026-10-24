@@ -71,7 +71,15 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boolean, calendar: PanelData, weather: PanelData) {
+private fun ClockHeader(
+    now: LocalDateTime,
+    snapshot: SysSnapshot,
+    glitch: Boolean,
+    calendar: PanelData,
+    weather: PanelData,
+    showSearch: Boolean,
+    onSearch: (String) -> Unit,
+) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
         PixelClock(now.toLocalTime(), glitch = glitch)
@@ -81,6 +89,7 @@ private fun ClockHeader(now: LocalDateTime, snapshot: SysSnapshot, glitch: Boole
                 "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}",
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
+        if (showSearch) SearchBar(onSearch)
         SysPanel(snapshot)
         PanelBlock("cal", calendar)
         PanelBlock("wx", weather)
@@ -98,6 +107,7 @@ fun PagerHome(
     onSwipeUp: () -> Unit,
     onEdit: () -> Unit,
     homeSignal: Int = 0,
+    onSearch: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
@@ -128,7 +138,7 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll, enabled = scroll.maxValue > 0),
             ) {
-                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather)
+                if (index == 0) ClockHeader(now, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach

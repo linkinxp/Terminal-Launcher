@@ -509,7 +509,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "ls [-a]            drawer / hidden",
             "fx [name on|off]   effects",
             "wall <sub> [arg]   wallpaper",
-            "panel <cal|wx> on|off  panels",
+            "panel <cal|wx|search> on|off  panels",
             "wx [city <n>|units c|f]  weather",
             "history neofetch whoami uptime date",
             "fortune clear sudo matrix help",

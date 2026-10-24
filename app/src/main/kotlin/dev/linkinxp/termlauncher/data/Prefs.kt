@@ -59,6 +59,7 @@ class Prefs(private val context: Context) {
     private val wxCacheAtKey = longPreferencesKey("wx_cache_at")
     private val panelCalKey = booleanPreferencesKey("panel_cal")
     private val panelWxKey = booleanPreferencesKey("panel_wx")
+    private val panelSearchKey = booleanPreferencesKey("panel_search")
     private val fxScanKey = booleanPreferencesKey("fx_scanlines")
     private val fxFlickerKey = booleanPreferencesKey("fx_flicker")
     private val fxGlitchKey = booleanPreferencesKey("fx_glitch")
@@ -101,7 +102,7 @@ class Prefs(private val context: Context) {
         val at = p[wxCacheAtKey]
         if (json != null && at != null) json to at else null
     }
-    val panels: Flow<PanelSettings> = data.map { p -> PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false) }
+    val panels: Flow<PanelSettings> = data.map { p -> PanelSettings(cal = p[panelCalKey] ?: false, wx = p[panelWxKey] ?: false, search = p[panelSearchKey] ?: true) }
     val history: Flow<CommandHistory> = data.map { CommandHistory.decode(it[historyKey]) }
     val stats: Flow<Map<String, AppStat>> = data.map { decodeStats(it[statsKey]) }
 
@@ -157,6 +158,7 @@ class Prefs(private val context: Context) {
         safeEdit { p ->
             p[panelCalKey] = panels.cal
             p[panelWxKey] = panels.wx
+            p[panelSearchKey] = panels.search
         }
     }
 

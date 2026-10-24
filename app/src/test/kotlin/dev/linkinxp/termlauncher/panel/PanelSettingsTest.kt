@@ -7,8 +7,12 @@ import org.junit.Test
 class PanelSettingsTest {
     private val d = PanelSettings()
 
-    @Test fun bothPanelsStartOff() {
-        assertEquals(PanelSettings(cal = false, wx = false), d)
+    @Test fun calAndWxStartOffAndSearchStartsOn() {
+        assertEquals(PanelSettings(cal = false, wx = false, search = true), d)
+    }
+
+    @Test fun searchCanBeSwitchedOff() {
+        assertEquals(false, applyPanel(d, "search", false).getOrThrow().search)
     }
 
     @Test fun bareCommandReturnsTheCurrentSettings() {
@@ -21,16 +25,17 @@ class PanelSettingsTest {
     }
 
     @Test fun unknownPanelListsTheValidOnes() {
-        assertEquals("panel: x: no such panel (cal wx)", applyPanel(d, "x", true).exceptionOrNull()?.message)
+        assertEquals("panel: x: no such panel (cal wx search)", applyPanel(d, "x", true).exceptionOrNull()?.message)
     }
 
     @Test fun missingValueGivesUsage() {
-        assertEquals("usage: panel <cal|wx> on|off", applyPanel(d, "cal", null).exceptionOrNull()?.message)
+        assertEquals("usage: panel <cal|wx|search> on|off", applyPanel(d, "cal", null).exceptionOrNull()?.message)
     }
 
     @Test fun describeHasALinePerPanel() {
         val lines = PanelSettings(cal = true).describe().lines()
         assertTrue(lines.any { it.startsWith("cal") && it.contains("on") })
         assertTrue(lines.any { it.startsWith("wx") && it.contains("off") })
+        assertTrue(lines.any { it.startsWith("search") && it.contains("on") })
     }
 }

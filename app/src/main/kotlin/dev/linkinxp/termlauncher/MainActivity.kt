@@ -1,9 +1,11 @@
 package dev.linkinxp.termlauncher
 
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import dev.linkinxp.termlauncher.wall.WallMode
 import android.os.SystemClock
 import androidx.lifecycle.Lifecycle
+import dev.linkinxp.termlauncher.search.searchUri
 import dev.linkinxp.termlauncher.sys.bootWindowOpen
 import dev.linkinxp.termlauncher.ui.isReduceMotion
 import androidx.core.content.ContextCompat
@@ -106,6 +109,16 @@ class MainActivity : ComponentActivity() {
         const val REQ_CONFIGURE = 4711
     }
 
+    /** Hands a typed query to the system (browser or the Google app) as a Google search URL. */
+    private fun openSearch(text: String) {
+        val uri = searchUri(text) ?: return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: ActivityNotFoundException) {
+            vm.showMessage("search: no browser found")
+        }
+    }
+
     private val homePresses = mutableIntStateOf(0)
 
     /** Pressing Home (button or gesture) while the launcher is open goes back to the first home page. */
@@ -197,6 +210,7 @@ class MainActivity : ComponentActivity() {
                     onSwipeUp = { vm.openDrawer() },
                     onEdit = { editing = true },
                     homeSignal = homeSignal,
+                    onSearch = ::openSearch,
                     // Kept composed but invisible under the drawer so the wall shows and the page is kept.
                     modifier = Modifier.alpha(if (ui.drawerOpen) 0f else 1f),
                 )
