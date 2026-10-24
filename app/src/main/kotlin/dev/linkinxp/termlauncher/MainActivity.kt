@@ -284,7 +284,7 @@ class MainActivity : ComponentActivity() {
                     when (item) {
                         is Item.App -> vm.launch(item.pkg)
                         is Item.Folder -> folderName = item.name
-                        is Item.Widget -> Unit
+                        is Item.Widget, is Item.Panel -> Unit
                     }
                 }
                 PagerHome(
@@ -294,7 +294,7 @@ class MainActivity : ComponentActivity() {
                         when (item) {
                             is Item.App -> menuPkg = item.pkg
                             is Item.Folder -> folderName = item.name
-                            is Item.Widget -> Unit
+                            is Item.Widget, is Item.Panel -> Unit
                         }
                     },
                     onSwipeUp = { vm.openDrawer() },

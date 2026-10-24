@@ -28,14 +28,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
+import androidx.compose.ui.platform.testTag
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.PanelKind
 
 private sealed interface Adding {
     data class App(val page: Int) : Adding
     data class Dir(val page: Int) : Adding
     data class Widget(val page: Int) : Adding
+    data class Panel(val page: Int) : Adding
 }
 
 @Composable
@@ -73,6 +76,17 @@ fun EditMode(
                                 Action("[+app]") { adding = Adding.App(i) }
                                 Action("[+dir]") { adding = Adding.Dir(i); newName = "" }
                                 Action("[+widget]") { adding = Adding.Widget(i) }
+                                Action("[+panel]") { adding = Adding.Panel(i) }
+                            }
+                            // Info panels on this page: reorder, send to the next page, take off.
+                            page.items.filterIsInstance<Item.Panel>().forEach { panel ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TermText("  ${panel.kind.name.lowercase()}", Modifier.weight(1f).testTag("panel-${panel.kind.name.lowercase()}"), dim = true)
+                                    Action("[up]") { vm.movePanel(panel.kind, -1) }
+                                    Action("[down]") { vm.movePanel(panel.kind, +1) }
+                                    if (pages.size > 1) Action("[pg ${(i + 1) % pages.size + 1}]") { vm.movePanelToPage(panel.kind, (i + 1) % pages.size) }
+                                    Action("[rm]") { vm.removePanelItem(panel.kind) }
+                                }
                             }
                             // Hosted widgets on this page: size and remove.
                             page.items.filterIsInstance<Item.Widget>().forEach { w ->
@@ -117,6 +131,16 @@ fun EditMode(
                                         TermText(
                                             "  + ${prov.label.lowercase()}",
                                             Modifier.fillMaxWidth().clickable { onAddWidget(i, prov.provider); adding = null }.padding(vertical = 5.dp),
+                                        )
+                                    }
+                                }
+                                is Adding.Panel -> if (a.page == i) {
+                                    val free = PanelKind.entries.filter { it !in ui.layout.placedPanels() }
+                                    if (free.isEmpty()) TermText("  all panels are placed", dim = true)
+                                    free.forEach { kind ->
+                                        TermText(
+                                            "  + ${kind.name.lowercase()}",
+                                            Modifier.fillMaxWidth().testTag("add-panel-${kind.name.lowercase()}").clickable { vm.addPanelTo(i, kind); adding = null }.padding(vertical = 5.dp),
                                         )
                                     }
                                 }

@@ -36,7 +36,7 @@ class QuickPlacementTest {
 
     private fun show() {
         val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
-        val layout = HomeLayout(dock = listOf(Item.App(maps.pkg)), pages = HomeLayout.default().addPage().pages)
+        val layout = HomeLayout(dock = listOf(Item.App(maps.pkg)), pages = HomeLayout.default().withDefaultPanels().addPage().pages)
         val ui = LauncherUi(
             theme = ThemeRegistry.default,
             layout = layout,

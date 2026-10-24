@@ -11,7 +11,12 @@ sealed interface Item {
 
     /** A hosted Android widget: [id] is its AppWidgetHost id, [provider] the flattened ComponentName. */
     @Serializable @SerialName("widget") data class Widget(val id: Int, val provider: String, val size: WidgetSize) : Item
+
+    /** One of the built-in info panels (search, sys, calendar, weather) placed on a page. */
+    @Serializable @SerialName("panel") data class Panel(val kind: PanelKind) : Item
 }
+
+@Serializable enum class PanelKind { SEARCH, SYS, CAL, WX }
 
 @Serializable data class Page(val items: List<Item>)
 
@@ -62,6 +67,38 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     }
 
     fun unpin(pkg: String): HomeLayout = copy(dock = dock - Item.App(pkg))
+
+    /** The panel kinds placed on some page. */
+    fun placedPanels(): Set<PanelKind> = pages.flatMap { it.items }.filterIsInstance<Item.Panel>().map { it.kind }.toSet()
+
+    /** Puts [kind] on top of [page] (a panel lives on one page only); a missing page changes nothing. */
+    fun addPanel(page: Int, kind: PanelKind): HomeLayout {
+        if (page !in pages.indices) return this
+        val cleared = removePanel(kind)
+        return cleared.copy(pages = cleared.pages.mapIndexed { i, p -> if (i == page) Page(listOf<Item>(Item.Panel(kind)) + p.items) else p })
+    }
+
+    fun removePanel(kind: PanelKind): HomeLayout =
+        copy(pages = pages.map { p -> Page(p.items.filterNot { it == Item.Panel(kind) }) })
+
+    /** Swaps the panel with the item above ([delta] -1) or below (+1) it on its page; at the ends nothing changes. */
+    fun movePanel(kind: PanelKind, delta: Int): HomeLayout {
+        val page = pages.indexOfFirst { p -> p.items.any { it == Item.Panel(kind) } }
+        if (page < 0) return this
+        val items = pages[page].items.toMutableList()
+        val from = items.indexOf(Item.Panel(kind))
+        val to = from + delta.coerceIn(-1, 1)
+        if (to !in items.indices) return this
+        items[to] = items.set(from, items[to])
+        return copy(pages = pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
+    }
+
+    fun movePanelToPage(kind: PanelKind, page: Int): HomeLayout =
+        if (kind in placedPanels() && page in pages.indices) addPanel(page, kind) else this
+
+    /** The four panels on top of page one, the way they used to be fixed. */
+    fun withDefaultPanels(): HomeLayout =
+        copy(pages = pages.mapIndexed { i, p -> if (i == 0) Page(DEFAULT_PANELS + p.items) else p })
 
     fun addPage(): HomeLayout = if (pages.size >= MAX_PAGES) this else copy(pages = pages + Page(emptyList()))
 
@@ -158,6 +195,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
                 is Item.App -> item.takeIf { it.pkg in installed }
                 is Item.Folder -> item.copy(apps = item.apps.filter { it in installed })
                 is Item.Widget -> item
+                is Item.Panel -> item
             }
         }
         return copy(dock = clean(dock), pages = pages.map { Page(clean(it.items)) })
@@ -169,7 +207,8 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         const val MAX_DOCK = 5
         const val MAX_PAGES = 5
         const val MAX_FOLDER_NAME = 24
-        private const val VERSION = 1
+        private const val VERSION = 2
+        private val DEFAULT_PANELS: List<Item> = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX).map { Item.Panel(it) }
         val RESERVED_WORDS = setOf(
             "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
             "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill",
@@ -179,12 +218,17 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         fun default(): HomeLayout = HomeLayout(emptyList(), listOf(Page(emptyList())))
 
         fun decode(raw: String?): HomeLayout {
-            if (raw == null) return default()
+            if (raw == null) return default().withDefaultPanels()
             return try {
                 val env = json.decodeFromString(Envelope.serializer(), raw)
-                if (env.v == VERSION && env.layout.pages.isNotEmpty()) env.layout else default()
+                when {
+                    env.layout.pages.isEmpty() -> default().withDefaultPanels()
+                    env.v == VERSION -> env.layout
+                    env.v == 1 -> env.layout.withDefaultPanels() // panels used to be fixed above everything else
+                    else -> default().withDefaultPanels()
+                }
             } catch (e: Exception) {
-                default()
+                default().withDefaultPanels()
             }
         }
     }

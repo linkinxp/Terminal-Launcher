@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.layout.PanelKind
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.WidgetSize
 import dev.linkinxp.termlauncher.quick.quickAdd
@@ -33,6 +34,7 @@ class BackupRepositoryTest {
     }
 
     private fun sample() = LauncherBackup(
+        panelItems = true,
         layout = HomeLayout.default().pin("a").mkdir("g").getOrThrow().mv("b", "g").getOrThrow(),
         hidden = setOf("h"),
         theme = "neon-city",
@@ -71,8 +73,8 @@ class BackupRepositoryTest {
     }
 
     @Test fun applyingTheDefaultBackupDoesNotThrow() = runBlocking {
-        repo.apply(LauncherBackup(customThemes = emptyList()))
-        assertEquals(LauncherBackup(customThemes = emptyList()), repo.snapshot())
+        repo.apply(LauncherBackup(customThemes = emptyList(), panelItems = true))
+        assertEquals(LauncherBackup(customThemes = emptyList(), panelItems = true), repo.snapshot())
     }
 
     @Test fun applyKeepsTheWidgetsThatAreOnTheDeviceNow() = runBlocking {
@@ -141,5 +143,12 @@ class BackupRepositoryTest {
         repo.apply(sample().copy(customThemes = listOf(mine)))
         repo.apply(sample()) // an older backup: no customThemes section at all
         assertEquals(listOf(mine), repo.snapshot().customThemes)
+    }
+
+    @Test fun anOlderBackupGetsTheDefaultPanelsAndANewerOneKeepsItsOwn() = runBlocking {
+        repo.apply(sample().copy(panelItems = false)) // no flag: made before panels were items
+        assertEquals(setOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX), prefs.layout.first().placedPanels())
+        repo.apply(sample().copy(panelItems = true)) // an explicit layout without panels stays without
+        assertEquals(emptySet<PanelKind>(), prefs.layout.first().placedPanels())
     }
 }

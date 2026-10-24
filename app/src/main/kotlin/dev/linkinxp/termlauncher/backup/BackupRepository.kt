@@ -47,6 +47,7 @@ class BackupRepository(private val prefs: Prefs) {
             drawerKeyboard = prefs.drawerKeyboard.first(),
             clockFormat = prefs.clockFormat.first().name,
             clockStyle = prefs.clockStyle.first().name,
+            panelItems = true,
             customThemes = prefs.customThemes.first().map {
                 CustomThemeBackup(it.name, hexString(it.background), hexString(it.foreground), hexString(it.accent), hexString(it.dim), it.border.name)
             },
@@ -68,7 +69,7 @@ class BackupRepository(private val prefs: Prefs) {
         if (custom != null) prefs.editCustomThemes { custom }
         ThemeBook(custom ?: prefs.customThemes.first()).byName(b.theme)?.let { prefs.setTheme(it.name) }
         // The imported layout never has widgets; the ones configured on this device stay where they were.
-        prefs.editLayout { current -> Result.success(b.layout.withoutWidgets().withWidgetsFrom(current)) }
+        prefs.editLayout { current -> Result.success((if (b.panelItems) b.layout else b.layout.withDefaultPanels()).withoutWidgets().withWidgetsFrom(current)) }
         prefs.setHidden(b.hidden)
         prefs.setFx(FxSettings(b.fx.scanlines, b.fx.flicker, b.fx.glitch, b.fx.cursor, b.fx.boot))
         val d = WallSettings()

@@ -7,7 +7,7 @@ import org.junit.Test
 class HomeLayoutTest {
     private val empty = HomeLayout.default()
     private fun apps(l: HomeLayout) = (l.dock + l.pages.flatMap { it.items }).flatMap {
-        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps; is Item.Widget -> emptyList() }
+        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps; is Item.Widget, is Item.Panel -> emptyList() }
     }
 
     @Test fun defaultHasEmptyDockAndOneEmptyPage() {
@@ -100,10 +100,11 @@ class HomeLayoutTest {
     }
 
     @Test fun decodeOfNullCorruptOrNewerVersionIsDefault() {
-        assertEquals(empty, HomeLayout.decode(null))
-        assertEquals(empty, HomeLayout.decode("{bad"))
-        assertEquals(empty, HomeLayout.decode("{\"v\":99}"))
-        assertEquals(empty, HomeLayout.decode("{\"v\":99,\"layout\":{\"dock\":[],\"pages\":[{\"items\":[]}]}}"))
+        val fresh = empty.withDefaultPanels() // a fresh home starts with the four info panels on page one
+        assertEquals(fresh, HomeLayout.decode(null))
+        assertEquals(fresh, HomeLayout.decode("{bad"))
+        assertEquals(fresh, HomeLayout.decode("{\"v\":99}"))
+        assertEquals(fresh, HomeLayout.decode("{\"v\":99,\"layout\":{\"dock\":[],\"pages\":[{\"items\":[]}]}}"))
     }
 
     @Test fun encodeDecodeRoundTrips() {
@@ -256,7 +257,7 @@ class HomeLayoutTest {
 
     @Test fun layoutsSavedBeforeWidgetsStillDecode() {
         val old = """{"v":1,"layout":{"dock":[],"pages":[{"items":[{"type":"app","pkg":"x"}]}]}}"""
-        assertEquals(listOf<Item>(Item.App("x")), HomeLayout.decode(old).pages[0].items)
+        assertEquals(listOf<Item>(Item.App("x")), HomeLayout.decode(old).pages[0].items.filterNot { it is Item.Panel })
     }
 
     @Test fun appPruningLeavesWidgetsAlone() {

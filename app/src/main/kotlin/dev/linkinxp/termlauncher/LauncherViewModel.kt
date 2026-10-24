@@ -24,6 +24,7 @@ import kotlin.random.Random
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.PanelKind
 import android.Manifest
 import android.os.Build
 import dev.linkinxp.termlauncher.backup.BackupRepository
@@ -383,6 +384,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             prefs.editPanels(op)?.let { (old, new) ->
                 if (new.cal && !old.cal && !calendarRepo.hasPermission()) _permissionRequests.tryEmit(Manifest.permission.READ_CALENDAR)
+                // Switching a panel on puts it back on the first page if it had been taken off every page.
+                val turnedOn = listOfNotNull(
+                    PanelKind.CAL.takeIf { new.cal && !old.cal }, PanelKind.WX.takeIf { new.wx && !old.wx }, PanelKind.SEARCH.takeIf { new.search && !old.search },
+                )
+                if (turnedOn.isNotEmpty()) prefs.editLayout { l ->
+                    Result.success(turnedOn.fold(l) { acc, k -> if (k in acc.placedPanels()) acc else acc.addPanel(0, k) })
+                }
             }
         }
     }
@@ -702,6 +710,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun pin(pkg: String) { ui.value.apps[pkg]?.let(::pinApp) }
     fun unpin(pkg: String) = edit { it.unpin(pkg) }
+    fun addPanelTo(page: Int, kind: PanelKind) = edit { it.addPanel(page, kind) }
+    fun movePanel(kind: PanelKind, delta: Int) = edit { it.movePanel(kind, delta) }
+    fun movePanelToPage(kind: PanelKind, page: Int) = edit { it.movePanelToPage(kind, page) }
+    fun removePanelItem(kind: PanelKind) = edit { it.removePanel(kind) }
     fun addPage() = edit { it.addPage() }
     fun removePage(index: Int) = edit { it.removePage(index) }
     fun movePage(from: Int, to: Int) = edit { it.movePage(from, to) }

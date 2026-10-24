@@ -52,6 +52,7 @@ import androidx.core.content.ContextCompat
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.PanelKind
 import dev.linkinxp.termlauncher.panel.PanelData
 import dev.linkinxp.termlauncher.sys.SysSnapshot
 import dev.linkinxp.termlauncher.sys.readSystemStats
@@ -86,17 +87,7 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun ClockHeader(
-    now: LocalDateTime,
-    h24: Boolean,
-    clockStyle: ClockStyle,
-    snapshot: SysSnapshot,
-    glitch: Boolean,
-    calendar: PanelData,
-    weather: PanelData,
-    showSearch: Boolean,
-    onSearch: (String) -> Unit,
-) {
+private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle, glitch: Boolean) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
         ClockView(clockStyle, now, h24, glitch)
@@ -106,10 +97,17 @@ private fun ClockHeader(
                 "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}" + if (h24) "" else "  ${amPm(now.hour)}",
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
-        if (showSearch) SearchBar(onSearch)
-        SysPanel(snapshot)
-        PanelBlock("cal", calendar)
-        PanelBlock("wx", weather)
+    }
+}
+
+/** A placed info panel; it shows only while its `panel` switch is on (sys has none). */
+@Composable
+private fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, onSearch: (String) -> Unit) {
+    when (kind) {
+        PanelKind.SEARCH -> if (ui.panels.search) SearchBar(onSearch)
+        PanelKind.SYS -> SysPanel(snapshot)
+        PanelKind.CAL -> PanelBlock("cal", ui.calendar)
+        PanelKind.WX -> PanelBlock("wx", ui.weather)
     }
 }
 
@@ -173,9 +171,10 @@ fun PagerHome(
                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
                     .verticalScroll(scroll),
             ) {
-                if (index == 0) ClockHeader(now, h24, ui.clockStyle, snapshot, ui.fx.glitch, ui.calendar, ui.weather, ui.panels.search, onSearch)
+                if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch)
                 ui.layout.pages[index].items.forEach { item ->
                     if (item is Item.Widget) { key(item.id) { WidgetPanel(item, vm) }; return@forEach }
+                    if (item is Item.Panel) { PanelItem(item.kind, ui, snapshot, onSearch); return@forEach }
                     val label = itemLabel(item, ui) ?: return@forEach
                     TermText(
                         "${if (item is Item.Folder) "" else "> "}$label",

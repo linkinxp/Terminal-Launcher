@@ -87,7 +87,10 @@ Your important apps as big text tiles under the search bar, four per row, up to 
 maps apps. Tap launches, long-press opens the app menu (pin to dock, hide, info...). Change them in settings (`quick tiles`: move up, remove,
 add, reset) or with `quick add <app>`, `quick rm <app>`, `quick clear`, `quick reset`; `panel quick off` hides the panel. Included in backups.
 
-## Panels (page 1, under `sys`; calendar and weather off by default)
+## Panels (search, sys, calendar, weather; calendar and weather off by default)
+Each panel is an item on a page, on page one under the clock by default. In edit mode (long-press an empty spot) every page lists its
+panels with `[up]` `[down]` `[pg n]` (send to another page) and `[rm]`; `[+panel]` puts a removed one back on that page. `panel cal on` also
+brings a removed panel back to page one. A panel still only shows while its `panel` switch is on. The clock and date stay at the top of page one.
 - `panel cal on|off`: the next 6 calendar events within 7 days, e.g. `today 10:05  Standup`, `now  Standup`, `tmrw all day  Holiday`.
   The first `panel cal on` asks for calendar read permission; if you deny it the panel says so and works once granted in Settings.
 - `panel wx on|off`: weather from Open-Meteo (free, no account). Set a city with `wx city <name>` (looked up once, switches the panel on),
