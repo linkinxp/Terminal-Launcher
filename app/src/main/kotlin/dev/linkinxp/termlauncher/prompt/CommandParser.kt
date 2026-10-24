@@ -47,7 +47,7 @@ fun parseCommand(input: String): Command {
         word == "ls" && args.isEmpty() -> Command.Ls(false)
         word == "ls" && args == "-a" -> Command.Ls(true)
         word == "theme" && args.substringBefore(' ').lowercase() == "add" -> Command.ThemeAdd(args.split(Regex("\\s+")).drop(1))
-        word == "theme" && args.substringBefore(' ').lowercase() == "rm" && args.contains(' ') -> Command.ThemeRm(args.substringAfter(' ').trim())
+        word == "theme" && args.substringBefore(' ').lowercase() == "rm" -> Command.ThemeRm(args.substringAfter(' ', "").trim())
         word == "theme" -> Command.Theme(args.ifEmpty { null })
         word == "settings" && args.isEmpty() -> Command.Settings
         word == "pin" && args.isNotEmpty() -> Command.Pin(args)

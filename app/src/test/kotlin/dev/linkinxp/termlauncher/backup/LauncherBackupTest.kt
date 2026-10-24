@@ -4,6 +4,7 @@ import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.WidgetSize
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -137,7 +138,7 @@ class LauncherBackupTest {
     @Test fun customThemesRoundTripAndBadEntriesAreIgnored() {
         val themes = listOf(CustomThemeBackup("mine", "#000000", "#00ff00", "#00ffff", "#006666", "ROUNDED"))
         assertEquals(themes, decodeBackup(encodeBackup(sample().copy(customThemes = themes))).getOrThrow().customThemes)
-        assertEquals(emptyList<CustomThemeBackup>(), decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().customThemes)
-        assertEquals(emptyList<CustomThemeBackup>(), decodeBackup("""{"format":"terminal-launcher-backup","version":1,"customThemes":"junk"}""").getOrThrow().customThemes)
+        assertNull(decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().customThemes)
+        assertNull(decodeBackup("""{"format":"terminal-launcher-backup","version":1,"customThemes":"junk"}""").getOrThrow().customThemes)
     }
 }

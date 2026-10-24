@@ -20,6 +20,10 @@ fun parseClockStyle(arg: String?): Result<ClockStyle> {
 /** What `clock style [name]` does: the style to save (null = unchanged) and the line to print. */
 data class ClockStyleReply(val set: ClockStyle?, val text: String)
 
+/** `clock style [name]` typed at the prompt: without a name it is a usage error (bare `clock` shows the style). */
+fun clockStyleCommand(arg: String?, current: ClockStyle): ClockStyleReply =
+    if (arg == null) ClockStyleReply(null, STYLE_USAGE) else clockStyleReply(arg, current)
+
 fun clockStyleReply(arg: String?, current: ClockStyle): ClockStyleReply =
     if (arg == null) ClockStyleReply(null, "style   ${current.name.lowercase()}")
     else parseClockStyle(arg).fold(

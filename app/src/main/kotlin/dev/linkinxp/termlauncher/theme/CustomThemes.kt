@@ -55,6 +55,7 @@ fun addCustomTheme(args: List<String>, existing: List<Theme>): AddThemeResult {
 
 /** `theme rm <name>`: built-in themes cannot be removed; [wasActive] says the removed theme was the one in use. */
 fun removeCustomTheme(name: String, existing: List<Theme>, active: String): RemoveThemeResult {
+    if (name.isBlank()) return RemoveThemeResult(null, false, "usage: theme rm <name>")
     val found = existing.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
         ?: return RemoveThemeResult(null, false, if (ThemeRegistry.byName(name) != null) "theme: ${name.trim().lowercase()} is built-in" else "theme: $name: no such custom theme")
     return RemoveThemeResult(existing - found, found.name.equals(active, ignoreCase = true), "theme: removed ${found.name}")

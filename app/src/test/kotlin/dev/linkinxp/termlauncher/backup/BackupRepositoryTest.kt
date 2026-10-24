@@ -26,7 +26,7 @@ class BackupRepositoryTest {
 
     // The DataStore is shared by the tests of this JVM: start every test from the defaults.
     @Before fun resetStores() = runBlocking {
-        repo.apply(LauncherBackup())
+        repo.apply(LauncherBackup(customThemes = emptyList()))
         // apply() keeps widgets on purpose, so clear the layout outright to start every test clean.
         prefs.editLayout { Result.success(HomeLayout.default()) }
         Unit
@@ -46,7 +46,7 @@ class BackupRepositoryTest {
 
     @Test fun applyThenSnapshotRoundTripsEveryStore() = runBlocking {
         repo.apply(sample())
-        assertEquals(sample(), repo.snapshot())
+        assertEquals(sample().copy(customThemes = emptyList()), repo.snapshot())
     }
 
     @Test fun snapshotNeverIncludesWidgets() = runBlocking {
@@ -71,8 +71,8 @@ class BackupRepositoryTest {
     }
 
     @Test fun applyingTheDefaultBackupDoesNotThrow() = runBlocking {
-        repo.apply(LauncherBackup())
-        assertEquals(LauncherBackup(), repo.snapshot())
+        repo.apply(LauncherBackup(customThemes = emptyList()))
+        assertEquals(LauncherBackup(customThemes = emptyList()), repo.snapshot())
     }
 
     @Test fun applyKeepsTheWidgetsThatAreOnTheDeviceNow() = runBlocking {
@@ -131,8 +131,15 @@ class BackupRepositoryTest {
         repo.apply(sample().copy(customThemes = listOf(mine), theme = "mine"))
         assertEquals(listOf(mine), repo.snapshot().customThemes)
         assertEquals("mine", repo.snapshot().theme)
-        repo.apply(sample().copy(theme = "mine")) // the theme is gone with the list: falls back
+        repo.apply(sample().copy(theme = "mine", customThemes = emptyList())) // an explicit empty list removes them: the theme falls back
         assertEquals(emptyList<CustomThemeBackup>(), repo.snapshot().customThemes)
         assertEquals("classy-black", repo.snapshot().theme)
+    }
+
+    @Test fun aBackupWithoutCustomThemesKeepsTheOnesOnThisPhone() = runBlocking {
+        val mine = CustomThemeBackup("mine", "#101010", "#eeeeee", "#3366ff", "#888888", "DOUBLE")
+        repo.apply(sample().copy(customThemes = listOf(mine)))
+        repo.apply(sample()) // an older backup: no customThemes section at all
+        assertEquals(listOf(mine), repo.snapshot().customThemes)
     }
 }

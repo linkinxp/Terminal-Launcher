@@ -4,6 +4,7 @@ import android.text.format.DateFormat
 import dev.linkinxp.termlauncher.clock.ClockFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
 import dev.linkinxp.termlauncher.clock.clockFormatReply
+import dev.linkinxp.termlauncher.clock.clockStyleCommand
 import dev.linkinxp.termlauncher.clock.clockStyleReply
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -664,7 +665,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun handleClock(sub: String?, arg: String?, cur: LauncherUi): String? {
         if (sub == null) return clockFormatReply(null, null, cur.clockFormat).text + "\n" + clockStyleReply(null, cur.clockStyle).text
         if (sub == "style") {
-            val styleReply = clockStyleReply(arg, cur.clockStyle)
+            val styleReply = clockStyleCommand(arg, cur.clockStyle)
             styleReply.set?.let { setClockStyle(it) }
             return styleReply.text
         }

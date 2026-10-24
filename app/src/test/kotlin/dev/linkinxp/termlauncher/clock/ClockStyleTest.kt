@@ -37,4 +37,9 @@ class ClockStyleTest {
         assertEquals(ClockStyleReply(ClockStyle.HEX, "clock style: hex"), clockStyleReply("hex", ClockStyle.PIXEL))
         assertEquals(ClockStyleReply(null, usage), clockStyleReply("nope", ClockStyle.PIXEL))
     }
+
+    @Test fun styleSubcommandWithoutANameShowsTheUsage() {
+        assertEquals(ClockStyleReply(null, usage), clockStyleCommand(null, ClockStyle.HEX))
+        assertEquals(ClockStyleReply(ClockStyle.HEX, "clock style: hex"), clockStyleCommand("hex", ClockStyle.PIXEL))
+    }
 }

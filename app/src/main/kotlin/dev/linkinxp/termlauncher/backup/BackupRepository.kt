@@ -59,14 +59,14 @@ class BackupRepository(private val prefs: Prefs) {
      */
     suspend fun apply(b: LauncherBackup) {
         // The user's own themes first, so a backed-up active custom theme can be found.
-        val custom = b.customThemes.mapNotNull { c ->
+        val custom = b.customThemes?.mapNotNull { c ->
             val border = BorderStyle.entries.firstOrNull { it.name == c.border } ?: return@mapNotNull null
             val colors = listOf(c.bg, c.fg, c.accent, c.dim).map { parseHexColor(it) ?: return@mapNotNull null }
             if (validateCustomTheme(c.name, emptyList(), ThemeRegistry.all.map { it.name }) != null) return@mapNotNull null
             buildCustomTheme(c.name, colors[0], colors[1], colors[2], colors[3], border)
-        }.take(CustomThemes.MAX)
-        prefs.editCustomThemes { custom }
-        ThemeBook(custom).byName(b.theme)?.let { prefs.setTheme(it.name) }
+        }?.take(CustomThemes.MAX)
+        if (custom != null) prefs.editCustomThemes { custom }
+        ThemeBook(custom ?: prefs.customThemes.first()).byName(b.theme)?.let { prefs.setTheme(it.name) }
         // The imported layout never has widgets; the ones configured on this device stay where they were.
         prefs.editLayout { current -> Result.success(b.layout.withoutWidgets().withWidgetsFrom(current)) }
         prefs.setHidden(b.hidden)

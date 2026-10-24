@@ -127,7 +127,7 @@ class CommandParserTest {
         assertEquals(Command.ThemeAdd(emptyList()), parseCommand("theme add"))
         assertEquals(Command.ThemeAdd(listOf("a", "b")), parseCommand("THEME  ADD   a   b"))
         assertEquals(Command.ThemeRm("mine"), parseCommand("theme rm mine"))
-        assertEquals(Command.Theme("rm"), parseCommand("theme rm"))
+        assertEquals(Command.ThemeRm(""), parseCommand("theme rm"))
         assertEquals(Command.Theme("matrix"), parseCommand("theme matrix"))
     }
 }

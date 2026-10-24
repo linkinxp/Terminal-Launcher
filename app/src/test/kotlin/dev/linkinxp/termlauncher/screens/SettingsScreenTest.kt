@@ -39,7 +39,7 @@ class SettingsScreenTest {
     private fun show(): LauncherViewModel {
         val app = ApplicationProvider.getApplicationContext<Application>()
         // The DataStore is shared by the tests of this JVM: start every test from the defaults.
-        runBlocking { BackupRepository(Prefs(app)).apply(LauncherBackup()) }
+        runBlocking { BackupRepository(Prefs(app)).apply(LauncherBackup(customThemes = emptyList())) }
         val vm = LauncherViewModel(app)
         rule.setContent {
             val ui by vm.ui.collectAsState()

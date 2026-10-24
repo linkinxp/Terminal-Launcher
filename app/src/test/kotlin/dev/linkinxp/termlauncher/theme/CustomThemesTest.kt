@@ -159,4 +159,10 @@ class CustomThemesTest {
             {"name":"b","bg":"#000000","fg":"#ffffff","accent":"#ff0000","dim":"#888888","border":"DOUBLE"}]"""
         assertEquals(listOf("a", "b"), CustomThemes.decode(raw).map { it.name })
     }
+
+    @Test fun removingWithoutANameShowsTheUsage() {
+        val r = removeCustomTheme("", listOf(theme("a")), "a")
+        assertNull(r.list)
+        assertEquals("usage: theme rm <name>", r.message)
+    }
 }

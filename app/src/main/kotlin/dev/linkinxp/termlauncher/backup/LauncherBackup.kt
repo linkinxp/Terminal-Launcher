@@ -76,7 +76,8 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val drawerKeyboard: Boolean = true,
     val clockFormat: String = "AUTO",
     val clockStyle: String = "PIXEL",
-    val customThemes: List<CustomThemeBackup> = emptyList(),
+    /** The user's own themes; `null` (an older backup) leaves the ones on this phone alone. */
+    val customThemes: List<CustomThemeBackup>? = null,
 )
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
@@ -123,7 +124,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 drawerKeyboard = section("drawerKeyboard", Boolean.serializer(), true),
                 clockFormat = section("clockFormat", String.serializer(), "AUTO"),
                 clockStyle = section("clockStyle", String.serializer(), "PIXEL"),
-                customThemes = section("customThemes", ListSerializer(CustomThemeBackup.serializer()), emptyList()),
+                customThemes = section("customThemes", ListSerializer(CustomThemeBackup.serializer()).nullable, null),
             ),
         )
     } catch (e: Exception) {
