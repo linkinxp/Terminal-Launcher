@@ -126,6 +126,19 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         return copy(pages = cleaned.mapIndexed { i, p -> if (i == 0) Page(top + p.items) else p })
     }
 
+    /**
+     * Moves [item] to where [target] is on [page] (a drag and drop): the item takes the target's place and the ones
+     * in between shift over by one. Anything that is not on the page, or a move onto itself, changes nothing.
+     */
+    fun moveItem(page: Int, item: Item, target: Item): HomeLayout {
+        if (page !in pages.indices || item == target) return this
+        val items = pages[page].items.toMutableList()
+        val from = items.indexOf(item); val to = items.indexOf(target)
+        if (from < 0 || to < 0) return this
+        items.add(to, items.removeAt(from))
+        return copy(pages = pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
+    }
+
     fun addPage(): HomeLayout = if (pages.size >= MAX_PAGES) this else copy(pages = pages + Page(emptyList()))
 
     fun removePage(index: Int): HomeLayout =

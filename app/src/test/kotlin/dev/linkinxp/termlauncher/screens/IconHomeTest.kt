@@ -148,4 +148,44 @@ class IconHomeTest {
         val sixth = rule.onNodeWithText("dd6").getUnclippedBoundsInRoot().top
         assertEquals("all six share one row", first.value, sixth.value, 0.5f)
     }
+
+    private val moves = mutableListOf<Triple<Int, Item, Item>>()
+
+    private fun showForDrag() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default, layout = HomeLayout(emptyList(), listOf(Page(listOf(Item.App(maps.pkg), Item.App(notes.pkg), Item.App(phone.pkg))))),
+            apps = listOf(maps, notes, phone).associateBy { it.pkg }, homeStyle = HomeStyle.ICONS,
+        )
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, { taps += it }, { longs += it }, {}, {}, onMoveItem = { p, i, t -> moves += Triple(p, i, t) }) } }
+    }
+
+    @Test fun holdingAnIconAndDraggingItOntoAnotherMovesIt() {
+        showForDrag()
+        val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
+        val to = rule.onNodeWithText("notes").fetchSemanticsNode().boundsInRoot.center
+        rule.onNodeWithText("maps").performTouchInput {
+            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(to.x - from.x, to.y - from.y), 200); up()
+        }
+        rule.waitForIdle()
+        assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, Item.App(notes.pkg) as Item)), moves)
+        assertEquals("a drag is not a tap or a menu", emptyList<Item>(), taps + longs)
+    }
+
+    @Test fun holdingWithoutMovingStillOpensTheMenu() {
+        showForDrag()
+        rule.onNodeWithText("notes").performTouchInput { longClick() }
+        rule.waitForIdle()
+        assertEquals(listOf<Item>(Item.App(notes.pkg)), longs)
+        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+    }
+
+    @Test fun droppingOnNothingMovesNothing() {
+        showForDrag()
+        rule.onNodeWithText("maps").performTouchInput {
+            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(0f, -1500f), 200); up()
+        }
+        rule.waitForIdle()
+        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+    }
 }

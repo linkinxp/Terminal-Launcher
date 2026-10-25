@@ -301,6 +301,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onSwipeUp = { vm.openDrawer() },
+                    onMoveItem = vm::moveItem,
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
                     },

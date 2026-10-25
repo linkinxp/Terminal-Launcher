@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,14 +46,15 @@ fun iconBlocks(items: List<Item>, columns: Int = ICON_COLUMNS): List<IconBlock> 
 fun IconCell(
     label: String,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     labelSize: TextUnit = 11.sp,
     vPad: Dp = 6.dp,
+    gesture: Modifier = Modifier,
     icon: @Composable () -> Unit,
 ) {
     Column(
-        modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(vertical = vPad),
+        modifier.then(if (onLongClick != null) Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick) else Modifier.clickable(onClick = onClick)).then(gesture).padding(vertical = vPad),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         icon()

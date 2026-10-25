@@ -43,6 +43,8 @@ import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.wall.AsciiStyle
 import dev.linkinxp.termlauncher.gestures.ScreenLock
 import dev.linkinxp.termlauncher.wall.SvgStyle
+import dev.linkinxp.termlauncher.wall.WallField
+import dev.linkinxp.termlauncher.wall.wallFields
 import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.wall.applyWall
@@ -106,25 +108,26 @@ fun SettingsScreen(
             }
 
             val w = ui.wall
+            val shown = wallFields(w.mode) // only what the chosen wallpaper uses
             TermPanel("wallpaper", Modifier.padding(top = 4.dp)) {
                 // Every control updates the stored value atomically, so quick taps never lose each other.
                 SettingRow("mode", w.mode.name.lowercase(), "wall-mode") { vm.updateWall { it.copy(mode = WallMode.entries.after(it.mode)) } }
-                SettingRow("svg style", w.svgStyle.name.lowercase(), "wall-svg-style") { vm.updateWall { it.copy(svgStyle = SvgStyle.entries.after(it.svgStyle)) } }
-                SettingRow("style", w.style.name.lowercase(), "wall-style") { vm.updateWall { it.copy(style = AsciiStyle.entries.after(it.style)) } }
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                if (WallField.SVG_STYLE in shown) SettingRow("svg style", w.svgStyle.name.lowercase(), "wall-svg-style") { vm.updateWall { it.copy(svgStyle = SvgStyle.entries.after(it.svgStyle)) } }
+                if (WallField.STYLE in shown) SettingRow("style", w.style.name.lowercase(), "wall-style") { vm.updateWall { it.copy(style = AsciiStyle.entries.after(it.style)) } }
+                if (WallField.SEED in shown) Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     TermText("seed".padEnd(11), dim = true)
                     TermText("${w.seed}  ", bold = true)
                     TermText("[random]", Modifier.testTag("wall-random").clickable {
                         vm.updateWall { applyWall(it, "random", null, Random.Default).getOrDefault(it) }
                     })
                 }
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                if (WallField.DIM in shown) Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     TermText("dim".padEnd(11), dim = true)
                     TermText("${w.dim}  ", bold = true)
                     TermText("[-]", Modifier.testTag("dim-minus").clickable { vm.updateWall { it.copy(dim = (it.dim - DIM_STEP).coerceIn(0, 100)) } }.padding(end = 10.dp))
                     TermText("[+]", Modifier.testTag("dim-plus").clickable { vm.updateWall { it.copy(dim = (it.dim + DIM_STEP).coerceIn(0, 100)) } })
                 }
-                ToggleRow("animate", w.animate, "wall-animate") { vm.updateWall { it.copy(animate = !it.animate) } }
+                if (WallField.ANIMATE in shown) ToggleRow("animate", w.animate, "wall-animate") { vm.updateWall { it.copy(animate = !it.animate) } }
             }
 
             val fx = ui.fx

@@ -12,7 +12,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.onSizeChanged
 import dev.linkinxp.termlauncher.gestures.SwipeDownAction
@@ -24,7 +31,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -75,6 +81,14 @@ import java.time.temporal.IsoFields
 import java.util.Locale
 
 private const val SWIPE_PX = 80f
+
+/** The icon being dragged on the home grid, how far it has moved, and where every cell is (read only when it drops). */
+private class DragState {
+    var item by mutableStateOf<Item?>(null)
+    var offset by mutableStateOf(Offset.Zero)
+    var moved = 0f
+    val bounds = HashMap<Item, Rect>()
+}
 
 @Composable
 private fun rememberNow(): LocalDateTime {
@@ -150,6 +164,7 @@ fun PagerHome(
     homeSignal: Int = 0,
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
+    onMoveItem: (page: Int, item: Item, target: Item) -> Unit = { _, _, _ -> },
     onSwipeDown: (SwipeDownAction) -> Unit = {},
     onDoubleTap: () -> Unit = {},
     style: HomeStyle = ui.homeStyle,
@@ -160,6 +175,7 @@ fun PagerHome(
         val targets = remember(ui.layout, ui.quick, ui.apps) { warmTargets(ui) }
         WarmIcons(targets)
     }
+    val drag = remember { DragState() }
     val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
@@ -228,10 +244,35 @@ fun PagerHome(
                                 if (item is Item.Widget) key(item.id) { WidgetPanel(item, vm, ui.density) }
                                 else if (item is Item.Panel) PanelItem(item.kind, ui, snapshot, onSearch)
                             }
-                            is IconBlock.Cells -> Row(Modifier.fillMaxWidth()) {
+                            is IconBlock.Cells -> Row(Modifier.fillMaxWidth().zIndex(if (drag.item in block.items) 1f else 0f)) {
                                 block.items.forEach { item ->
                                     val label = itemLabel(item, ui) ?: return@forEach
-                                    IconCell(label, { onItemTap(item) }, { onItemLongPress(item) }, Modifier.weight(1f), labelSize = ui.density.labelSp.sp) { ItemIcon(item, ui, ui.density.iconDp.dp) }
+                                    val dragging = drag.item == item
+                                    // Hold an icon to pick it up; drag it onto another to put it there. A hold with no movement is the menu.
+                                    val placeModifier = Modifier
+                                        .onGloballyPositioned { drag.bounds[item] = it.boundsInRoot() }
+                                        .graphicsLayer {
+                                            if (dragging) { translationX = drag.offset.x; translationY = drag.offset.y; scaleX = 1.12f; scaleY = 1.12f; alpha = 0.9f }
+                                        }
+                                    // Inside the cell's click handling, so it sees (and consumes) the lift before a click can fire.
+                                    val dragGesture = Modifier
+                                        .pointerInput(item, index) {
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = { drag.item = item; drag.offset = Offset.Zero; drag.moved = 0f },
+                                                onDrag = { change, amount -> change.consume(); drag.offset += amount; drag.moved += amount.getDistance() },
+                                                onDragEnd = {
+                                                    val from = drag.bounds[item]
+                                                    if (drag.moved < 12f) onItemLongPress(item)
+                                                    else if (from != null) {
+                                                        val pageCells = ui.layout.pages[index].items.mapNotNull { i -> drag.bounds[i]?.let { r -> i to r } }.toMap()
+                                                        nearestCell(from.center + drag.offset, pageCells)?.let { target -> if (target != item) onMoveItem(index, item, target) }
+                                                    }
+                                                    drag.item = null; drag.offset = Offset.Zero
+                                                },
+                                                onDragCancel = { drag.item = null; drag.offset = Offset.Zero },
+                                            )
+                                        }
+                                    IconCell(label, { onItemTap(item) }, null, Modifier.weight(1f).then(placeModifier), labelSize = ui.density.labelSp.sp, gesture = dragGesture) { ItemIcon(item, ui, ui.density.iconDp.dp) }
                                 }
                                 // Count only the cells actually drawn: an uninstalled app has no label and no cell.
                                 repeat(ui.density.columns - block.items.count { itemLabel(it, ui) != null }) { Spacer(Modifier.weight(1f)) }

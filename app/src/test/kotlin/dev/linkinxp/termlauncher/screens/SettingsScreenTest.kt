@@ -18,6 +18,7 @@ import dev.linkinxp.termlauncher.theme.buildCustomTheme
 import kotlinx.coroutines.runBlocking
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
+import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
 import android.os.Looper
 import org.junit.Assert.assertEquals
@@ -79,17 +80,17 @@ class SettingsScreenTest {
 
     @Test fun dimStepsByFiveAndStaysWithinZeroToOneHundred() {
         val vm = show()
-        vm.setWall(WallSettings(dim = 55))
-        until { vm.ui.value.wall.dim == 55 }
+        vm.setWall(WallSettings(mode = WallMode.SYSTEM, dim = 55))
+        until { vm.ui.value.wall.mode == WallMode.SYSTEM && vm.ui.value.wall.dim == 55 }; settle()
         click("dim-plus"); until { vm.ui.value.wall.dim == 60 }
         click("dim-plus"); until { vm.ui.value.wall.dim == 65 }
-        vm.setWall(WallSettings(dim = 98))
-        until { vm.ui.value.wall.dim == 98 }
+        vm.setWall(WallSettings(mode = WallMode.SYSTEM, dim = 98))
+        until { vm.ui.value.wall.dim == 98 }; settle()
         click("dim-plus"); until { vm.ui.value.wall.dim == 100 }
         click("dim-plus"); settle()
         assertEquals(100, vm.ui.value.wall.dim)
-        vm.setWall(WallSettings(dim = 3))
-        until({ "wall=${vm.ui.value.wall}" }) { vm.ui.value.wall.dim == 3 }
+        vm.setWall(WallSettings(mode = WallMode.SYSTEM, dim = 3))
+        until({ "wall=${vm.ui.value.wall}" }) { vm.ui.value.wall.dim == 3 }; settle()
         click("dim-minus"); until { vm.ui.value.wall.dim == 0 }
         click("dim-minus"); settle()
         assertEquals(0, vm.ui.value.wall.dim)
@@ -112,7 +113,7 @@ class SettingsScreenTest {
 
     @Test fun rapidDimStepsAreAllApplied() {
         val vm = show()
-        vm.setWall(WallSettings(dim = 55))
+        vm.setWall(WallSettings(mode = WallMode.SYSTEM, dim = 55))
         until { vm.ui.value.wall.dim == 55 }
         repeat(4) { vm.updateWall { it.copy(dim = (it.dim + 5).coerceIn(0, 100)) } } // no waiting in between
         until({ "wall=${vm.ui.value.wall}" }) { vm.ui.value.wall.dim == 75 }
@@ -199,5 +200,39 @@ class SettingsScreenTest {
         assertEquals(dev.linkinxp.termlauncher.layout.Density.NORMAL, vm.ui.value.density)
         val order = listOf(levels[3], levels[0], levels[1], levels[2]) // from normal: roomy, then wraps to dense, compact, normal
         for (next in order) { click("density-row"); until({ "density=${vm.ui.value.density}" }) { vm.ui.value.density == next } }
+    }
+
+    private fun has(tag: String) = rule.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+
+    private fun showWithMode(mode: WallMode): LauncherViewModel {
+        val vm = show()
+        vm.setWall(WallSettings(mode = mode))
+        until({ "mode=${vm.ui.value.wall.mode}" }) { vm.ui.value.wall.mode == mode }
+        settle()
+        return vm
+    }
+
+    @Test fun aSolidWallpaperOnlyShowsTheModeRow() {
+        showWithMode(WallMode.SOLID)
+        assertTrue(has("wall-mode"))
+        listOf("wall-style", "wall-svg-style", "wall-random", "dim-plus", "wall-animate").forEach { assertTrue("$it should be hidden", !has(it)) }
+    }
+
+    @Test fun theSvgWallpaperShowsItsStyleSeedAndDimOnly() {
+        showWithMode(WallMode.SVG)
+        listOf("wall-svg-style", "wall-random", "dim-plus").forEach { assertTrue("$it should show", has(it)) }
+        listOf("wall-style", "wall-animate").forEach { assertTrue("$it should be hidden", !has(it)) }
+    }
+
+    @Test fun theAsciiWallpaperShowsItsOwnFieldsAndNotTheSvgStyle() {
+        showWithMode(WallMode.ASCII)
+        listOf("wall-style", "wall-random", "dim-plus", "wall-animate").forEach { assertTrue("$it should show", has(it)) }
+        assertTrue(!has("wall-svg-style"))
+    }
+
+    @Test fun theSystemWallpaperOnlyHasDim() {
+        showWithMode(WallMode.SYSTEM)
+        assertTrue(has("dim-plus"))
+        listOf("wall-style", "wall-svg-style", "wall-random", "wall-animate").forEach { assertTrue("$it should be hidden", !has(it)) }
     }
 }

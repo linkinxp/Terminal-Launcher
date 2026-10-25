@@ -759,6 +759,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun movePanel(kind: PanelKind, delta: Int) = edit { it.movePanel(kind, delta) }
     fun movePanelToPage(kind: PanelKind, page: Int) = edit { it.movePanelToPage(kind, page) }
     fun removePanelItem(kind: PanelKind) = edit { it.removePanel(kind) }
+    fun moveItem(page: Int, item: Item, target: Item) = edit { it.moveItem(page, item, target) }
     fun addPage() = edit { it.addPage() }
     fun removePage(index: Int) = edit { it.removePage(index) }
     fun movePage(from: Int, to: Int) = edit { it.movePage(from, to) }
