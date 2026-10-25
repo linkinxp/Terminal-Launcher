@@ -823,7 +823,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "history neofetch whoami uptime date",
             "fortune clear help settings sudo",
             "matrix [wake]  pill red|blue",
-            "layout classic|bottom|grid|apps-first",
+            "layout classic|bottom|grid|icons|apps",
         ).joinToString("\n")
     }
 }

@@ -143,7 +143,7 @@ class LauncherBackupTest {
     }
 
     @Test fun theHomeStyleRoundTripsAndDefaultsToClassic() {
-        assertEquals("GRID", decodeBackup(encodeBackup(sample().copy(homeStyle = "GRID"))).getOrThrow().homeStyle)
+        assertEquals("ICONS", decodeBackup(encodeBackup(sample().copy(homeStyle = "ICONS"))).getOrThrow().homeStyle)
         assertEquals("CLASSIC", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().homeStyle)
     }
 }
