@@ -33,8 +33,10 @@ class FxSettingsTest {
 
     @Test fun scanlinesFollowTheThemeUntilSetExplicitly() {
         val cyber = ThemeRegistry.byName("neon-city")!!
-        val plain = ThemeRegistry.byName("matrix")!!
+        val plain = ThemeRegistry.byName("nord")!!
+        val phosphor = ThemeRegistry.byName("matrix")!! // a glowing CRT-style theme
         assertTrue(FxSettings().scanlinesOn(cyber))
+        assertTrue(FxSettings().scanlinesOn(phosphor))
         assertFalse(FxSettings().scanlinesOn(plain))
         assertFalse(FxSettings(scanlines = false).scanlinesOn(cyber))
         assertTrue(FxSettings(scanlines = true).scanlinesOn(plain))

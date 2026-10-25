@@ -2,7 +2,7 @@ package dev.linkinxp.termlauncher.fx
 
 import dev.linkinxp.termlauncher.theme.Theme
 
-/** CRT/glitch toggles. [scanlines] `null` means "follow the theme" (on for cyber themes). */
+/** CRT/glitch toggles. [scanlines] `null` means "follow the theme" (auto: on for the cyber and glowing CRT themes). */
 data class FxSettings(
     val scanlines: Boolean? = null,
     val flicker: Boolean = false,
@@ -22,7 +22,7 @@ data class FxSettings(
     /** Sets scanlines explicitly, or `null` to follow the theme again. */
     fun withScanlines(value: Boolean?): FxSettings = copy(scanlines = value)
 
-    fun scanlinesOn(theme: Theme): Boolean = scanlines ?: theme.cyber
+    fun scanlinesOn(theme: Theme): Boolean = scanlines ?: (theme.cyber || theme.glow) // auto: the CRT-style themes
 
     /** One `name on|off` line per effect (scanlines notes when it follows the theme). */
     fun describe(theme: Theme): String = listOf(

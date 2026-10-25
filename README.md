@@ -56,6 +56,12 @@ quick tiles and page one are drawn ahead of time, and so are the first 24 drawer
   them, it never reads their text). Two new panels, added with `[+panel]` in edit mode: `now playing` (title, artist, previous/play/next) and
   `toggles` (flashlight, and shortcuts to the wifi, bluetooth, sound and location screens).
 
+## Effects (`fx`)
+`fx scanlines on|off|auto`: CRT scanlines (dark lines plus a faint line in the theme color) and a vignette; `auto` is on for the cyber themes and
+the glowing CRT themes (classy-black, matrix, amber). While scanlines are on, a soft band also sweeps down the screen every few seconds.
+`fx glitch on|off` glitches the clock when the minute changes and, every 30 to 60 seconds, flashes a few colored glitch bars across the whole
+screen; `fx flicker on|off` adds quick dark flashes. Everything stops under reduced motion and while the launcher is not on screen.
+
 ## Moving icons
 In the icon style, press and hold an icon to pick it up and drop it on any slot: onto an empty one (it stays where you put it and leaves a hole
 behind, so nothing else moves), onto another icon (it is inserted there and the rest shift over), or into the extra empty row that appears
