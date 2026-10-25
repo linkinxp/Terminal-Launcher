@@ -812,6 +812,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun pinFolder(name: String) = edit { it.pinFolder(name) }
     fun unpinFolder(name: String) = edit { it.unpinFolder(name) }
     fun mkdirOnPage(name: String, page: Int) = applyLayout { it.mkdir(name, page) }
+    /** An app dropped on another icon: a new folder with both, or the app goes into the folder it landed on. */
+    fun mergeOnto(fromPage: Int, item: Item.App, toPage: Int, slot: Int) {
+        val layout = ui.value.layout
+        val target = layout.pages.getOrNull(toPage)?.items?.getOrNull(slot)
+        if (target is Item.App) say("folder '${layout.newFolderName()}' created: tap it to rename")
+        edit { it.mergeOnto(fromPage, item, toPage, slot) }
+    }
+    fun renameFolder(old: String, new: String) = applyLayout { it.renameFolder(old, new) }
     fun addAt(page: Int, pkg: String, slot: Int) = edit { it.addAt(page, pkg, slot) }
     fun addToHome(pkg: String) = edit { it.addToHome(pkg) }
     fun removeShortcut(pkg: String) = edit { it.removeShortcut(pkg) }
@@ -873,7 +881,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.4"
+        const val LAUNCHER_VERSION = "1.0.5"
         const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L

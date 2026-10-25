@@ -1,5 +1,15 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,6 +54,23 @@ fun FolderPanel(name: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: 
                                 color = ui.theme.accent.color(),
                             )
                         }
+                    }
+                    var newName by remember(name) { mutableStateOf("") }
+                    val rename = { if (newName.isNotBlank()) { vm.renameFolder(name, newName.trim()); onDismiss() } }
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        TermText("rename ", dim = true)
+                        BasicTextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = ui.theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
+                            cursorBrush = SolidColor(ui.theme.accent.color()),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { rename() }),
+                            decorationBox = { inner -> Box { if (newName.isEmpty()) TermText(folder.name, dim = true); inner() } },
+                            modifier = Modifier.weight(1f).testTag("folder-rename"),
+                        )
+                        TapText("[ok]", { rename() }, Modifier.testTag("folder-rename-ok"), bold = true)
                     }
                     TermText(
                         if (pinned) "unpin from dock" else "pin to dock",

@@ -1,1 +1,1 @@
-Hold an app in the drawer and drag it onto your home screen: the drawer steps aside and you drop it on any slot, or on the dock. Holding without moving still opens the app menu.
+Make folders by dragging: drop an icon right on top of another to create a folder with both, or on a folder to add it. Folders can be renamed from their panel.

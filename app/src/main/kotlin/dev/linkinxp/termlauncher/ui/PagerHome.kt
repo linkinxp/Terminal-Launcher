@@ -173,6 +173,7 @@ fun PagerHome(
     drag: DragState = remember { DragState() },
     onAddAt: (page: Int, pkg: String, slot: Int) -> Unit = { _, _, _ -> },
     onPinNew: (pkg: String) -> Unit = {},
+    onMerge: (fromPage: Int, item: Item.App, toPage: Int, slot: Int) -> Unit = { _, _, _, _ -> },
     style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
@@ -263,7 +264,7 @@ fun PagerHome(
                 // Apps and folders in rows of one or two; panels and widgets always take the full width.
                 val perRow = if (style == HomeStyle.GRID) 2 else 1
                 if (style == HomeStyle.ICONS) {
-                    IconPageContent(index, ui, vm, snapshot, onSearch, onItemTap, onItemLongPress, onMoveItem, drag, { pager.currentPage }, { widthPx[0] }, onMoveToPage, onDropOnDock)
+                    IconPageContent(index, ui, vm, snapshot, onSearch, onItemTap, onItemLongPress, onMoveItem, drag, { pager.currentPage }, { widthPx[0] }, onMoveToPage, onDropOnDock, onMerge)
                     return@content
                 }
                 val run = ArrayList<Item>()

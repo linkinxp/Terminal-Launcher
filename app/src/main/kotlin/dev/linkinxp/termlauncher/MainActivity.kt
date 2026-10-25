@@ -329,6 +329,7 @@ class MainActivity : ComponentActivity() {
                     drag = drag,
                     onAddAt = vm::addAt,
                     onPinNew = vm::pin,
+                    onMerge = vm::mergeOnto,
                     imeSkip = { uiState.value.drawerOpen },
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)

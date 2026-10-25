@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.screens
 
+import androidx.compose.ui.geometry.Offset
 import android.app.Application
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
@@ -165,7 +166,8 @@ class IconHomeTest {
     @Test fun holdingAnIconAndDraggingItOntoAnotherMovesIt() {
         showForDrag()
         val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
-        val to = rule.onNodeWithText("notes").fetchSemanticsNode().boundsInRoot.center
+        val notesCell = rule.onNodeWithText("notes").fetchSemanticsNode().boundsInRoot
+        val to = Offset(notesCell.left + 3f, notesCell.center.y) // the edge of the cell: between icons, not on top of one
         rule.onNodeWithText("maps").performTouchInput { down(center) }
         rule.mainClock.advanceTimeBy(800) // the hold that picks the icon up
         rule.onNodeWithText("maps").performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(to.x - from.x, to.y - from.y), 200); up() }
@@ -284,7 +286,8 @@ class IconHomeTest {
         rule.onRoot().performTouchInput { moveTo(androidx.compose.ui.geometry.Offset(width - 5f, 60f), 100) }
         rule.mainClock.advanceTimeBy(2_500) // held at the edge: the page turns
         rule.waitForIdle()
-        val target = rule.onNodeWithText("phone").fetchSemanticsNode().boundsInRoot.center
+        val phoneCell = rule.onNodeWithText("phone").fetchSemanticsNode().boundsInRoot
+        val target = androidx.compose.ui.geometry.Offset(phoneCell.left + 3f, phoneCell.center.y) // the cell's edge: a move, not a folder
         rule.onRoot().performTouchInput { moveTo(androidx.compose.ui.geometry.Offset(target.x, target.y), 100); up() } // root coordinates: the picked-up icon's own node has scrolled away
         rule.waitForIdle()
         assertEquals(listOf(Triple(0, 1, 1)), crossings)

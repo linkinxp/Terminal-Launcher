@@ -1,5 +1,9 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.layout.HomeLayout
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -44,6 +48,8 @@ class DragState {
     /** An app picked up in the drawer (the finger is then followed by the drawer drag watcher, not by a home cell). */
     var fromDrawer by mutableStateOf(false)
     var moved = false
+    /** The slot (page * 100000 + slot) an icon would join as a folder if let go now, or -1. */
+    var hover by mutableStateOf(-1L)
     /** Set by the home pager: drops [Item] picked up in the drawer where the finger let go. */
     var drawerDrop: (Offset, Item) -> Unit = { _, _ -> }
     /** Live layout coordinates of every slot: read at the moment of use, so a scrolling pager can never leave them stale. */
@@ -83,6 +89,7 @@ internal fun IconPageContent(
     screenWidth: () -> Float,
     onMoveToPage: (fromPage: Int, item: Item, toPage: Int, slot: Int) -> Unit,
     onDropOnDock: (page: Int, item: Item) -> Unit,
+    onMerge: (fromPage: Int, item: Item.App, toPage: Int, slot: Int) -> Unit = { _, _, _, _ -> },
 ) {
     val items = ui.layout.pages[page].items
     val columns = ui.density.columns
@@ -104,8 +111,10 @@ internal fun IconPageContent(
                         if (label == null) { SlotBox(page, slot, ui, drag, Modifier.weight(1f)); return@forEachIndexed }
                         DisposableEffect(page, slot) { onDispose { drag.bounds.remove(drag.key(page, slot)) } }
                         val dragging = drag.item == item
+                        val joining = drag.hover == drag.key(page, slot)
                         val placeModifier = Modifier
                             .onGloballyPositioned { drag.bounds[drag.key(page, slot)] = it }
+                            .background(if (joining) LocalTheme.current.accent.color().copy(alpha = 0.22f) else Color.Transparent, RoundedCornerShape(14.dp))
                             .graphicsLayer { alpha = if (dragging) 0.3f else 1f } // the floating copy follows the finger, this one marks where it came from
                         // Inside the cell's click handling, so it sees (and consumes) the lift before a click can fire.
                         val dragGesture = Modifier
@@ -121,22 +130,25 @@ internal fun IconPageContent(
                                         change.consume()
                                         drag.toRoot(page, slot, change.position)?.let { drag.finger = it }
                                         drag.edge = edgeDirection(drag.finger.x, screenWidth(), 48.dp.toPx())
+                                        drag.hover = mergeTarget(drag, ui.layout, item, currentPage())?.let { drag.key(currentPage(), it) } ?: -1L
                                     },
                                     onDragEnd = {
                                         val finger = drag.finger
                                         if ((finger - drag.start).getDistance() < viewConfiguration.touchSlop) onItemLongPress(item)
                                         else {
                                             val target = currentPage()
+                                            val joinSlot = mergeTarget(drag, ui.layout, item, target)
                                             when {
                                                 drag.dockBounds?.takeIf { it.isAttached }?.boundsInRoot()?.contains(finger) == true -> onDropOnDock(page, item)
+                                                joinSlot != null -> onMerge(page, item as Item.App, target, joinSlot)
                                                 else -> nearestCell(finger, drag.slotsOf(target))?.let { s ->
                                                     if (target == page) { if (s != slot) onMoveItem(page, item, s) } else onMoveToPage(page, item, target, s)
                                                 }
                                             }
                                         }
-                                        drag.item = null; drag.edge = 0
+                                        drag.item = null; drag.edge = 0; drag.hover = -1L
                                     },
-                                    onDragCancel = { drag.item = null; drag.edge = 0 },
+                                    onDragCancel = { drag.item = null; drag.edge = 0; drag.hover = -1L },
                                 )
                             }
                         IconCell(label, { onItemTap(item) }, null, Modifier.weight(1f).then(placeModifier), labelSize = ui.density.labelSp.sp, gesture = dragGesture) { ItemIcon(item, ui, ui.density.iconDp.dp) }
@@ -154,4 +166,14 @@ internal fun IconPageContent(
             }
         }
     }
+}
+
+/** The slot on [page] the dragged app would join as a folder: it must be right on top of another app or a folder. */
+internal fun mergeTarget(drag: DragState, layout: HomeLayout, dragged: Item, page: Int): Int? {
+    if (dragged !is Item.App) return null
+    val slots = drag.slotsOf(page)
+    val slot = nearestCell(drag.finger, slots) ?: return null
+    val rect = slots[slot] ?: return null
+    val target = layout.pages.getOrNull(page)?.items?.getOrNull(slot)
+    return slot.takeIf { isOnTop(drag.finger, rect) && target != dragged && (target is Item.App || target is Item.Folder) }
 }

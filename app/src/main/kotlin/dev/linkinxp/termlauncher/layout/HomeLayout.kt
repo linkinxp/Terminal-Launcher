@@ -90,6 +90,31 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         return cleared.copy(pages = cleared.pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
     }
 
+    /** `folder`, or `folder2`, `folder3`... the first name no folder has yet. */
+    fun newFolderName(): String =
+        generateSequence(1) { it + 1 }.map { if (it == 1) "folder" else "folder$it" }.first { nameError(it, "mkdir", except = null) == null }
+
+    /**
+     * An app dropped right on another icon: two apps become a new folder where the target was, a folder takes the app in.
+     * The dragged app leaves its old slot (a hole, so nothing shifts). Anything else (self, empty slot, bad page) changes nothing.
+     */
+    fun mergeOnto(fromPage: Int, dragged: Item.App, toPage: Int, slot: Int): HomeLayout {
+        if (fromPage !in pages.indices || toPage !in pages.indices) return this
+        val target = pages[toPage].items.getOrNull(slot) ?: return this
+        if (target == dragged || (target !is Item.App && target !is Item.Folder) || dragged !in pages[fromPage].items) return this
+        val merged: Item = when (target) {
+            is Item.App -> Item.Folder(newFolderName(), listOf(target.pkg, dragged.pkg))
+            is Item.Folder -> if (dragged.pkg in target.apps) target else target.copy(apps = target.apps + dragged.pkg)
+            else -> return this
+        }
+        return copy(pages = pages.mapIndexed { i, p ->
+            val items = p.items.toMutableList()
+            if (i == fromPage) items[items.indexOf(dragged)] = Item.Gap
+            if (i == toPage) items[slot] = merged
+            Page(trimmed(items))
+        })
+    }
+
     /** Puts an app on the first page without panels (the apps page); nothing changes when it is already docked or on a page. */
     fun addToHome(pkg: String): HomeLayout {
         val app = Item.App(pkg)

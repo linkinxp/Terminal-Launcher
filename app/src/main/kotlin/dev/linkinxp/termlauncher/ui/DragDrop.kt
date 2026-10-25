@@ -15,6 +15,10 @@ private const val SWIPE_DP = 44f
 /** How far a vertical swipe must travel (in pixels at this screen [density]) before it opens the drawer or the shade. */
 fun swipeThresholdPx(density: Float): Float = SWIPE_DP * density
 
+/** The middle 60% of a cell: a drop there lands on the icon (make a folder); nearer its edge it goes between icons. */
+fun isOnTop(point: Offset, cell: Rect): Boolean =
+    kotlin.math.abs(point.x - cell.center.x) <= cell.width * 0.3f && kotlin.math.abs(point.y - cell.center.y) <= cell.height * 0.3f
+
 /** How far past a cell's edge a drop still counts for it, as a fraction of the cell's size. */
 private const val SNAP = 0.75f
 
