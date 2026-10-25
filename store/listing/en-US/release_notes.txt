@@ -1,1 +1,1 @@
-First release: icon grid, themes, SVG wallpapers, panels, drag and drop, universal search.
+Easier to use: a starter home on a fresh install, bigger tap targets, a confirmation before removing a page (its apps move instead of vanishing), hidden apps and page editing in settings, clearer messages, dates in your language. Restoring an older backup no longer switches the scanlines off.

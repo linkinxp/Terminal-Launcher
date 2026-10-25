@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.clock.dateLine
 import android.text.format.DateFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
 import dev.linkinxp.termlauncher.clock.amPm
@@ -116,9 +117,7 @@ private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle
     Column(Modifier.fillMaxWidth()) {
         ClockView(clockStyle, now, h24, glitch)
         TermText(
-            "${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} " +
-                "${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.year}  " +
-                "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}" + if (h24) "" else "  ${amPm(now.hour)}",
+            dateLine(date, Locale.getDefault()) + if (h24) "" else "  ${amPm(now.hour)}",
             Modifier.fillMaxWidth().padding(top = 8.dp, bottom = if (weatherLine == null) 8.dp else 2.dp),
         )
         // The weather in one line, right under the date.
@@ -145,7 +144,7 @@ private fun CompactClock(now: LocalDateTime, h24: Boolean) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
         TermText(formatClockTime(now.hour, now.minute, h24), size = 40.sp, bold = true)
         TermText(
-            "  ${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} ${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()}",
+            Locale.getDefault().let { l -> "  ${date.dayOfWeek.getDisplayName(TextStyle.SHORT, l).lowercase(l)} ${date.dayOfMonth} ${date.month.getDisplayName(TextStyle.SHORT, l).lowercase(l)}" },
             Modifier.padding(bottom = 6.dp), dim = true,
         )
     }

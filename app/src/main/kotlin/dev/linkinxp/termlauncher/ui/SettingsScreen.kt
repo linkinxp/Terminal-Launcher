@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,7 +57,7 @@ private const val DIM_STEP = 5
 
 @Composable
 private fun SettingRow(label: String, value: String, tag: String, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().testTag(tag).clickable(onClick = onClick).padding(vertical = 8.dp)) {
+    Row(Modifier.fillMaxWidth().testTag(tag).clickable(onClick = onClick).heightIn(min = MIN_TAP).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         TermText(label.padEnd(11), dim = true)
         TermText(value, bold = true)
     }
@@ -78,6 +79,7 @@ fun SettingsScreen(
     onImport: () -> Unit,
     onImportLauncher: () -> Unit,
     onClose: () -> Unit,
+    onEditPages: () -> Unit = {},
 ) {
     val theme = LocalTheme.current
     BackHandler(onBack = onClose)
@@ -90,7 +92,7 @@ fun SettingsScreen(
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 TermText("settings", color = theme.accent.color(), bold = true)
-                TermText("[x]", Modifier.testTag("settings-close").clickable(onClick = onClose), dim = true)
+                TapText("[x]", onClose, Modifier.testTag("settings-close"), dim = true)
             }
 
             TermPanel("theme", Modifier.padding(top = 4.dp)) {
@@ -104,7 +106,7 @@ fun SettingsScreen(
                         }
                         val custom = ThemeRegistry.byName(t.name) == null
                         TermText(" ${if (t.name == ui.theme.name) "*" else " "} ${t.name}${if (custom) " +" else ""}", Modifier.weight(1f), bold = t.name == ui.theme.name)
-                        if (custom) TermText("[rm]", Modifier.testTag("theme-rm-${t.name}").clickable { vm.removeCustomTheme(t.name) }.padding(horizontal = 6.dp), dim = true)
+                        if (custom) TapText("[rm]", { vm.removeCustomTheme(t.name) }, Modifier.testTag("theme-rm-${t.name}"), dim = true)
                     }
                 }
             }
@@ -175,13 +177,13 @@ fun SettingsScreen(
                 ui.quick.forEach { pkg ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         TermText(ui.apps[pkg]?.label?.lowercase() ?: pkg, Modifier.weight(1f))
-                        TermText("[^]", Modifier.testTag("quick-up-$pkg").clickable { vm.moveQuickUp(pkg) }.padding(horizontal = 8.dp))
-                        TermText("[rm]", Modifier.testTag("quick-rm-$pkg").clickable { vm.removeQuick(pkg) }.padding(start = 8.dp))
+                        TapText("[^]", { vm.moveQuickUp(pkg) }, Modifier.testTag("quick-up-$pkg"))
+                        TapText("[rm]", { vm.removeQuick(pkg) }, Modifier.testTag("quick-rm-$pkg"))
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    TermText("[+ add]", Modifier.testTag("quick-add").clickable { picking = !picking }.padding(end = 16.dp), bold = true)
-                    TermText("[reset]", Modifier.testTag("quick-reset").clickable { vm.resetQuick() }, dim = true)
+                    TapText("[+ add]", { picking = !picking }, Modifier.testTag("quick-add"), bold = true)
+                    TapText("[reset]", { vm.resetQuick() }, Modifier.testTag("quick-reset"), dim = true)
                 }
                 if (picking) {
                     ui.apps.values.filter { it.pkg !in ui.quick && it.pkg !in ui.hidden }.sortedBy { it.label.lowercase() }.forEach { app ->
@@ -196,6 +198,18 @@ fun SettingsScreen(
             TermPanel("home", Modifier.padding(top = 4.dp)) {
                 SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
                 SettingRow("density", "${ui.density.name.lowercase()} (${ui.density.columns})", "density-row") { vm.cycleDensity() }
+                SettingRow("pages", "[edit pages, widgets, panels]", "settings-edit-pages", onEditPages)
+            }
+
+            TermPanel("hidden apps", Modifier.padding(top = 4.dp)) {
+                val hiddenApps = ui.hidden.mapNotNull { ui.apps[it] }.sortedBy { it.label.lowercase() }
+                if (hiddenApps.isEmpty()) TermText("none (long-press an app > hide)", dim = true, size = 12.sp, maxLines = 2)
+                hiddenApps.forEach { app ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        TermText(app.label.lowercase(), Modifier.weight(1f))
+                        TapText("[unhide]", { vm.toggleHidden(app.pkg) }, Modifier.testTag("unhide-${app.pkg}"))
+                    }
+                }
             }
 
             TermPanel("notifications", Modifier.padding(top = 4.dp)) {

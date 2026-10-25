@@ -45,8 +45,8 @@ private sealed interface Adding {
 }
 
 @Composable
-private fun Action(text: String, onClick: () -> Unit) {
-    TermText(text, Modifier.clickable(onClick = onClick).padding(end = 12.dp, top = 4.dp, bottom = 4.dp), bold = true)
+private fun Action(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TapText(text, onClick, modifier, bold = true)
 }
 
 private fun PanelKind.label() = when (this) {
@@ -66,25 +66,39 @@ fun EditMode(
     val theme = ui.theme
     var adding by remember { mutableStateOf<Adding?>(null) }
     var newName by remember { mutableStateOf("") }
+    var confirmRemove by remember { mutableStateOf<Int?>(null) }
     val pages = ui.layout.pages
     val providers = remember { vm.widgets.providers() }
     Dialog(onDismissRequest = onDismiss) {
         Box(Modifier.padding(8.dp)) {
             DialogSurface(theme) {
-                TermPanel("edit pages", Modifier.fillMaxWidth().padding(8.dp), trailing = "[done]") {
+                TermPanel("edit pages", Modifier.fillMaxWidth().padding(8.dp)) {
                     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
-                        TermText("[settings]", Modifier.clickable(onClick = onOpenSettings).padding(bottom = 4.dp), bold = true, color = theme.accent.color())
+                        TapText("[settings]", onOpenSettings, bold = true, color = theme.accent.color())
                         ui.prompt.message?.let { TermText(it, color = theme.accent.color(), maxLines = 3) }
                         pages.forEachIndexed { i, page ->
                             TermText("page ${i + 1} (${page.items.size} items)", Modifier.padding(top = 10.dp), color = theme.accent.color(), bold = true)
                             FlowRow {
                                 if (i > 0) Action("[up]") { vm.movePage(i, i - 1) }
                                 if (i < pages.lastIndex) Action("[down]") { vm.movePage(i, i + 1) }
-                                if (pages.size > 1) Action("[rm]") { vm.removePage(i) }
+                                if (pages.size > 1) Action("[rm]", Modifier.testTag("page-rm-$i")) {
+                                    if (page.items.any { it != Item.Gap }) confirmRemove = i else vm.removePage(i)
+                                }
                                 Action("[+app]") { adding = Adding.App(i) }
                                 Action("[+dir]") { adding = Adding.Dir(i); newName = "" }
                                 Action("[+widget]") { adding = Adding.Widget(i) }
                                 Action("[+panel]") { adding = Adding.Panel(i) }
+                            }
+                            if (confirmRemove == i) {
+                                val count = page.items.count { it != Item.Gap }
+                                val to = if (i > 0) i else 2
+                                Column(Modifier.padding(start = 12.dp)) {
+                                    TermText("move $count item${if (count == 1) "" else "s"} to page $to?", color = theme.accent.color(), maxLines = 2)
+                                    FlowRow {
+                                        Action("[move + remove]", Modifier.testTag("page-rm-confirm")) { vm.removePage(i); confirmRemove = null }
+                                        Action("[cancel]", Modifier.testTag("page-rm-cancel")) { confirmRemove = null }
+                                    }
+                                }
                             }
                             // Info panels on this page: the name on its own line, its buttons under it.
                             page.items.filterIsInstance<Item.Panel>().forEach { panel ->
@@ -159,9 +173,9 @@ fun EditMode(
                             }
                         }
                         if (pages.size < HomeLayout.MAX_PAGES) {
-                            TermText("+ add page", Modifier.clickable { vm.addPage() }.padding(top = 14.dp, bottom = 6.dp), bold = true)
+                            TapText("+ add page", { vm.addPage() }, Modifier.padding(top = 8.dp), bold = true)
                         }
-                        TermText("[done]", Modifier.clickable(onClick = onDismiss).padding(top = 10.dp), dim = true)
+                        TapText("[done]", onDismiss, dim = true)
                     }
                 }
             }

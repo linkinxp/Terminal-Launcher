@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.backup
 
+import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import kotlinx.serialization.KSerializer
@@ -25,6 +26,12 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val cursor: Boolean = true,
     val boot: Boolean = true,
 )
+
+/** Backups written since scanlines follow the theme record this; older ones stored an explicit "off" that was mostly an old default. */
+const val FX_SCHEMA = 2
+
+fun FxBackup.toSettings(fxSchema: Int): FxSettings =
+    FxSettings(if (fxSchema < FX_SCHEMA && scanlines == false) null else scanlines, flicker, glitch, cursor, boot)
 
 @Serializable data class WallBackup(
     val mode: String = "SOLID",
@@ -66,6 +73,8 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val hidden: Set<String> = emptySet(),
     val theme: String = "classy-black",
     val fx: FxBackup = FxBackup(),
+    /** [FX_SCHEMA] for files written by this version; 0 for older ones. */
+    val fxSchema: Int = 0,
     val wall: WallBackup = WallBackup(),
     val panels: PanelBackup = PanelBackup(),
     val wx: WxBackup = WxBackup(),
@@ -122,6 +131,7 @@ fun decodeBackup(text: String?): Result<LauncherBackup> {
                 hidden = section("hidden", SetSerializer(String.serializer()), emptySet()),
                 theme = section("theme", String.serializer(), "classy-black"),
                 fx = section("fx", FxBackup.serializer(), FxBackup()),
+                fxSchema = section("fxSchema", Int.serializer(), 0),
                 wall = section("wall", WallBackup.serializer(), WallBackup()),
                 panels = section("panels", PanelBackup.serializer(), PanelBackup()),
                 wx = section("wx", WxBackup.serializer(), WxBackup()),

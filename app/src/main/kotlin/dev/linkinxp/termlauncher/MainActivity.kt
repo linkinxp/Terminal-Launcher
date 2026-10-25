@@ -341,6 +341,7 @@ class MainActivity : ComponentActivity() {
                         onExport = { exportLauncher.launch(BACKUP_FILE) },
                         onImport = { importLauncher.launch(arrayOf("*/*")) },
                         onImportLauncher = { launcherImportLauncher.launch(arrayOf("*/*")) },
+                        onEditPages = { settingsOpen.value = false; editing = true },
                         onClose = { settingsOpen.value = false },
                     )
                 }

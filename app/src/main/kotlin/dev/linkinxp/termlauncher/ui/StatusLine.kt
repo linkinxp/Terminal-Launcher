@@ -1,5 +1,8 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Box
 import dev.linkinxp.termlauncher.clock.formatClockTime
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,15 +44,15 @@ fun StatusLine(
 ) {
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Start) {
         // Tap to open the settings screen.
-        TermText("[cfg] ", Modifier.testTag("status-cfg").clickable(onClick = onSettings), bold = true)
+        TapText("[cfg]", onSettings, Modifier.testTag("status-cfg"), bold = true)
         (0 until pageCount).forEach { i ->
-            TermText(
+            TapText(
                 pageLabel(i, compactPageLabels(pageCount)) + if (i == current) "*" else "",
-                Modifier.clickable { onPage(i) }.padding(end = 8.dp),
+                { onPage(i) },
                 bold = i == current,
                 dim = i != current,
             )
         }
-        TermText("│ " + statusTail(snapshot.batteryPct, snapshot.charging, now.hour, now.minute, h24), dim = true)
+        Box(Modifier.heightIn(min = MIN_TAP), contentAlignment = Alignment.CenterStart) { TermText("│ " + statusTail(snapshot.batteryPct, snapshot.charging, now.hour, now.minute, h24), dim = true) }
     }
 }

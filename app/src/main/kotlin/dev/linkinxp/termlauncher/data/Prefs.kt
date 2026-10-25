@@ -21,6 +21,7 @@ import dev.linkinxp.termlauncher.apps.AppStat
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.fx.FxSettings
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.layout.seededLayout
 import dev.linkinxp.termlauncher.panel.PanelSettings
 import dev.linkinxp.termlauncher.prompt.CommandHistory
 import dev.linkinxp.termlauncher.quick.MAX_QUICK
@@ -132,6 +133,18 @@ class Prefs(private val context: Context) {
         safeEdit { p -> p[customThemesKey] = CustomThemes.encode(op(CustomThemes.decode(p[customThemesKey])).take(CustomThemes.MAX)) }
     }
     suspend fun setTheme(name: String) { safeEdit { it[themeKey] = name } }
+    /** Stores the starter home on a first run (no layout ever stored); true when it did. */
+    suspend fun seedLayout(installed: Set<String>): Boolean {
+        var seeded = false
+        try {
+            context.store.edit { p ->
+                seededLayout(p[layoutKey], installed)?.let { p[layoutKey] = it.encode(); seeded = true }
+            }
+        } catch (_: IOException) {
+        }
+        return seeded
+    }
+
     /**
      * Atomically applies [op] to the stored layout (read-modify-write inside one DataStore transaction,
      * so rapid edits cannot overwrite each other and an unloaded layout is never replaced by the default).

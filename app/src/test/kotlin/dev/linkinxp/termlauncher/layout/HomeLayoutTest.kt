@@ -252,9 +252,21 @@ class HomeLayoutTest {
         assertEquals(setOf(1, 2), l.widgetIds())
     }
 
-    @Test fun removingAPageMakesItsWidgetIdsDisappear() {
-        val l = empty.addWidget(0, w(1)).addPage().addWidget(1, w(2)).removePage(1)
-        assertEquals(setOf(1), l.widgetIds())
+    @Test fun removingAPageMovesItsItemsToThePageBefore() {
+        val l = empty.addPage().addToPage(0, Item.App("a")).addToPage(1, Item.App("b")).addToPage(1, Item.Gap).addWidget(1, w(2)).removePage(1)
+        assertEquals(1, l.pages.size)
+        assertEquals(listOf<Item>(Item.App("a"), Item.App("b"), w(2)), l.pages[0].items) // order kept, empty slots dropped
+        assertEquals(setOf(2), l.widgetIds())
+    }
+
+    @Test fun removingTheFirstPageMovesItsItemsToTheNextOne() {
+        val l = empty.addPage().addToPage(0, Item.App("a")).addToPage(1, Item.App("b")).removePage(0)
+        assertEquals(listOf<Item>(Item.App("a"), Item.App("b")), l.pages[0].items)
+    }
+
+    @Test fun removingAnEmptyPageJustRemovesIt() {
+        val l = empty.addToPage(0, Item.App("a")).addPage().removePage(1)
+        assertEquals(listOf<Item>(Item.App("a")), l.pages[0].items)
     }
 
     @Test fun layoutsWithWidgetsRoundTrip() {

@@ -40,6 +40,7 @@ class BackupRepository(private val prefs: Prefs) {
             hidden = prefs.hidden.first(),
             theme = prefs.theme.first().name,
             fx = FxBackup(fx.scanlines, fx.flicker, fx.glitch, fx.cursor, fx.boot),
+            fxSchema = FX_SCHEMA,
             wall = WallBackup(wall.mode.name, wall.style.name, wall.seed, wall.dim, wall.animate, wall.svgStyle.name),
             panels = PanelBackup(panels.cal, panels.wx, panels.search, panels.quick),
             wx = WxBackup(wx.city, wx.lat, wx.lon, wx.fahrenheit),
@@ -77,7 +78,7 @@ class BackupRepository(private val prefs: Prefs) {
         // The imported layout never has widgets; the ones configured on this device stay where they were.
         prefs.editLayout { current -> Result.success((if (b.panelItems) b.layout else b.layout.withDefaultPanels()).withoutWidgets().withWidgetsFrom(current)) }
         prefs.setHidden(b.hidden)
-        prefs.setFx(FxSettings(b.fx.scanlines, b.fx.flicker, b.fx.glitch, b.fx.cursor, b.fx.boot))
+        prefs.setFx(b.fx.toSettings(b.fxSchema))
         val d = WallSettings()
         prefs.setWall(
             WallSettings(

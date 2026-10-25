@@ -827,7 +827,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Pins [app] to the dock; a full dock or an already pinned app is reported in the prompt area. */
     private fun pinApp(app: AppEntry) = applyLayout { l ->
         val next = l.pin(app.pkg)
-        if (next == l) Result.failure(IllegalStateException("pin: ${app.label.lowercase()}: dock full or already pinned"))
+        if (next == l) Result.failure(IllegalStateException(l.pinProblem(app.pkg, app.label)))
         else Result.success(next)
     }
 
@@ -861,10 +861,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
         }
         viewModelScope.launch { repo.apps.collect { pruneMissingWidgets() } }
+        // First run: familiar apps instead of an empty home, once, as soon as the app list is known.
+        viewModelScope.launch {
+            val installed = repo.apps.first { it.isNotEmpty() }.map { it.pkg }.toSet()
+            if (prefs.seedLayout(installed)) say(FIRST_RUN_HINT)
+        }
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.0"
+        const val LAUNCHER_VERSION = "1.0.1"
+        const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L
         private const val CAL_LINES = 40

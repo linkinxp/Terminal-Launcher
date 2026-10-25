@@ -48,7 +48,7 @@ class BackupRepositoryTest {
 
     @Test fun applyThenSnapshotRoundTripsEveryStore() = runBlocking {
         repo.apply(sample())
-        assertEquals(sample().copy(customThemes = emptyList()), repo.snapshot())
+        assertEquals(sample().copy(customThemes = emptyList(), fxSchema = FX_SCHEMA), repo.snapshot())
     }
 
     @Test fun snapshotNeverIncludesWidgets() = runBlocking {
@@ -74,7 +74,7 @@ class BackupRepositoryTest {
 
     @Test fun applyingTheDefaultBackupDoesNotThrow() = runBlocking {
         repo.apply(LauncherBackup(customThemes = emptyList(), panelItems = true))
-        assertEquals(LauncherBackup(customThemes = emptyList(), panelItems = true), repo.snapshot())
+        assertEquals(LauncherBackup(customThemes = emptyList(), panelItems = true, fxSchema = FX_SCHEMA), repo.snapshot())
     }
 
     @Test fun applyKeepsTheWidgetsThatAreOnTheDeviceNow() = runBlocking {

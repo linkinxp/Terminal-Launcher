@@ -69,6 +69,10 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         else -> copy(dock = dock + Item.App(pkg))
     }
 
+    /** Why [pin] would do nothing, in plain words. */
+    fun pinProblem(pkg: String, label: String): String =
+        if (dock.contains(Item.App(pkg))) "${label.lowercase()} is already in the dock" else "dock is full ($MAX_DOCK): unpin one first"
+
     fun unpin(pkg: String): HomeLayout = copy(dock = dock - Item.App(pkg))
 
     /** The panel kinds placed on some page. */
@@ -181,8 +185,19 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
 
     fun addPage(): HomeLayout = if (pages.size >= MAX_PAGES) this else copy(pages = pages + Page(emptyList()))
 
-    fun removePage(index: Int): HomeLayout =
-        if (pages.size <= 1 || index !in pages.indices) this else copy(pages = pages.filterIndexed { i, _ -> i != index })
+    /** Removes a page; whatever was on it (apps, folders, widgets, panels) moves to the page before it, or the next one for page one. */
+    fun removePage(index: Int): HomeLayout {
+        if (pages.size <= 1 || index !in pages.indices) return this
+        val moved = pages[index].items.filter { it != Item.Gap }
+        val target = if (index > 0) index - 1 else 1
+        return copy(pages = pages.mapIndexedNotNull { i, p ->
+            when (i) {
+                index -> null
+                target -> Page(if (index > 0) p.items + moved else moved + p.items)
+                else -> p
+            }
+        })
+    }
 
     fun movePage(from: Int, to: Int): HomeLayout {
         if (from !in pages.indices || to !in pages.indices) return this
