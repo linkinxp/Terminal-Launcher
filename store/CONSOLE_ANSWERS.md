@@ -1,7 +1,7 @@
 # Play Console answers for com.linkinxp.terminal (draft; check each against the form)
 
 **App category**: Personalization. **Tags**: launcher, customization. **Contact email / website**: set in the Console.
-**Privacy policy URL**: https://github.com/linkinxp/Terminal-Launcher/blob/main/PRIVACY.md
+**Privacy policy URL**: https://linkinxp.github.io/Terminal-Launcher/privacy/
 
 ## App content
 - **Ads**: no. **App access**: everything works without login or special access (notification access, contacts and calendar are optional).

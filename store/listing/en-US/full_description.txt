@@ -26,6 +26,6 @@ USEFUL
 - Import your layout from another launcher; back up and restore your whole setup to a file
 
 PRIVACY
-No account, no ads, no analytics. Everything stays on your phone. The only network request is the optional weather panel, which sends the coordinates of the city you chose to Open-Meteo. Notification access (for badges and the now-playing panel) and contacts or calendar access are optional and used only on the device. Full policy: https://github.com/linkinxp/Terminal-Launcher/blob/main/PRIVACY.md
+No account, no ads, no analytics. Everything stays on your phone. The only network request is the optional weather panel, which sends the coordinates of the city you chose to Open-Meteo. Notification access (for badges and the now-playing panel) and contacts or calendar access are optional and used only on the device. Full policy: https://linkinxp.github.io/Terminal-Launcher/privacy/
 
 Terminal replaces your home screen; you can switch back any time in Android settings.
