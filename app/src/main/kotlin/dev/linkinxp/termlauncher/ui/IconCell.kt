@@ -84,8 +84,8 @@ fun FolderTile(folder: Item.Folder, ui: LauncherUi, size: Dp) {
 @Composable
 fun ItemIcon(item: Item, ui: LauncherUi, size: Dp) {
     when (item) {
-        is Item.App -> IconTile(item.pkg, ui.apps[item.pkg]?.label ?: item.pkg, size)
-        is Item.Folder -> FolderTile(item, ui, size)
+        is Item.App -> BadgedIcon(listOf(item.pkg), ui.badges, "badge-${item.pkg}") { IconTile(item.pkg, ui.apps[item.pkg]?.label ?: item.pkg, size) }
+        is Item.Folder -> BadgedIcon(item.apps, ui.badges, "badge-folder-${item.name}") { FolderTile(item, ui, size) }
         else -> {}
     }
 }

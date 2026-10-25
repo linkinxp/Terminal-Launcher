@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.8.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 0.9.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest
@@ -48,6 +48,17 @@ quick tiles and page one are drawn ahead of time, and so are the first 24 drawer
 - Swipe down on the left half of the screen: notifications; on the right half: quick settings. Double-tap an empty spot: lock the screen (switch
   on the "Terminal: lock screen" accessibility service once; settings > gestures has the shortcut). A one-line weather summary shows under the
   date when the weather panel is on. Long-press an app for its own shortcuts (when Terminal is the default home app).
+
+## Search beyond apps, badges, media and toggles
+- The drawer search also offers matching contacts (after you allow contacts), matching Android settings pages (`wifi`, `battery`, `dark`...) and
+  "search the web: ..."; the Search key launches the best app match, or the web row when there is none.
+- Icons show a small count badge when an app has notifications (settings > notifications: needs notification access; Terminal only counts
+  them, it never reads their text). Two new panels, added with `[+panel]` in edit mode: `now playing` (title, artist, previous/play/next) and
+  `toggles` (flashlight, and shortcuts to the wifi, bluetooth, sound and location screens).
+
+## Moving icons
+In the icon style, press and hold an icon to pick it up, drag it onto another icon and let go: it takes that place and the others shift over.
+Hold without moving and you get the item menu as before. The wallpaper settings only show the fields the chosen wallpaper uses.
 
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head

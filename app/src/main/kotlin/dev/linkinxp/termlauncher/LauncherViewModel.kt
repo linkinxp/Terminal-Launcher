@@ -25,6 +25,9 @@ import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.Density
+import dev.linkinxp.termlauncher.search.ContactsRepository
+import dev.linkinxp.termlauncher.search.ExtraResult
+import dev.linkinxp.termlauncher.search.buildExtras
 import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.densityPlan
 import dev.linkinxp.termlauncher.layout.PanelKind
@@ -93,6 +96,8 @@ import dev.linkinxp.termlauncher.theme.addCustomTheme
 import dev.linkinxp.termlauncher.theme.removeCustomTheme
 import dev.linkinxp.termlauncher.theme.describeThemes
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -150,6 +155,9 @@ data class LauncherUi(
     val homeStyle: HomeStyle = HomeStyle.CLASSIC,
     val doubleTapLock: Boolean = true,
     val density: Density = Density.NORMAL,
+    val badges: Boolean = true,
+    /** Contacts, settings pages and a web fallback for the drawer search (empty without a query). */
+    val extras: List<ExtraResult> = emptyList(),
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -167,6 +175,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val calendar: PanelData = PanelData.Off,
         val weather: PanelData = PanelData.Off,
         val weatherLine: String? = null,
+        val extras: List<ExtraResult> = emptyList(),
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -191,11 +200,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle, val doubleTapLock: Boolean, val density: Density)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle, val doubleTapLock: Boolean, val density: Density, val badges: Boolean)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle, prefs.doubleTapLock, prefs.density) { a ->
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle, prefs.doubleTapLock, prefs.density, prefs.badges) { a ->
         @Suppress("UNCHECKED_CAST")
-        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle, a[7] as Boolean, a[8] as Density)
+        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle, a[7] as Boolean, a[8] as Density, a[9] as Boolean)
     }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
@@ -234,6 +243,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             calendar = if (p.panels.cal) e.calendar else PanelData.Off,
             weather = if (p.panels.wx) e.weather else PanelData.Off,
             weatherLine = if (p.panels.wx) e.weatherLine else null,
+            extras = e.extras,
             wx = x.wx,
             quick = (x.quick ?: quickDefaults).filter { it in installed },
             drawerKeyboard = x.drawerKeyboard,
@@ -243,6 +253,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             homeStyle = x.homeStyle,
             doubleTapLock = x.doubleTapLock,
             density = x.density,
+            badges = x.badges,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi(homeStyle = HomeStyle.DEFAULT))
@@ -698,13 +709,35 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun appInfo(pkg: String) = repo.appInfo(pkg)
 
     fun openDrawer(showHidden: Boolean = false) {
-        eph.update { it.copy(drawerOpen = true, showHidden = showHidden, filter = "") }
+        eph.update { it.copy(drawerOpen = true, showHidden = showHidden, filter = "", extras = emptyList()) }
     }
-    fun closeDrawer() = eph.update { it.copy(drawerOpen = false, showHidden = false, filter = "") }
-    fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
+    fun closeDrawer() = eph.update { it.copy(drawerOpen = false, showHidden = false, filter = "", extras = emptyList()) }
+
+    private val contactsRepo = ContactsRepository(application)
+    private var extrasJob: Job? = null
+
+    fun setFilter(filter: String) {
+        eph.update { it.copy(filter = filter, extras = if (filter.trim().length < 2) emptyList() else it.extras) }
+        refreshExtras()
+    }
+
+    /** Looks up contacts (off the main thread) and builds the settings/web rows for the current search text. */
+    fun refreshExtras() {
+        extrasJob?.cancel()
+        val query = eph.value.filter
+        if (query.trim().length < 2) return
+        extrasJob = viewModelScope.launch {
+            val allowed = contactsRepo.hasPermission()
+            val contacts = if (allowed) withContext(Dispatchers.IO) { contactsRepo.search(query) } else emptyList()
+            eph.update { if (it.filter == query) it.copy(extras = buildExtras(query, contacts, allowed)) else it }
+        }
+    }
+
+    fun askForContacts() { _permissionRequests.tryEmit(Manifest.permission.READ_CONTACTS) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setClockFormat(f: ClockFormat) { viewModelScope.launch { prefs.setClockFormat(f) } }
     fun toggleDoubleTapLock() { viewModelScope.launch { prefs.setDoubleTapLock(!ui.value.doubleTapLock) } }
+    fun toggleBadges() { viewModelScope.launch { prefs.setBadges(!ui.value.badges) } }
     fun setDensity(d: Density) { viewModelScope.launch { prefs.setDensity(d) } }
     fun cycleDensity() { setDensity(Density.entries.let { it[(it.indexOf(ui.value.density) + 1) % it.size] }) }
     fun setHomeStyle(s: HomeStyle) { viewModelScope.launch { prefs.setHomeStyle(s) } }
@@ -823,7 +856,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "0.8.0"
+        const val LAUNCHER_VERSION = "0.9.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L
         private const val CAL_LINES = 40

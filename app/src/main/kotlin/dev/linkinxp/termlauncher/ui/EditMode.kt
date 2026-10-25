@@ -50,7 +50,7 @@ private fun Action(text: String, onClick: () -> Unit) {
 }
 
 private fun PanelKind.label() = when (this) {
-    PanelKind.SEARCH -> "search bar"; PanelKind.SYS -> "sys stats"; PanelKind.CAL -> "calendar"; PanelKind.WX -> "weather"
+    PanelKind.SEARCH -> "search bar"; PanelKind.SYS -> "sys stats"; PanelKind.CAL -> "calendar"; PanelKind.WX -> "weather"; PanelKind.MEDIA -> "now playing"; PanelKind.TOGGLES -> "toggles"
 }
 
 /** Edit pages: add, remove and reorder pages; add an app shortcut or a folder to a page. */

@@ -136,6 +136,8 @@ private fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, on
         PanelKind.SYS -> SysPanel(snapshot)
         PanelKind.CAL -> PanelBlock("cal", ui.calendar, scrollAfter = 6)
         PanelKind.WX -> PanelBlock("wx", ui.weather)
+        PanelKind.MEDIA -> MediaPanel()
+        PanelKind.TOGGLES -> TogglesPanel()
     }
 }
 

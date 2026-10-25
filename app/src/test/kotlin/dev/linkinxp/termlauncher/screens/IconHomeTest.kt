@@ -188,4 +188,24 @@ class IconHomeTest {
         rule.waitForIdle()
         assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
     }
+
+    @Test fun anAppWithNotificationsShowsABadgeOnItsIconWhenBadgesAreOn() {
+        dev.linkinxp.termlauncher.badges.BadgeStore.publish(mapOf(maps.pkg to 3))
+        show(HomeStyle.ICONS, quick = emptyList(), dock = emptyList())
+        waitForIcon(maps.pkg)
+        rule.onNodeWithTag("badge-${maps.pkg}", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("3", useUnmergedTree = true).assertIsDisplayed()
+        assertEquals(0, rule.onAllNodes(androidx.compose.ui.test.hasTestTag("badge-${notes.pkg}"), useUnmergedTree = true).fetchSemanticsNodes().size)
+        dev.linkinxp.termlauncher.badges.BadgeStore.publish(emptyMap())
+    }
+
+    @Test fun noBadgesWhenTheSettingIsOff() {
+        dev.linkinxp.termlauncher.badges.BadgeStore.publish(mapOf(maps.pkg to 3))
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(theme = ThemeRegistry.default, layout = HomeLayout(emptyList(), listOf(Page(listOf(Item.App(maps.pkg))))), apps = mapOf(maps.pkg to maps), homeStyle = HomeStyle.ICONS, badges = false)
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, {}, {}) } }
+        waitForIcon(maps.pkg)
+        assertEquals(0, rule.onAllNodes(androidx.compose.ui.test.hasTestTag("badge-${maps.pkg}"), useUnmergedTree = true).fetchSemanticsNodes().size)
+        dev.linkinxp.termlauncher.badges.BadgeStore.publish(emptyMap())
+    }
 }

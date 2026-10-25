@@ -235,4 +235,11 @@ class SettingsScreenTest {
         assertTrue(has("dim-plus"))
         listOf("wall-style", "wall-svg-style", "wall-random", "wall-animate").forEach { assertTrue("$it should be hidden", !has(it)) }
     }
+
+    @Test fun theBadgesRowTogglesAndIsOnByDefault() {
+        val vm = show()
+        assertEquals(true, vm.ui.value.badges)
+        click("badges-row"); until({ "badges=${vm.ui.value.badges}" }) { !vm.ui.value.badges }
+        click("badges-row"); until({ "badges=${vm.ui.value.badges}" }) { vm.ui.value.badges }
+    }
 }

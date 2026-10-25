@@ -41,6 +41,7 @@ import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.wall.AsciiStyle
+import dev.linkinxp.termlauncher.badges.isBadgeAccessGranted
 import dev.linkinxp.termlauncher.gestures.ScreenLock
 import dev.linkinxp.termlauncher.wall.SvgStyle
 import dev.linkinxp.termlauncher.wall.WallField
@@ -194,6 +195,15 @@ fun SettingsScreen(
             TermPanel("home", Modifier.padding(top = 4.dp)) {
                 SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
                 SettingRow("density", "${ui.density.name.lowercase()} (${ui.density.columns})", "density-row") { vm.cycleDensity() }
+            }
+
+            TermPanel("notifications", Modifier.padding(top = 4.dp)) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                ToggleRow("badges", ui.badges, "badges-row") { vm.toggleBadges() }
+                SettingRow("access", if (isBadgeAccessGranted(context)) "on" else "off [grant]", "badges-access") {
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+                TermText("counts only: Terminal never reads the notification text", dim = true, size = 12.sp, maxLines = 2)
             }
 
             TermPanel("gestures", Modifier.padding(top = 4.dp)) {

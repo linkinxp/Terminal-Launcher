@@ -44,5 +44,17 @@ class GridLayoutTest {
         is GridEntry.Header -> "h:$text"
         is GridEntry.Folder -> "f:$name"
         is GridEntry.Cell -> "c:${app.label}"
+        is GridEntry.Extra -> "x:${extra.label}"
+    }
+
+    @Test fun extrasFollowTheAppsAndEveryKeyIsUnique() {
+        val s = DrawerState(emptyList(), emptyList(), results = listOf(app("Camera")))
+        val extras = listOf(
+            dev.linkinxp.termlauncher.search.ExtraResult(dev.linkinxp.termlauncher.search.ExtraKind.SETTING, "wifi settings", "x"),
+            dev.linkinxp.termlauncher.search.ExtraResult(dev.linkinxp.termlauncher.search.ExtraKind.WEB, "search the web: cam", "cam"),
+        )
+        val g = gridLayout(s, emptyList(), filtering = true, extras = extras)
+        assertEquals(listOf("c:Camera", "x:wifi settings", "x:search the web: cam"), g.entries.map { it.debug() })
+        assertEquals(g.entries.size, g.entries.map { it.key }.toSet().size)
     }
 }

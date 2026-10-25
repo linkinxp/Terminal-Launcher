@@ -161,4 +161,9 @@ class LauncherBackupTest {
         assertEquals("DENSE", decodeBackup(encodeBackup(sample().copy(density = "DENSE"))).getOrThrow().density)
         assertEquals("NORMAL", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().density)
     }
+
+    @Test fun theBadgesSettingRoundTripsAndDefaultsToOn() {
+        assertEquals(false, decodeBackup(encodeBackup(sample().copy(badges = false))).getOrThrow().badges)
+        assertEquals(true, decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().badges)
+    }
 }

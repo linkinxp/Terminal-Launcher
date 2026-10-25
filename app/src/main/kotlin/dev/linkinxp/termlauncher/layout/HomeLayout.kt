@@ -16,7 +16,7 @@ sealed interface Item {
     @Serializable @SerialName("panel") data class Panel(val kind: PanelKind) : Item
 }
 
-@Serializable enum class PanelKind { SEARCH, SYS, CAL, WX }
+@Serializable enum class PanelKind { SEARCH, SYS, CAL, WX, MEDIA, TOGGLES }
 
 @Serializable data class Page(val items: List<Item>)
 

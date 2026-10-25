@@ -33,7 +33,7 @@ fun QuickPanel(ui: LauncherUi, onTap: (String) -> Unit, onLongPress: (String) ->
                     row.forEach { pkg ->
                         val label = tileLabel(ui.apps[pkg]?.label ?: pkg).lowercase()
                         IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg"), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) {
-                            IconTile(pkg, ui.apps[pkg]?.label ?: pkg, ui.density.quickDp.dp)
+                            BadgedIcon(listOf(pkg), ui.badges, "badge-$pkg") { IconTile(pkg, ui.apps[pkg]?.label ?: pkg, ui.density.quickDp.dp) }
                         }
                     }
                     repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }

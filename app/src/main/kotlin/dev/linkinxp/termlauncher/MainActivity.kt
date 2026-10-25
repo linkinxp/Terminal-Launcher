@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.onCalendarPermission(granted)
+        vm.refreshExtras()
     }
 
     private val bindLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -325,6 +326,7 @@ class MainActivity : ComponentActivity() {
                         onAppLongPress = { menuPkg = it },
                         onFolderTap = { folderName = it },
                         onSettings = { vm.closeDrawer(); settingsOpen.value = true },
+                        onWebSearch = ::openSearch,
                     )
                 }
                 menuPkg?.let { AppMenu(it, uiState.value, vm) { menuPkg = null } }

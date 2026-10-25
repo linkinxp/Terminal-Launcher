@@ -54,6 +54,8 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.layout.HomeStyle
+import dev.linkinxp.termlauncher.search.ExtraKind
+import dev.linkinxp.termlauncher.search.ExtraResult
 import dev.linkinxp.termlauncher.wall.WallMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -73,6 +75,7 @@ fun AppDrawer(
     onAppLongPress: (String) -> Unit,
     onFolderTap: (String) -> Unit,
     onSettings: () -> Unit = {},
+    onWebSearch: (String) -> Unit = {},
     open: () -> Boolean = { true },
     modifier: Modifier = Modifier,
 ) {
@@ -149,9 +152,19 @@ fun AppDrawer(
 
     val grid = if (iconStyle) {
         val folderRows = folders.map { it.name to it.apps.size }
-        remember(d, folderRows, filtering) { gridLayout(d, folderRows, filtering) }
+        remember(d, folderRows, filtering, ui.extras) { gridLayout(d, folderRows, filtering, if (filtering) ui.extras else emptyList()) }
     } else null
     if (iconStyle) WarmIcons(remember(d, ui.density) { drawerWarmTargets(d, ui.density.iconDp) }, delayMs = 1_500)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Contacts and settings pages open in their own apps; the web row hands over to the search handler.
+    val onExtra: (ExtraResult) -> Unit = { extra ->
+        when (extra.kind) {
+            ExtraKind.WEB -> { onWebSearch(extra.target); vm.closeDrawer() }
+            ExtraKind.ASK_CONTACTS -> vm.askForContacts()
+            ExtraKind.CONTACT -> { try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(extra.target)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); vm.closeDrawer() } catch (_: Exception) {} }
+            ExtraKind.SETTING -> { try { context.startActivity(android.content.Intent(extra.target).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); vm.closeDrawer() } catch (_: Exception) {} }
+        }
+    }
     val searchRow: @Composable () -> Unit = {
     Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         TermText("| grep ", dim = true)
@@ -189,7 +202,7 @@ fun AppDrawer(
             if (iconStyle) {
                 IconDrawerGrid(
                     grid!!, ui, gridState, hideKeyboardOnScroll,
-                    onLaunch = { pkg -> vm.launch(pkg); vm.closeDrawer() }, onAppLongPress = onAppLongPress, onFolderTap = onFolderTap,
+                    onLaunch = { pkg -> vm.launch(pkg); vm.closeDrawer() }, onAppLongPress = onAppLongPress, onFolderTap = onFolderTap, onExtra = onExtra,
                     modifier = Modifier.weight(1f),
                 )
                 // Controls and search sit at the bottom, in reach of the thumb; a swipe down on them closes the drawer.
@@ -246,7 +259,11 @@ fun AppDrawer(
                         val app = d.results[i]
                         AppRow(app, ui.iconMode, { vm.launch(app.pkg); vm.closeDrawer() }, { onAppLongPress(app.pkg) })
                     }
-                    if (d.results.isEmpty() && folders.isEmpty()) item { TermText("no match", dim = true) }
+                    if (d.results.isEmpty() && folders.isEmpty() && ui.extras.isEmpty()) item { TermText("no match", dim = true) }
+                    items(ui.extras.size, key = { "x-${ui.extras[it].kind}-${ui.extras[it].label}" }) { i ->
+                        val extra = ui.extras[i]
+                        TermText("> ${extra.label}", Modifier.fillMaxWidth().clickable { onExtra(extra) }.padding(vertical = 10.dp), color = if (extra.kind == ExtraKind.WEB) theme.accent.color() else theme.foreground.color())
+                    }
                 } else if (d.recent.isNotEmpty()) {
                     item(key = "h-recent") { TermText("recent", color = theme.accent.color(), bold = true, modifier = Modifier.padding(top = 4.dp)) }
                     items(d.recent.size, key = { "r-${d.recent[it].pkg}" }) { i ->

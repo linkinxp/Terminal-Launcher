@@ -135,4 +135,18 @@ class IconDrawerTest {
         val f = rule.onNodeWithText("cc6").getUnclippedBoundsInRoot().top
         assertEquals(a.value, f.value, 0.5f)
     }
+
+    @Test fun searchExtrasAppearUnderTheAppsAndTapsAreReported() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val web = mutableListOf<String>()
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default, apps = apps.associateBy { it.pkg }, drawer = buildDrawer(apps, emptySet(), emptyMap(), DrawerSort.AZ, "cam", false), filter = "cam",
+            drawerOpen = true, homeStyle = HomeStyle.ICONS, drawerKeyboard = false,
+            extras = dev.linkinxp.termlauncher.search.buildExtras("cam", emptyList(), contactsAllowed = true),
+        )
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}, onWebSearch = { web += it }) } }
+        rule.onNodeWithText("search the web: cam", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("search the web: cam", substring = true).performClick()
+        assertEquals(listOf("cam"), web)
+    }
 }
