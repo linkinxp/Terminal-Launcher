@@ -146,6 +146,7 @@ data class LauncherUi(
     val clockStyle: ClockStyle = ClockStyle.PIXEL,
     val customThemes: List<Theme> = emptyList(),
     val homeStyle: HomeStyle = HomeStyle.CLASSIC,
+    val doubleTapLock: Boolean = true,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -187,11 +188,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle, val doubleTapLock: Boolean)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle) { a ->
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle, prefs.doubleTapLock) { a ->
         @Suppress("UNCHECKED_CAST")
-        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle)
+        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle, a[7] as Boolean)
     }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
@@ -237,6 +238,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             clockStyle = x.clockStyle,
             customThemes = x.customThemes,
             homeStyle = x.homeStyle,
+            doubleTapLock = x.doubleTapLock,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi(homeStyle = HomeStyle.DEFAULT))
@@ -696,6 +698,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setFilter(filter: String) = eph.update { it.copy(filter = filter) }
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setClockFormat(f: ClockFormat) { viewModelScope.launch { prefs.setClockFormat(f) } }
+    fun toggleDoubleTapLock() { viewModelScope.launch { prefs.setDoubleTapLock(!ui.value.doubleTapLock) } }
     fun setHomeStyle(s: HomeStyle) { viewModelScope.launch { prefs.setHomeStyle(s) } }
     fun cycleHomeStyle() { setHomeStyle(HomeStyle.entries.let { it[(it.indexOf(ui.value.homeStyle) + 1) % it.size] }) }
 

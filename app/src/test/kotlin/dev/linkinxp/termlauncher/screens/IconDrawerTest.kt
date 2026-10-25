@@ -3,11 +3,15 @@ package dev.linkinxp.termlauncher.screens
 import android.app.Application
 import android.os.Looper
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
@@ -82,4 +86,39 @@ class IconDrawerTest {
         rule.onNodeWithText("-- B --").assertIsDisplayed()
         rule.onNodeWithText("| grep ", substring = true).assertIsDisplayed()
     }
+
+    @Test fun theSearchFieldIsNotFocusedWhenTheKeyboardSettingIsOff() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val open = androidx.compose.runtime.mutableStateOf(false)
+        val ui = LauncherUi(theme = ThemeRegistry.default, apps = apps.associateBy { it.pkg }, drawer = buildDrawer(apps, emptySet(), emptyMap(), DrawerSort.AZ, "", false), homeStyle = HomeStyle.ICONS, drawerKeyboard = false)
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}, open = { open.value }) } }
+        open.value = true
+        rule.waitForIdle()
+        rule.onNodeWithTag("drawer-search").assertIsNotFocused()
+    }
+
+    @Test fun theLastSearchIsGoneWhenTheDrawerIsOpenedAgain() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val open = androidx.compose.runtime.mutableStateOf(true)
+        val ui = LauncherUi(theme = ThemeRegistry.default, apps = apps.associateBy { it.pkg }, drawer = buildDrawer(apps, emptySet(), emptyMap(), DrawerSort.AZ, "", false), homeStyle = HomeStyle.ICONS, drawerKeyboard = false)
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}, open = { open.value }) } }
+        rule.onNodeWithTag("drawer-search").performTextInput("Claude")
+        rule.onNodeWithText("Claude", substring = true).assertIsDisplayed()
+        open.value = false
+        pump()
+        open.value = true
+        pump()
+        assertEquals(0, rule.onAllNodesWithText("Claude", substring = true).fetchSemanticsNodes().size)
+    }
+
+    @Test fun aClosedDrawerCannotTakeFocusSoItNeverPullsTheKeyboardUpOnHome() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(theme = ThemeRegistry.default, apps = apps.associateBy { it.pkg }, drawer = buildDrawer(apps, emptySet(), emptyMap(), DrawerSort.AZ, "", false), homeStyle = HomeStyle.ICONS, drawerKeyboard = true)
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}, open = { false }) } }
+        rule.onNodeWithTag("drawer-search").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        pump()
+        rule.onNodeWithTag("drawer-search").assertIsNotFocused()
+    }
+
+    private fun pump() { repeat(15) { shadowOf(Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(20) } }
 }

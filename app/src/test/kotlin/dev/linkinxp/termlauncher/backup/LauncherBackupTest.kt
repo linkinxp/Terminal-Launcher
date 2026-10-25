@@ -151,4 +151,9 @@ class LauncherBackupTest {
         assertEquals("TOPO", decodeBackup(encodeBackup(sample().copy(wall = WallBackup(svgStyle = "TOPO")))).getOrThrow().wall.svgStyle)
         assertEquals("CIRCUIT", decodeBackup("""{"format":"terminal-launcher-backup","version":1,"wall":{"mode":"ASCII"}}""").getOrThrow().wall.svgStyle)
     }
+
+    @Test fun theDoubleTapLockRoundTripsAndDefaultsToOn() {
+        assertEquals(false, decodeBackup(encodeBackup(sample().copy(doubleTapLock = false))).getOrThrow().doubleTapLock)
+        assertEquals(true, decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().doubleTapLock)
+    }
 }

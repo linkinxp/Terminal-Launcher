@@ -10,7 +10,13 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.onSizeChanged
+import dev.linkinxp.termlauncher.gestures.SwipeDownAction
+import dev.linkinxp.termlauncher.gestures.swipeDownAction
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.BackHandler
@@ -144,7 +150,8 @@ fun PagerHome(
     homeSignal: Int = 0,
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
-    onSwipeDown: () -> Unit = {},
+    onSwipeDown: (SwipeDownAction) -> Unit = {},
+    onDoubleTap: () -> Unit = {},
     style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
@@ -167,11 +174,13 @@ fun PagerHome(
     // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
     // pulling down at the top opens the notification shade, pushing up at the bottom opens the drawer.
     val overscroll = remember { floatArrayOf(0f) }
+    val downX = remember { floatArrayOf(0f) }   // where the current gesture started, to tell the left half from the right
+    val widthPx = remember { floatArrayOf(0f) }
     val fired = remember { booleanArrayOf(false) } // one swipe per drag, fired the moment it is long enough, not on release
     val swipes by rememberUpdatedState({ dy: Float ->
         when {
             dy < -SWIPE_PX -> onSwipeUp()
-            dy > SWIPE_PX -> onSwipeDown()
+            dy > SWIPE_PX -> onSwipeDown(swipeDownAction(downX[0], widthPx[0]))
         }
     })
     val edgeSwipes = remember {
@@ -190,7 +199,19 @@ fun PagerHome(
             }
         }
     }
-    Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().nestedScroll(edgeSwipes)) {
+    Box(
+        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+            .onSizeChanged { widthPx[0] = it.width.toFloat() }
+            .pointerInput(Unit) {
+                // Watches where every gesture starts without taking part in it.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    downX[0] = down.position.x
+                    do { val event = awaitPointerEvent(PointerEventPass.Initial) } while (event.changes.any { it.pressed })
+                }
+            }
+            .nestedScroll(edgeSwipes),
+    ) {
     Column(Modifier.fillMaxSize()) {
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
             val scroll = rememberScrollState()
@@ -244,7 +265,7 @@ fun PagerHome(
                 }
                 flush()
             }
-            val tapEdit = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
+            val tapEdit = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }, onDoubleTap = { onDoubleTap() }) }
             // The big clock heads the first page with panels (the glance page); with a non-classic style page one keeps a one-line clock.
             val header: @Composable () -> Unit = {
                 if (style == HomeStyle.CLASSIC) { if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch, ui.weatherLine) }

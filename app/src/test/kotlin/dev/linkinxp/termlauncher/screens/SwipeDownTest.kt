@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
@@ -13,6 +14,7 @@ import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.AppEntry
 import dev.linkinxp.termlauncher.layout.HomeLayout
+import dev.linkinxp.termlauncher.gestures.SwipeDownAction
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.Page
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
@@ -34,7 +36,8 @@ class SwipeDownTest {
     @get:Rule val rule = createComposeRule()
 
     private val phone = AppEntry("pkg.phone", "Phone", 0)
-    private var shades = 0
+    private val shades = mutableListOf<SwipeDownAction>()
+    private var doubles = 0
     private var drawers = 0
 
     private fun show(longPage: Boolean = false) {
@@ -43,14 +46,14 @@ class SwipeDownTest {
         val apps = (listOf(phone) + if (longPage) many else emptyList()).associateBy { it.pkg }
         val layout = HomeLayout(emptyList(), listOf(Page(if (longPage) many.map { Item.App(it.pkg) } else emptyList())))
         val ui = LauncherUi(theme = ThemeRegistry.default, apps = apps, quick = listOf(phone.pkg), layout = layout)
-        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, { drawers++ }, {}, onSwipeDown = { shades++ }) } }
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, { drawers++ }, {}, onSwipeDown = { shades += it }, onDoubleTap = { doubles++ }) } }
     }
 
     @Test fun swipingDownOpensTheShadeAndNotAQuickPanel() {
         show()
         rule.onRoot().performTouchInput { swipeDown() }
         rule.waitForIdle()
-        assertEquals(1, shades)
+        assertEquals(1, shades.size)
         assertEquals(0, drawers)
         rule.onNodeWithTag("pull-quick-pkg.phone").assertDoesNotExist()
     }
@@ -59,7 +62,7 @@ class SwipeDownTest {
         show(longPage = true)
         rule.onRoot().performTouchInput { swipeDown(startY = height * 0.1f, endY = height * 0.6f) }
         rule.waitForIdle()
-        assertEquals(1, shades)
+        assertEquals(1, shades.size)
     }
 
     @Test fun swipingUpStillOpensTheDrawer() {
@@ -67,7 +70,7 @@ class SwipeDownTest {
         rule.onRoot().performTouchInput { swipeUp() }
         rule.waitForIdle()
         assertEquals(1, drawers)
-        assertEquals(0, shades)
+        assertEquals(0, shades.size)
     }
 
     @Test fun aScrollingPageScrollsInsteadOfOpeningTheDrawerOnTheFirstSwipeUp() {
@@ -97,9 +100,26 @@ class SwipeDownTest {
             moveBy(Offset(0f, 300f))
         }
         rule.waitForIdle()
-        assertEquals(1, shades)
+        assertEquals(1, shades.size)
         rule.onRoot().performTouchInput { up() }
         rule.waitForIdle()
-        assertEquals(1, shades)
+        assertEquals(1, shades.size)
+    }
+
+    @Test fun aSwipeDownFromTheLeftOpensTheNotificationsAndFromTheRightTheQuickSettings() {
+        show()
+        rule.onRoot().performTouchInput { down(Offset(width * 0.2f, 40f)); moveBy(Offset(0f, 300f)); up() }
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.onRoot().performTouchInput { down(Offset(width * 0.8f, 40f)); moveBy(Offset(0f, 300f)); up() }
+        rule.waitForIdle()
+        assertEquals(listOf(SwipeDownAction.NOTIFICATIONS, SwipeDownAction.QUICK_SETTINGS), shades)
+    }
+
+    @Test fun doubleTappingAnEmptySpotOnThePageIsReported() {
+        show()
+        rule.onRoot().performTouchInput { doubleClick(Offset(width / 2f, height * 0.5f)) }
+        rule.waitForIdle()
+        assertEquals(1, doubles)
     }
 }

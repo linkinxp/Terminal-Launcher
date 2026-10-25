@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -99,16 +100,32 @@ fun AppDrawer(
     LaunchedEffect(Unit) {
         // `open` is observed here (not read during composition), so opening/closing never recomposes the drawer.
         snapshotFlow { open() }.collect { isOpen ->
-            if (isOpen) {
-                // Settings > drawer > keyboard (on by default). Showing the keyboard is a blocking call, so it waits for the slide-in.
-                if (keyboardOnOpen) { withContext(Dispatchers.Main) { focus.requestFocus(); keyboard?.show() } }
-            } else {
-                // Views and focus may only be touched on the main thread (the state observer can resume elsewhere).
-                withContext(Dispatchers.Main) {
-                    keyboard?.hide(); focusManager.clearFocus()
-                    filterValue = TextFieldValue("")
-                    listState.scrollToItem(0); gridState.scrollToItem(0)
+            // One failing step must never end this collector: it would stop the keyboard and the search reset for good.
+            try {
+                if (isOpen) {
+                    // A new visit never starts with the last search in the box.
+                    withContext(Dispatchers.Main) { if (filterValue.text.isNotEmpty()) filterValue = TextFieldValue("") }
+                    // Settings > drawer > keyboard (on by default). The drawer is still off-screen until its first frame
+                    // after opening: asking for focus and the keyboard before that does nothing, so wait for that frame.
+                    if (keyboardOnOpen) {
+                        androidx.compose.runtime.withFrameNanos { }
+                        withContext(Dispatchers.Main) {
+                            try { focus.requestFocus() } catch (e: IllegalStateException) { android.util.Log.w("TermDrawer", "no search field to focus", e) }
+                            keyboard?.show()
+                        }
+                    }
+                } else {
+                    // Views and focus may only be touched on the main thread (the state observer can resume elsewhere).
+                    withContext(Dispatchers.Main) {
+                        filterValue = TextFieldValue("")
+                        keyboard?.hide(); focusManager.clearFocus()
+                        listState.scrollToItem(0); gridState.scrollToItem(0)
+                    }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("TermDrawer", "drawer ${if (isOpen) "open" else "close"} step failed", e)
             }
         }
     }
@@ -151,7 +168,8 @@ fun AppDrawer(
                 if (top != null) { vm.launch(top.pkg); vm.closeDrawer() }
                 else if (filtering) folders.firstOrNull()?.let { onFolderTap(it.name) }
             }),
-            modifier = Modifier.weight(1f).focusRequester(focus).testTag("drawer-search"),
+            // While the drawer is closed (parked off-screen) the field cannot take focus, so it can never pull the keyboard up on the home screen.
+            modifier = Modifier.weight(1f).focusProperties { canFocus = open() }.focusRequester(focus).testTag("drawer-search"),
         )
         if (filterValue.text.isNotEmpty()) {
             TermText("[clr]", Modifier.clickable { filterValue = TextFieldValue(""); vm.setFilter("") }.padding(start = 8.dp), dim = true)

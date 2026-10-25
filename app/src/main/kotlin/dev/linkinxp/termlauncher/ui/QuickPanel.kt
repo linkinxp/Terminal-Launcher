@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.quick.tileLabel
@@ -22,18 +24,25 @@ private const val PER_ROW = 4
 @Composable
 fun QuickPanel(ui: LauncherUi, onTap: (String) -> Unit, onLongPress: (String) -> Unit, modifier: Modifier = Modifier) {
     if (!ui.panels.quick || ui.quick.isEmpty()) return
-    TermPanel("quick", modifier.fillMaxWidth().padding(top = 8.dp)) {
-        tileRows(ui.quick, PER_ROW).forEach { row ->
-            if (ui.homeStyle == HomeStyle.ICONS) {
+    if (ui.homeStyle == HomeStyle.ICONS) {
+        // Icon style: no bordered panel and no title, just a compact row of small icons, so the apps get the room.
+        Column(modifier.fillMaxWidth().padding(top = 2.dp)) {
+            tileRows(ui.quick, PER_ROW).forEach { row ->
                 Row(Modifier.fillMaxWidth()) {
                     row.forEach { pkg ->
                         val label = tileLabel(ui.apps[pkg]?.label ?: pkg).lowercase()
-                        IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg")) { IconTile(pkg, ui.apps[pkg]?.label ?: pkg, 48.dp) }
+                        IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg"), labelSize = 10.sp, vPad = 3.dp) {
+                            IconTile(pkg, ui.apps[pkg]?.label ?: pkg, 40.dp)
+                        }
                     }
                     repeat(PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
                 }
-                return@forEach
             }
+        }
+        return
+    }
+    TermPanel("quick", modifier.fillMaxWidth().padding(top = 8.dp)) {
+        tileRows(ui.quick, PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { pkg ->
                     TermText(

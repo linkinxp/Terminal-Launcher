@@ -41,6 +41,7 @@ import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.wall.AsciiStyle
+import dev.linkinxp.termlauncher.gestures.ScreenLock
 import dev.linkinxp.termlauncher.wall.SvgStyle
 import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
@@ -189,6 +190,15 @@ fun SettingsScreen(
 
             TermPanel("home", Modifier.padding(top = 4.dp)) {
                 SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
+            }
+
+            TermPanel("gestures", Modifier.padding(top = 4.dp)) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                ToggleRow("double-tap lock", ui.doubleTapLock, "gesture-lock") { vm.toggleDoubleTapLock() }
+                SettingRow("lock service", if (ScreenLock.isEnabled(context)) "on" else "off [enable]", "gesture-service") {
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+                TermText("swipe down: left = notifications, right = quick settings", dim = true, size = 12.sp, maxLines = 2)
             }
 
             TermPanel("clock", Modifier.padding(top = 4.dp)) {

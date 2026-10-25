@@ -16,7 +16,8 @@ private const val DRAWER_WARM_CELLS = 24
 /** An app tile to draw ahead of time at the size ([sizeDp]) it is shown at. */
 data class WarmTarget(val pkg: String, val label: String, val sizeDp: Float)
 
-private const val DOCK_DP = 48f
+private const val DOCK_DP = 44f
+private const val QUICK_DP = 40f
 private const val PAGE_DP = 56f
 private const val MINI = 0.4f // a folder's mini tiles are this fraction of the folder tile
 
@@ -30,7 +31,7 @@ fun warmTargets(ui: LauncherUi): List<WarmTarget> {
         else -> {}
     }
     ui.layout.dock.forEach { item(it, DOCK_DP) }
-    ui.quick.forEach { add(it, DOCK_DP) }
+    ui.quick.forEach { add(it, QUICK_DP) }
     ui.layout.pages.firstOrNull()?.items.orEmpty().forEach { item(it, PAGE_DP) }
     return out.distinctBy { it.pkg to it.sizeDp }.take(HOME_WARM_MAX)
 }

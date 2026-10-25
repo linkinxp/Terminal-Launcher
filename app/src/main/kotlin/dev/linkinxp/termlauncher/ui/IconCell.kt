@@ -48,14 +48,15 @@ fun IconCell(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     labelSize: TextUnit = 11.sp,
+    vPad: Dp = 6.dp,
     icon: @Composable () -> Unit,
 ) {
     Column(
-        modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(vertical = 6.dp),
+        modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(vertical = vPad),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         icon()
-        TermText(label, Modifier.padding(top = 4.dp), size = labelSize, maxLines = 1)
+        TermText(label, Modifier.padding(top = 2.dp), size = labelSize, maxLines = 1)
     }
 }
 

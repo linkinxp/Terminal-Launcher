@@ -49,6 +49,7 @@ class BackupRepository(private val prefs: Prefs) {
             clockFormat = prefs.clockFormat.first().name,
             clockStyle = prefs.clockStyle.first().name,
             homeStyle = prefs.homeStyle.first().name,
+            doubleTapLock = prefs.doubleTapLock.first(),
             panelItems = true,
             customThemes = prefs.customThemes.first().map {
                 CustomThemeBackup(it.name, hexString(it.background), hexString(it.foreground), hexString(it.accent), hexString(it.dim), it.border.name)
@@ -91,6 +92,7 @@ class BackupRepository(private val prefs: Prefs) {
         prefs.setClockFormat(ClockFormat.fromName(b.clockFormat))
         prefs.setClockStyle(ClockStyle.fromName(b.clockStyle))
         prefs.setHomeStyle(HomeStyle.fromName(b.homeStyle))
+        prefs.setDoubleTapLock(b.doubleTapLock)
         prefs.setWx(WxSettings(b.wx.city, b.wx.lat, b.wx.lon, b.wx.fahrenheit))
         prefs.clearWxCache()
         prefs.setSort(enumOr(b.drawerSort, DrawerSort.AZ))

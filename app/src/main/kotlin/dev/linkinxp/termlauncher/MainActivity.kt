@@ -55,7 +55,10 @@ import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.WakeUpOverlay
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.ImportDialog
+import dev.linkinxp.termlauncher.gestures.ScreenLock
+import dev.linkinxp.termlauncher.gestures.SwipeDownAction
 import dev.linkinxp.termlauncher.sys.expandNotificationShade
+import dev.linkinxp.termlauncher.sys.expandQuickSettings
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
@@ -298,7 +301,14 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onSwipeUp = { vm.openDrawer() },
-                    onSwipeDown = { expandNotificationShade(this@MainActivity) },
+                    onSwipeDown = { action ->
+                        if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
+                    },
+                    onDoubleTap = {
+                        if (uiState.value.doubleTapLock && !ScreenLock.lock()) {
+                            vm.showMessage("double-tap lock: switch on Terminal: lock screen in accessibility settings (settings > gestures)")
+                        }
+                    },
                     onEdit = { editing = true },
                     homeSignal = homeSignal,
                     onSearch = ::openSearch,

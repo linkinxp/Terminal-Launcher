@@ -185,4 +185,11 @@ class SettingsScreenTest {
             click("home-style-row"); until({ "style=${vm.ui.value.homeStyle}" }) { vm.ui.value.homeStyle == next }
         }
     }
+
+    @Test fun theDoubleTapLockRowTogglesAndIsOnByDefault() {
+        val vm = show()
+        assertEquals(true, vm.ui.value.doubleTapLock)
+        click("gesture-lock"); until({ "lock=${vm.ui.value.doubleTapLock}" }) { !vm.ui.value.doubleTapLock }
+        click("gesture-lock"); until({ "lock=${vm.ui.value.doubleTapLock}" }) { vm.ui.value.doubleTapLock }
+    }
 }

@@ -1,7 +1,9 @@
 package dev.linkinxp.termlauncher.screens
 
 import android.app.Application
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -112,5 +114,23 @@ class IconHomeTest {
         val second = rule.onNodeWithText("bravo").getUnclippedBoundsInRoot().left
         val shifted = rule.onNodeWithText("foxtrot").getUnclippedBoundsInRoot().left
         assertEquals("both rows keep four equal columns", second.value, shifted.value, 1.5f)
+    }
+
+    @Test fun theQuickTilesInTheIconStyleHaveNoFrameAndSmallerIcons() {
+        show(HomeStyle.ICONS, items = emptyList(), dock = emptyList(), quick = listOf(maps.pkg))
+        waitForIcon(maps.pkg)
+        rule.onNodeWithText("quick").assertDoesNotExist() // the bordered `quick` panel title is gone in this style
+        rule.onAllNodesWithContentDescription("icon-${maps.pkg}", useUnmergedTree = true)[0].assertHeightIsEqualTo(40.dp)
+    }
+
+    @Test fun theDockIconsAreFortyFourDp() {
+        show(HomeStyle.ICONS, items = emptyList(), dock = listOf(Item.App(phone.pkg)), quick = emptyList())
+        waitForIcon(phone.pkg)
+        rule.onAllNodesWithContentDescription("icon-${phone.pkg}", useUnmergedTree = true)[0].assertHeightIsEqualTo(44.dp)
+    }
+
+    @Test fun otherStylesKeepTheBorderedQuickPanel() {
+        show(HomeStyle.CLASSIC, items = emptyList(), dock = emptyList(), quick = listOf(maps.pkg))
+        rule.onNodeWithText("quick").assertIsDisplayed()
     }
 }
