@@ -1,5 +1,13 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.layout.Item
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,6 +74,7 @@ fun IconDrawerGrid(
     onFolderTap: (String) -> Unit,
     onExtra: (ExtraResult) -> Unit = {},
     modifier: Modifier = Modifier,
+    drag: DragState? = null,
 ) {
     val theme = LocalTheme.current
     LazyVerticalGrid(
@@ -84,7 +93,24 @@ fun IconDrawerGrid(
                     TermText("> ${entry.extra.label}", Modifier.fillMaxWidth().clickable { onExtra(entry.extra) }.padding(vertical = 10.dp), color = if (entry.extra.kind == ExtraKind.WEB) theme.accent.color() else theme.foreground.color())
                 }
                 is GridEntry.Cell -> item(key = entry.key) {
-                    IconCell(entry.app.label.lowercase(), { onLaunch(entry.app.pkg) }, { onAppLongPress(entry.app.pkg) }, labelSize = ui.density.labelSp.sp) {
+                    val pkg = entry.app.pkg
+                    val cell = remember { arrayOfNulls<LayoutCoordinates>(1) }
+                    // With a drag state, a hold picks the app up (the watcher above does the rest; a hold that never moves is the menu).
+                    val pickUp = if (drag == null) Modifier else Modifier
+                        .onGloballyPositioned { cell[0] = it }
+                        .semantics { onLongClick(label = "item menu") { onAppLongPress(pkg); true } }
+                        .pointerInput(pkg) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { at ->
+                                    val root = cell[0]?.takeIf { it.isAttached }?.localToRoot(at) ?: at
+                                    drag.item = Item.App(pkg); drag.fromDrawer = true; drag.moved = false
+                                    drag.start = root; drag.finger = root; drag.edge = 0
+                                },
+                                onDrag = { change, _ -> change.consume() },
+                                onDragEnd = {}, onDragCancel = {},
+                            )
+                        }
+                    IconCell(entry.app.label.lowercase(), { onLaunch(pkg) }, if (drag == null) ({ onAppLongPress(pkg) }) else null, labelSize = ui.density.labelSp.sp, gesture = pickUp) {
                         BadgedIcon(listOf(entry.app.pkg), ui.badges, "badge-${entry.app.pkg}") { IconTile(entry.app.pkg, entry.app.label, ui.density.iconDp.dp) }
                     }
                 }

@@ -33,7 +33,7 @@ import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.sys.SysSnapshot
 
 /** The icon being dragged on one page, how far it has moved, and where every slot is (read only when it drops). */
-internal class DragState {
+class DragState {
     var item by mutableStateOf<Item?>(null)
     /** Where the finger is on screen (root coordinates) and where it first picked the icon up. */
     var finger by mutableStateOf(Offset.Zero)
@@ -41,6 +41,11 @@ internal class DragState {
     /** -1, 0 or 1: the finger is at the left edge, nowhere special, or the right edge (the page turns after a moment). */
     var edge by mutableStateOf(0)
     var dockBounds: LayoutCoordinates? = null
+    /** An app picked up in the drawer (the finger is then followed by the drawer drag watcher, not by a home cell). */
+    var fromDrawer by mutableStateOf(false)
+    var moved = false
+    /** Set by the home pager: drops [Item] picked up in the drawer where the finger let go. */
+    var drawerDrop: (Offset, Item) -> Unit = { _, _ -> }
     /** Live layout coordinates of every slot: read at the moment of use, so a scrolling pager can never leave them stale. */
     val bounds = HashMap<Long, LayoutCoordinates>()
     fun key(page: Int, slot: Int) = page * SLOT_RANGE + slot

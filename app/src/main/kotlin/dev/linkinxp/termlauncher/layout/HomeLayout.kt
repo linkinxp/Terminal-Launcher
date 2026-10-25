@@ -69,6 +69,27 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         else -> copy(dock = dock + Item.App(pkg))
     }
 
+    /**
+     * Drops app [pkg] on slot [slot] of [page] (from the drawer): an occupied slot inserts it, a hole is taken, past the end
+     * pads with holes. An app that is already on a page or in the dock is moved, never duplicated.
+     */
+    fun addAt(page: Int, pkg: String, slot: Int): HomeLayout {
+        val app = Item.App(pkg)
+        if (page !in pages.indices || slot < 0) return this
+        val cleared = copy(
+            dock = dock - app,
+            pages = pages.map { p -> if (app in p.items) Page(trimmed(p.items.map { if (it == app) Item.Gap else it }.toMutableList())) else p },
+        )
+        val items = cleared.pages[page].items.toMutableList()
+        if (slot > items.size + MAX_PAD) return this
+        when {
+            slot >= items.size -> { while (items.size < slot) items.add(Item.Gap); items.add(app) }
+            items[slot] == Item.Gap -> items[slot] = app
+            else -> items.add(slot, app)
+        }
+        return cleared.copy(pages = cleared.pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
+    }
+
     /** Puts an app on the first page without panels (the apps page); nothing changes when it is already docked or on a page. */
     fun addToHome(pkg: String): HomeLayout {
         val app = Item.App(pkg)

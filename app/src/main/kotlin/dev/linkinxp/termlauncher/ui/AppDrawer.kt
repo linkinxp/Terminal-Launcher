@@ -79,6 +79,7 @@ fun AppDrawer(
     onWebSearch: (String) -> Unit = {},
     open: () -> Boolean = { true },
     modifier: Modifier = Modifier,
+    drag: DragState? = null,
 ) {
     val theme = LocalTheme.current
     val d = ui.drawer
@@ -206,7 +207,7 @@ fun AppDrawer(
                 IconDrawerGrid(
                     grid!!, ui, gridState, hideKeyboardOnScroll,
                     onLaunch = { pkg -> vm.launch(pkg); vm.closeDrawer() }, onAppLongPress = onAppLongPress, onFolderTap = onFolderTap, onExtra = onExtra,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f), drag = drag,
                 )
                 // Controls and search sit at the bottom, in reach of the thumb; a swipe down on them closes the drawer.
                 Column(

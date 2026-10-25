@@ -14,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.view.WindowManager
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import dev.linkinxp.termlauncher.wall.WallMode
 import android.os.SystemClock
@@ -61,6 +63,7 @@ import dev.linkinxp.termlauncher.gestures.SwipeDownAction
 import dev.linkinxp.termlauncher.sys.expandNotificationShade
 import dev.linkinxp.termlauncher.sys.expandQuickSettings
 import dev.linkinxp.termlauncher.ui.PagerHome
+import dev.linkinxp.termlauncher.ui.drawerDragWatcher
 import dev.linkinxp.termlauncher.ui.SettingsScreen
 import dev.linkinxp.termlauncher.ui.TermTheme
 
@@ -299,6 +302,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             BackHandler { /* a launcher stays home */ }
+            val drag = remember { dev.linkinxp.termlauncher.ui.DragState() }
             TermTheme(theme, wall) {
                 val tap = { item: Item ->
                     when (item) {
@@ -307,6 +311,7 @@ class MainActivity : ComponentActivity() {
                         is Item.Widget, is Item.Panel, is Item.Gap -> Unit
                     }
                 }
+                Box(Modifier.fillMaxSize().drawerDragWatcher(drag, onLeaveDrawer = vm::closeDrawer, onMenu = { menuPkg = it })) {
                 PagerHome(
                     homeUi, vm,
                     onItemTap = tap,
@@ -321,6 +326,9 @@ class MainActivity : ComponentActivity() {
                     onMoveItem = vm::placeItem,
                     onMoveToPage = vm::moveItemToPage,
                     onDropOnDock = vm::moveItemToDock,
+                    drag = drag,
+                    onAddAt = vm::addAt,
+                    onPinNew = vm::pin,
                     imeSkip = { uiState.value.drawerOpen },
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
@@ -346,7 +354,9 @@ class MainActivity : ComponentActivity() {
                         onFolderTap = { folderName = it },
                         onSettings = { vm.closeDrawer(); settingsOpen.value = true },
                         onWebSearch = ::openSearch,
+                        drag = drag,
                     )
+                }
                 }
                 menuPkg?.let { AppMenu(it, uiState.value, vm) { menuPkg = null } }
                 folderName?.let { FolderPanel(it, uiState.value, vm) { folderName = null } }

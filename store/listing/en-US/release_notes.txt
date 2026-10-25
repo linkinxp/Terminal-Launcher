@@ -1,1 +1,1 @@
-Long-press an app in the drawer and choose "add to home" to put it on your home screen. Terminal also offers to become your home app after install.
+Hold an app in the drawer and drag it onto your home screen: the drawer steps aside and you drop it on any slot, or on the dock. Holding without moving still opens the app menu.

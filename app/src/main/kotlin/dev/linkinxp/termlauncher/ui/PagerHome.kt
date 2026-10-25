@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.runtime.SideEffect
 import dev.linkinxp.termlauncher.clock.dateLine
 import android.text.format.DateFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
@@ -169,6 +170,9 @@ fun PagerHome(
     imeSkip: () -> Boolean = { false },
     onSwipeDown: (SwipeDownAction) -> Unit = {},
     onDoubleTap: () -> Unit = {},
+    drag: DragState = remember { DragState() },
+    onAddAt: (page: Int, pkg: String, slot: Int) -> Unit = { _, _, _ -> },
+    onPinNew: (pkg: String) -> Unit = {},
     style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
@@ -178,8 +182,17 @@ fun PagerHome(
         WarmIcons(targets)
     }
     val pager = rememberPagerState { pageCount }
-    val drag = remember { DragState() }
     val boxRoot = remember { mutableStateOf(Offset.Zero) }
+    // An app let go after being dragged out of the drawer: on the dock, or on the slot under the finger.
+    SideEffect {
+        drag.drawerDrop = { finger, item ->
+            val app = item as? Item.App
+            if (app != null) {
+                if (drag.dockBounds?.takeIf { it.isAttached }?.boundsInRoot()?.contains(finger) == true) onPinNew(app.pkg)
+                else nearestCell(finger, drag.slotsOf(pager.currentPage))?.let { onAddAt(pager.currentPage, app.pkg, it) }
+            }
+        }
+    }
     // Holding a dragged icon at the left or right edge turns the page, so it can be dropped on another one.
     LaunchedEffect(drag.edge) {
         while (drag.edge != 0 && drag.item != null) {
