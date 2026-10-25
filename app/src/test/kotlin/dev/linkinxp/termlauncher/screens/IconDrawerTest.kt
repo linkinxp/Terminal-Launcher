@@ -121,6 +121,20 @@ class IconDrawerTest {
         rule.onNodeWithTag("drawer-search").assertIsNotFocused()
     }
 
+    @Test fun theSearchIsClearedOnEveryVisitNotJustTheFirst() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val open = androidx.compose.runtime.mutableStateOf(true)
+        val ui = LauncherUi(theme = ThemeRegistry.default, apps = apps.associateBy { it.pkg }, drawer = buildDrawer(apps, emptySet(), emptyMap(), DrawerSort.AZ, "", false), homeStyle = HomeStyle.ICONS, drawerKeyboard = false)
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}, open = { open.value }) } }
+        repeat(3) { visit ->
+            rule.onNodeWithTag("drawer-search").performTextInput("Claude$visit")
+            rule.onNodeWithText("Claude$visit", substring = true).assertIsDisplayed()
+            open.value = false; pump()
+            open.value = true; pump()
+            assertEquals("visit $visit still shows the old search", 0, rule.onAllNodesWithText("Claude", substring = true).fetchSemanticsNodes().size)
+        }
+    }
+
     private fun pump() { repeat(15) { shadowOf(Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(20) } }
 
     @Test fun theDrawerGridFollowsTheDensityColumns() {

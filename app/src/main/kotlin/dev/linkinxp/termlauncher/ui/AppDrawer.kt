@@ -60,6 +60,7 @@ import dev.linkinxp.termlauncher.wall.WallMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val HIDDEN_OFFSET_PX = 100_000f
@@ -100,10 +101,11 @@ fun AppDrawer(
     // Opening the drawer puts the cursor in the search field with the keyboard up: just start typing.
     val focusManager = LocalFocusManager.current
     val keyboardOnOpen by rememberUpdatedState(ui.drawerKeyboard)
+    val iconStyleNow by rememberUpdatedState(iconStyle)
     LaunchedEffect(Unit) {
         // `open` is observed here (not read during composition), so opening/closing never recomposes the drawer.
-        snapshotFlow { open() }.collect { isOpen ->
-            // One failing step must never end this collector: it would stop the keyboard and the search reset for good.
+        // collectLatest: a newer open/close always wins over a step still waiting (a frame, a scroll), so nothing can wedge the drawer.
+        snapshotFlow { open() }.collectLatest { isOpen ->
             try {
                 if (isOpen) {
                     // A new visit never starts with the last search in the box.
@@ -122,8 +124,9 @@ fun AppDrawer(
                     withContext(Dispatchers.Main) {
                         filterValue = TextFieldValue("")
                         keyboard?.hide(); focusManager.clearFocus()
-                        listState.scrollToItem(0); gridState.scrollToItem(0)
                     }
+                    // Back to the top: only the list that is actually on screen (the other state has no layout and would never return).
+                    if (iconStyleNow) gridState.scrollToItem(0) else listState.scrollToItem(0)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -260,7 +263,7 @@ fun AppDrawer(
                         AppRow(app, ui.iconMode, { vm.launch(app.pkg); vm.closeDrawer() }, { onAppLongPress(app.pkg) })
                     }
                     if (d.results.isEmpty() && folders.isEmpty() && ui.extras.isEmpty()) item { TermText("no match", dim = true) }
-                    items(ui.extras.size, key = { "x-${ui.extras[it].kind}-${ui.extras[it].label}" }) { i ->
+                    items(ui.extras.size, key = { ui.extras[it].listKey() }) { i ->
                         val extra = ui.extras[i]
                         TermText("> ${extra.label}", Modifier.fillMaxWidth().clickable { onExtra(extra) }.padding(vertical = 10.dp), color = if (extra.kind == ExtraKind.WEB) theme.accent.color() else theme.foreground.color())
                     }

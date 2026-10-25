@@ -11,7 +11,10 @@ import androidx.core.content.ContextCompat
 enum class ExtraKind { CONTACT, SETTING, WEB, ASK_CONTACTS }
 
 /** One non-app answer under the drawer's app results; [target] is a contact URI, a settings action or the web query. */
-data class ExtraResult(val kind: ExtraKind, val label: String, val target: String)
+data class ExtraResult(val kind: ExtraKind, val label: String, val target: String) {
+    /** A list key that stays unique even for two contacts with the same name. */
+    fun listKey(): String = "x-$kind-$label-$target"
+}
 
 private data class SettingsPage(val label: String, val action: String, val keywords: List<String>)
 
@@ -65,7 +68,7 @@ data class ContactRow(val id: Long, val lookupKey: String, val name: String)
 /** Contact rows to results; a row without a lookup key cannot be opened and is dropped. */
 fun contactResults(rows: List<ContactRow>): List<ExtraResult> = rows.filter { it.lookupKey.isNotBlank() && it.name.isNotBlank() }.map {
     // the same URI ContactsContract.Contacts.getLookupUri builds
-    ExtraResult(ExtraKind.CONTACT, it.name, "content://com.android.contacts/contacts/lookup/${java.net.URLEncoder.encode(it.lookupKey, "UTF-8")}/${it.id}")
+    ExtraResult(ExtraKind.CONTACT, it.name, "content://com.android.contacts/contacts/lookup/${java.net.URLEncoder.encode(it.lookupKey, "UTF-8").replace("+", "%20")}/${it.id}")
 }
 
 class ContactsRepository(private val context: Context) {

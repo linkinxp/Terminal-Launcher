@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import dev.linkinxp.termlauncher.LauncherUi
@@ -207,5 +208,23 @@ class IconHomeTest {
         waitForIcon(maps.pkg)
         assertEquals(0, rule.onAllNodes(androidx.compose.ui.test.hasTestTag("badge-${maps.pkg}"), useUnmergedTree = true).fetchSemanticsNodes().size)
         dev.linkinxp.termlauncher.badges.BadgeStore.publish(emptyMap())
+    }
+
+    @Test fun aHoldWithAJitteringFingerStillOpensTheMenu() {
+        showForDrag()
+        rule.onNodeWithText("notes").performTouchInput {
+            down(center)
+            repeat(6) { moveBy(androidx.compose.ui.geometry.Offset(5f, 0f)); moveBy(androidx.compose.ui.geometry.Offset(-5f, 0f)) } // 60 px of wobble, net zero
+            advanceEventTime(900); up()
+        }
+        rule.waitForIdle()
+        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+    }
+
+    @Test fun anIconOffersItsMenuToAccessibilityServicesToo() {
+        showForDrag()
+        rule.onNodeWithText("notes").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnLongClick)
+        rule.waitForIdle()
+        assertEquals(listOf<Item>(Item.App(notes.pkg)), longs)
     }
 }

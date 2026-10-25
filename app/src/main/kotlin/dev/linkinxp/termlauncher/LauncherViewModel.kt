@@ -717,7 +717,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private var extrasJob: Job? = null
 
     fun setFilter(filter: String) {
-        eph.update { it.copy(filter = filter, extras = if (filter.trim().length < 2) emptyList() else it.extras) }
+        // The settings and web rows follow the text at once; the contacts arrive a moment later.
+        eph.update { it.copy(filter = filter, extras = buildExtras(filter, emptyList(), contactsRepo.hasPermission())) }
         refreshExtras()
     }
 

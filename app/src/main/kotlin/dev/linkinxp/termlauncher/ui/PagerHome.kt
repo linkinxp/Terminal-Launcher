@@ -19,6 +19,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.onSizeChanged
@@ -174,7 +176,7 @@ fun PagerHome(
 ) {
     val pageCount = ui.layout.pages.size
     if (style == HomeStyle.ICONS) {
-        val targets = remember(ui.layout, ui.quick, ui.apps) { warmTargets(ui) }
+        val targets = remember(ui.layout, ui.quick, ui.apps, ui.density) { warmTargets(ui) }
         WarmIcons(targets)
     }
     val drag = remember { DragState() }
@@ -258,13 +260,14 @@ fun PagerHome(
                                         }
                                     // Inside the cell's click handling, so it sees (and consumes) the lift before a click can fire.
                                     val dragGesture = Modifier
+                                        .semantics { onLongClick(label = "item menu") { onItemLongPress(item); true } }
                                         .pointerInput(item, index) {
                                             detectDragGesturesAfterLongPress(
                                                 onDragStart = { drag.item = item; drag.offset = Offset.Zero; drag.moved = 0f },
                                                 onDrag = { change, amount -> change.consume(); drag.offset += amount; drag.moved += amount.getDistance() },
                                                 onDragEnd = {
                                                     val from = drag.bounds[item]
-                                                    if (drag.moved < 12f) onItemLongPress(item)
+                                                    if (drag.offset.getDistance() < viewConfiguration.touchSlop) onItemLongPress(item)
                                                     else if (from != null) {
                                                         val pageCells = ui.layout.pages[index].items.mapNotNull { i -> drag.bounds[i]?.let { r -> i to r } }.toMap()
                                                         nearestCell(from.center + drag.offset, pageCells)?.let { target -> if (target != item) onMoveItem(index, item, target) }

@@ -104,4 +104,11 @@ class PanelItemsTest {
         assertEquals(2, keep.pages.size)
         assertEquals(listOf<Item>(Item.App("b")), keep.pages[1].items)
     }
+
+    @Test fun backToClassicKeepsEveryKindOfPanelIncludingTheNewOnes() {
+        val media = Item.Panel(PanelKind.MEDIA); val toggles = Item.Panel(PanelKind.TOGGLES)
+        val l = layout(listOf(Item.App("a")), listOf(toggles, wx, media, s)).panelsHome()
+        assertEquals(listOf<Item>(s, wx, media, toggles, Item.App("a")), l.pages[0].items)
+        assertEquals(PanelKind.entries.toSet().intersect(setOf(PanelKind.SEARCH, PanelKind.WX, PanelKind.MEDIA, PanelKind.TOGGLES)), l.placedPanels())
+    }
 }

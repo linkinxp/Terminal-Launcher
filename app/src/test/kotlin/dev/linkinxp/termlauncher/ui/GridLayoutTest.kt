@@ -57,4 +57,12 @@ class GridLayoutTest {
         assertEquals(listOf("c:Camera", "x:wifi settings", "x:search the web: cam"), g.entries.map { it.debug() })
         assertEquals(g.entries.size, g.entries.map { it.key }.toSet().size)
     }
+
+    @Test fun twoContactsWithTheSameNameGetDifferentKeys() {
+        val a = dev.linkinxp.termlauncher.search.ExtraResult(dev.linkinxp.termlauncher.search.ExtraKind.CONTACT, "Mike", "content://lookup/1")
+        val b = dev.linkinxp.termlauncher.search.ExtraResult(dev.linkinxp.termlauncher.search.ExtraKind.CONTACT, "Mike", "content://lookup/2")
+        val g = gridLayout(DrawerState(emptyList(), emptyList(), results = listOf(app("Mikey"))), emptyList(), filtering = true, extras = listOf(a, b))
+        assertEquals(g.entries.size, g.entries.map { it.key }.toSet().size)
+        assertTrue(a.listKey() != b.listKey())
+    }
 }

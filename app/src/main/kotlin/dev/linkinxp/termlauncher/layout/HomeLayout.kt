@@ -115,7 +115,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
 
     /** The reverse: every panel back on top of page one in the original order; pages emptied by that disappear. */
     fun panelsHome(): HomeLayout {
-        val order = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX)
+        val order = PanelKind.entries
         val placed = placedPanels()
         if (placed.isEmpty()) return this
         val cleaned = pages.mapIndexedNotNull { i, p ->

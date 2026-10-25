@@ -28,7 +28,7 @@ sealed interface GridEntry {
     data class Header(val text: String) : GridEntry { override val key get() = "h-$text" }
     data class Folder(val name: String, val count: Int) : GridEntry { override val key get() = "f-$name" }
     data class Cell(val app: AppEntry, val group: String) : GridEntry { override val key get() = "c-$group-${app.pkg}" }
-    data class Extra(val extra: ExtraResult) : GridEntry { override val key get() = "x-${extra.kind}-${extra.label}" }
+    data class Extra(val extra: ExtraResult) : GridEntry { override val key get() = extra.listKey() }
 }
 
 /** The grid's entries and, for the A-Z rail, the entry index of each letter's header. */

@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+private const val PUBLISH_DELAY_MS = 300L
+
 /** What a badge needs to know about one notification. */
 data class NotifInfo(val pkg: String, val ongoing: Boolean, val groupSummary: Boolean)
 
@@ -49,16 +51,37 @@ class BadgeListenerService : NotificationListenerService() {
 
     private var media: dev.linkinxp.termlauncher.media.MediaWatcher? = null
 
+    // Reading the active notifications copies all of them: do it on a background thread, at most a few times a second.
+    private var thread: android.os.HandlerThread? = null
+    private var handler: android.os.Handler? = null
+    private val publishTask = Runnable { publish() }
+
+    override fun onCreate() {
+        super.onCreate()
+        thread = android.os.HandlerThread("badges").also { it.start(); handler = android.os.Handler(it.looper) }
+    }
+
+    override fun onDestroy() {
+        thread?.quitSafely(); thread = null; handler = null
+        super.onDestroy()
+    }
+
+    private fun schedulePublish() {
+        handler?.let { it.removeCallbacks(publishTask); it.postDelayed(publishTask, PUBLISH_DELAY_MS) }
+    }
+
     override fun onListenerConnected() {
-        publish()
+        media?.stop()
+        handler?.post(publishTask)
         media = dev.linkinxp.termlauncher.media.MediaWatcher(this, ComponentName(this, BadgeListenerService::class.java)).also { it.start() }
     }
 
     override fun onListenerDisconnected() {
         BadgeStore.publish(emptyMap()); media?.stop(); media = null
     }
-    override fun onNotificationPosted(sbn: StatusBarNotification?) = publish()
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) = publish()
+    // An ongoing notification (a download's progress, music) never changes a count: skip its updates.
+    override fun onNotificationPosted(sbn: StatusBarNotification?) { if (sbn?.isOngoing != true) schedulePublish() }
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) = schedulePublish()
 
     private fun StatusBarNotification.toInfo() = NotifInfo(
         packageName,
