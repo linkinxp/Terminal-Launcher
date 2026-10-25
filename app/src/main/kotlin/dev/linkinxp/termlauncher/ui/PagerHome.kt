@@ -42,6 +42,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.unit.sp
 import dev.linkinxp.termlauncher.clock.formatClockTime
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,6 +68,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -82,7 +87,6 @@ import java.time.format.TextStyle
 import java.time.temporal.IsoFields
 import java.util.Locale
 
-private const val SWIPE_PX = 80f
 
 @Composable
 private fun rememberNow(): LocalDateTime {
@@ -161,6 +165,8 @@ fun PagerHome(
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
     onMoveItem: (page: Int, item: Item, slot: Int) -> Unit = { _, _, _ -> },
+    onMoveToPage: (fromPage: Int, item: Item, toPage: Int, slot: Int) -> Unit = { _, _, _, _ -> },
+    onDropOnDock: (page: Int, item: Item) -> Unit = { _, _ -> },
     imeSkip: () -> Boolean = { false },
     onSwipeDown: (SwipeDownAction) -> Unit = {},
     onDoubleTap: () -> Unit = {},
@@ -172,8 +178,18 @@ fun PagerHome(
         val targets = remember(ui.layout, ui.quick, ui.apps, ui.density) { warmTargets(ui) }
         WarmIcons(targets)
     }
-    val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
+    val drag = remember { DragState() }
+    val boxRoot = remember { mutableStateOf(Offset.Zero) }
+    // Holding a dragged icon at the left or right edge turns the page, so it can be dropped on another one.
+    LaunchedEffect(drag.edge) {
+        while (drag.edge != 0 && drag.item != null) {
+            delay(650)
+            val next = pager.currentPage + drag.edge
+            if (drag.edge != 0 && drag.item != null && next in 0 until pageCount) pager.animateScrollToPage(next)
+        }
+    }
+    val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val scope = rememberCoroutineScope()
     // A Home press scrolls back to the first page.
     LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.animateScrollToPage(0) }
@@ -185,14 +201,15 @@ fun PagerHome(
     LaunchedEffect(now.minute, ui.clockFormat) { vm.refreshPanels() } // the agenda times follow the clock format
     // A page that scrolls swallows vertical drags, so its leftover at either end counts as the swipe:
     // pulling down at the top opens the notification shade, pushing up at the bottom opens the drawer.
+    val swipePx = swipeThresholdPx(LocalDensity.current.density)
     val overscroll = remember { floatArrayOf(0f) }
     val downX = remember { floatArrayOf(0f) }   // where the current gesture started, to tell the left half from the right
     val widthPx = remember { floatArrayOf(0f) }
     val fired = remember { booleanArrayOf(false) } // one swipe per drag, fired the moment it is long enough, not on release
     val swipes by rememberUpdatedState({ dy: Float ->
         when {
-            dy < -SWIPE_PX -> onSwipeUp()
-            dy > SWIPE_PX -> onSwipeDown(swipeDownAction(downX[0], widthPx[0]))
+            dy < -swipePx -> onSwipeUp()
+            dy > swipePx -> onSwipeDown(swipeDownAction(downX[0], widthPx[0]))
         }
     })
     val edgeSwipes = remember {
@@ -200,7 +217,7 @@ fun PagerHome(
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                 if (source == NestedScrollSource.UserInput) {
                     overscroll[0] += available.y
-                    if (!fired[0] && kotlin.math.abs(overscroll[0]) > SWIPE_PX) { fired[0] = true; swipes(overscroll[0]) }
+                    if (!fired[0] && kotlin.math.abs(overscroll[0]) > swipePx) { fired[0] = true; swipes(overscroll[0]) }
                 }
                 return Offset.Zero
             }
@@ -214,6 +231,7 @@ fun PagerHome(
     Box(
         modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePaddingUnless(imeSkip)
             .onSizeChanged { widthPx[0] = it.width.toFloat() }
+            .onGloballyPositioned { boxRoot.value = it.positionInRoot() }
             .pointerInput(Unit) {
                 // Watches where every gesture starts without taking part in it.
                 awaitEachGesture {
@@ -225,7 +243,7 @@ fun PagerHome(
             .nestedScroll(edgeSwipes),
     ) {
     Column(Modifier.fillMaxSize()) {
-        HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
+        HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), beyondViewportPageCount = if (drag.item != null) 1 else 0) { index ->
             val scroll = rememberScrollState()
             val tapPadding = if (style == HomeStyle.CLASSIC) 8.dp else 12.dp
             val content: @Composable () -> Unit = content@{
@@ -233,7 +251,7 @@ fun PagerHome(
                 // Apps and folders in rows of one or two; panels and widgets always take the full width.
                 val perRow = if (style == HomeStyle.GRID) 2 else 1
                 if (style == HomeStyle.ICONS) {
-                    IconPageContent(index, ui, vm, snapshot, onSearch, onItemTap, onItemLongPress, onMoveItem)
+                    IconPageContent(index, ui, vm, snapshot, onSearch, onItemTap, onItemLongPress, onMoveItem, drag, { pager.currentPage }, { widthPx[0] }, onMoveToPage, onDropOnDock)
                     return@content
                 }
                 val run = ArrayList<Item>()
@@ -294,15 +312,23 @@ fun PagerHome(
                 var done = false
                 detectVerticalDragGestures(onDragStart = { total = 0f; done = false }) { _, dy ->
                     total += dy
-                    if (!done && kotlin.math.abs(total) > SWIPE_PX) { done = true; swipes(total) }
+                    if (!done && kotlin.math.abs(total) > swipePx) { done = true; swipes(total) }
                 }
             },
         ) {
             StatusLine(pageCount, pager.currentPage, snapshot, now, h24, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
             // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
             QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
-            Dock(ui, onItemTap, onItemLongPress)
+            Dock(ui, onItemTap, onItemLongPress, onBounds = { drag.dockBounds = it })
             PromptBar(ui, vm)
+        }
+    }
+    // The picked-up icon: a floating copy under the finger (the original stays faded where it was).
+    drag.item?.let { picked ->
+        val size = ui.density.iconDp.dp
+        val half = with(LocalDensity.current) { size.toPx() / 2f }
+        Box(Modifier.offset { IntOffset((drag.finger.x - boxRoot.value.x - half).toInt(), (drag.finger.y - boxRoot.value.y - half).toInt()) }.graphicsLayer { scaleX = 1.12f; scaleY = 1.12f; alpha = 0.92f }) {
+            ItemIcon(picked, ui, size)
         }
     }
     }

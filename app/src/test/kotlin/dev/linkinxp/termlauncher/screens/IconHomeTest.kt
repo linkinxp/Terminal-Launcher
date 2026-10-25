@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
@@ -165,9 +166,9 @@ class IconHomeTest {
         showForDrag()
         val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
         val to = rule.onNodeWithText("notes").fetchSemanticsNode().boundsInRoot.center
-        rule.onNodeWithText("maps").performTouchInput {
-            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(to.x - from.x, to.y - from.y), 200); up()
-        }
+        rule.onNodeWithText("maps").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(800) // the hold that picks the icon up
+        rule.onNodeWithText("maps").performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(to.x - from.x, to.y - from.y), 200); up() }
         rule.waitForIdle()
         assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, 1)), moves)
         assertEquals("a drag is not a tap or a menu", emptyList<Item>(), taps + longs)
@@ -183,9 +184,9 @@ class IconHomeTest {
 
     @Test fun droppingOnNothingMovesNothing() {
         showForDrag()
-        rule.onNodeWithText("maps").performTouchInput {
-            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(0f, -1500f), 200); up()
-        }
+        rule.onNodeWithText("maps").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(800)
+        rule.onNodeWithText("maps").performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(0f, -1500f), 200); up() }
         rule.waitForIdle()
         assertEquals(emptyList<Triple<Int, Item, Int>>(), moves)
     }
@@ -232,9 +233,9 @@ class IconHomeTest {
         showForDrag() // three icons on a four-column grid: slot 3 is empty
         val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
         val slot = rule.onNodeWithTag("slot-3").fetchSemanticsNode().boundsInRoot.center
-        rule.onNodeWithText("maps").performTouchInput {
-            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(slot.x - from.x, slot.y - from.y), 200); up()
-        }
+        rule.onNodeWithText("maps").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(800) // the hold that picks the icon up
+        rule.onNodeWithText("maps").performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(slot.x - from.x, slot.y - from.y), 200); up() }
         rule.waitForIdle()
         assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, 3)), moves)
     }
@@ -248,5 +249,44 @@ class IconHomeTest {
         rule.onNodeWithTag("slot-4").assertExists() // the first slot of the extra row
         rule.onNodeWithText("maps").performTouchInput { up() }
         assertEquals(from.x > 0, true)
+    }
+
+    @Test fun droppingAnIconOnTheDockHandsItToThePinCallback() {
+        val docked = mutableListOf<Pair<Int, Item>>()
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default, layout = HomeLayout(listOf(Item.App(phone.pkg)), listOf(Page(listOf(Item.App(maps.pkg), Item.App(notes.pkg))))),
+            apps = listOf(maps, notes, phone).associateBy { it.pkg }, homeStyle = HomeStyle.ICONS,
+        )
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, {}, {}, onDropOnDock = { p, i -> docked += p to i }) } }
+        rule.waitForIdle()
+        val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
+        val dock = rule.onNodeWithText("phone").fetchSemanticsNode().boundsInRoot.center
+        rule.onNodeWithText("maps").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(800) // the hold that picks the icon up
+        rule.onNodeWithText("maps").performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(dock.x - from.x, dock.y - from.y), 200); up() }
+        rule.waitForIdle()
+        assertEquals(listOf(0 to (Item.App(maps.pkg) as Item)), docked)
+    }
+
+    @Test fun holdingAnIconAtTheScreenEdgeTurnsThePageAndDropsItThere() {
+        val crossings = mutableListOf<Triple<Int, Int, Int>>()
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default,
+            layout = HomeLayout(emptyList(), listOf(Page(listOf(Item.App(maps.pkg))), Page(listOf(Item.App(notes.pkg), Item.App(phone.pkg))))),
+            apps = listOf(maps, notes, phone).associateBy { it.pkg }, homeStyle = HomeStyle.ICONS,
+        )
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, {}, {}, onMoveToPage = { from, _, to, slot -> crossings += Triple(from, to, slot) }) } }
+        rule.waitForIdle()
+        rule.onNodeWithText("maps").performTouchInput { down(center) }
+        rule.mainClock.advanceTimeBy(800) // the hold that picks the icon up
+        rule.onRoot().performTouchInput { moveTo(androidx.compose.ui.geometry.Offset(width - 5f, 60f), 100) }
+        rule.mainClock.advanceTimeBy(2_500) // held at the edge: the page turns
+        rule.waitForIdle()
+        val target = rule.onNodeWithText("phone").fetchSemanticsNode().boundsInRoot.center
+        rule.onRoot().performTouchInput { moveTo(androidx.compose.ui.geometry.Offset(target.x, target.y), 100); up() } // root coordinates: the picked-up icon's own node has scrolled away
+        rule.waitForIdle()
+        assertEquals(listOf(Triple(0, 1, 1)), crossings)
     }
 }

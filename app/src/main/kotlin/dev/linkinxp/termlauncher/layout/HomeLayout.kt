@@ -148,6 +148,37 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         return copy(pages = pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
     }
 
+    private fun trimmed(items: MutableList<Item>): List<Item> {
+        while (items.lastOrNull() == Item.Gap) items.removeAt(items.lastIndex)
+        return items
+    }
+
+    /** Moves [item] from one page to slot [slot] of another (a drag across pages); the old slot becomes a hole. */
+    fun moveItemToPage(fromPage: Int, item: Item, toPage: Int, slot: Int): HomeLayout {
+        if (fromPage == toPage || fromPage !in pages.indices || toPage !in pages.indices || item == Item.Gap || slot < 0) return this
+        val src = pages[fromPage].items.toMutableList()
+        val at = src.indexOf(item)
+        val dst = pages[toPage].items.toMutableList()
+        if (at < 0 || slot > dst.size + MAX_PAD) return this
+        src[at] = Item.Gap
+        when {
+            slot >= dst.size -> { while (dst.size < slot) dst.add(Item.Gap); dst.add(item) }
+            dst[slot] == Item.Gap -> dst[slot] = item
+            else -> dst.add(slot, item)
+        }
+        return copy(pages = pages.mapIndexed { i, p -> when (i) { fromPage -> Page(trimmed(src)); toPage -> Page(trimmed(dst)); else -> p } })
+    }
+
+    /** Pins [item] (an app or a folder) to the dock by moving it off [page]; a full dock or a duplicate changes nothing. */
+    fun moveToDock(page: Int, item: Item): HomeLayout {
+        if (page !in pages.indices || (item !is Item.App && item !is Item.Folder) || dock.size >= MAX_DOCK || item in dock) return this
+        val src = pages[page].items.toMutableList()
+        val at = src.indexOf(item)
+        if (at < 0) return this
+        src[at] = Item.Gap
+        return copy(dock = dock + item, pages = pages.mapIndexed { i, p -> if (i == page) Page(trimmed(src)) else p })
+    }
+
     fun addPage(): HomeLayout = if (pages.size >= MAX_PAGES) this else copy(pages = pages + Page(emptyList()))
 
     fun removePage(index: Int): HomeLayout =

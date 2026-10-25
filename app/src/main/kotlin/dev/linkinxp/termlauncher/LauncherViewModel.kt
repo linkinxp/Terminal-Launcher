@@ -798,6 +798,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun movePanel(kind: PanelKind, delta: Int) = edit { it.movePanel(kind, delta) }
     fun movePanelToPage(kind: PanelKind, page: Int) = edit { it.movePanelToPage(kind, page) }
     fun removePanelItem(kind: PanelKind) = edit { it.removePanel(kind) }
+    fun moveItemToPage(fromPage: Int, item: Item, toPage: Int, slot: Int) = edit { it.moveItemToPage(fromPage, item, toPage, slot) }
+    fun moveItemToDock(page: Int, item: Item) = edit { it.moveToDock(page, item) }
     fun placeItem(page: Int, item: Item, slot: Int) = edit { it.placeItem(page, item, slot) }
     fun addPage() = edit { it.addPage() }
     fun removePage(index: Int) = edit { it.removePage(index) }

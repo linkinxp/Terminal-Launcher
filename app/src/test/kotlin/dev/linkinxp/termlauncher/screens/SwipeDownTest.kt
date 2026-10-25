@@ -122,4 +122,15 @@ class SwipeDownTest {
         rule.waitForIdle()
         assertEquals(1, doubles)
     }
+
+    @Test fun aShortFlickDoesNotOpenAnything() {
+        show()
+        rule.onRoot().performTouchInput {
+            down(Offset(width / 2f, height - 20f)); moveBy(Offset(0f, -20f)); up()
+            advanceEventTime(1000)
+            down(Offset(width / 2f, 40f)); moveBy(Offset(0f, 20f)); up()
+        }
+        rule.waitForIdle()
+        assertEquals(0, drawers); assertEquals(0, shades.size)
+    }
 }

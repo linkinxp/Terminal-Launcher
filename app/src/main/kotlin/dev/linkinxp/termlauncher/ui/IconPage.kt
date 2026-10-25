@@ -17,7 +17,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.onLongClick
@@ -33,15 +35,28 @@ import dev.linkinxp.termlauncher.sys.SysSnapshot
 /** The icon being dragged on one page, how far it has moved, and where every slot is (read only when it drops). */
 internal class DragState {
     var item by mutableStateOf<Item?>(null)
-    var offset by mutableStateOf(Offset.Zero)
-    val bounds = HashMap<Int, Rect>()
+    /** Where the finger is on screen (root coordinates) and where it first picked the icon up. */
+    var finger by mutableStateOf(Offset.Zero)
+    var start = Offset.Zero
+    /** -1, 0 or 1: the finger is at the left edge, nowhere special, or the right edge (the page turns after a moment). */
+    var edge by mutableStateOf(0)
+    var dockBounds: LayoutCoordinates? = null
+    /** Live layout coordinates of every slot: read at the moment of use, so a scrolling pager can never leave them stale. */
+    val bounds = HashMap<Long, LayoutCoordinates>()
+    fun key(page: Int, slot: Int) = page * SLOT_RANGE + slot
+    /** The slots of one page, by slot number. */
+    fun slotsOf(page: Int): Map<Int, Rect> = bounds.filter { it.key / SLOT_RANGE == page.toLong() && it.value.isAttached }
+        .map { (it.key % SLOT_RANGE).toInt() to it.value.boundsInRoot() }.toMap()
+    /** A screen position for [local] in the cell at [page]/[slot], or null when that cell is not on screen any more. */
+    fun toRoot(page: Int, slot: Int, local: Offset): Offset? = bounds[key(page, slot)]?.takeIf { it.isAttached }?.localToRoot(local)
+    private companion object { const val SLOT_RANGE = 100_000L }
 }
 
 /** An empty grid slot: nothing to see, but a place an icon can be dropped (numbered by its position in the page list). */
 @Composable
-private fun SlotBox(slot: Int, ui: LauncherUi, drag: DragState, modifier: Modifier) {
-    DisposableEffect(slot) { onDispose { drag.bounds.remove(slot) } }
-    Box(modifier.height((ui.density.iconDp + 28f).dp).testTag("slot-$slot").onGloballyPositioned { drag.bounds[slot] = it.boundsInRoot() })
+private fun SlotBox(page: Int, slot: Int, ui: LauncherUi, drag: DragState, modifier: Modifier) {
+    DisposableEffect(page, slot) { onDispose { drag.bounds.remove(drag.key(page, slot)) } }
+    Box(modifier.height((ui.density.iconDp + 28f).dp).testTag("slot-$slot").onGloballyPositioned { drag.bounds[drag.key(page, slot)] = it })
 }
 
 /**
@@ -58,10 +73,14 @@ internal fun IconPageContent(
     onItemTap: (Item) -> Unit,
     onItemLongPress: (Item) -> Unit,
     onMoveItem: (page: Int, item: Item, slot: Int) -> Unit,
+    drag: DragState,
+    currentPage: () -> Int,
+    screenWidth: () -> Float,
+    onMoveToPage: (fromPage: Int, item: Item, toPage: Int, slot: Int) -> Unit,
+    onDropOnDock: (page: Int, item: Item) -> Unit,
 ) {
     val items = ui.layout.pages[page].items
     val columns = ui.density.columns
-    val drag = remember(page) { DragState() }
     val blocks = iconBlocks(items, columns)
     // Empty slots after the last icon (and, while dragging, one more row) can take a drop: only when the icons run to the end of the page.
     val tail = (blocks.lastOrNull() as? IconBlock.Cells)?.takeIf { it.start + it.items.size == items.size }
@@ -77,37 +96,55 @@ internal fun IconPageContent(
                     block.items.forEachIndexed { k, item ->
                         val slot = block.start + k
                         val label = if (item is Item.Gap) null else itemLabel(item, ui)
-                        if (label == null) { SlotBox(slot, ui, drag, Modifier.weight(1f)); return@forEachIndexed }
-                        DisposableEffect(slot) { onDispose { drag.bounds.remove(slot) } }
+                        if (label == null) { SlotBox(page, slot, ui, drag, Modifier.weight(1f)); return@forEachIndexed }
+                        DisposableEffect(page, slot) { onDispose { drag.bounds.remove(drag.key(page, slot)) } }
                         val dragging = drag.item == item
                         val placeModifier = Modifier
-                            .onGloballyPositioned { drag.bounds[slot] = it.boundsInRoot() }
-                            .graphicsLayer {
-                                if (dragging) { translationX = drag.offset.x; translationY = drag.offset.y; scaleX = 1.12f; scaleY = 1.12f; alpha = 0.9f }
-                            }
+                            .onGloballyPositioned { drag.bounds[drag.key(page, slot)] = it }
+                            .graphicsLayer { alpha = if (dragging) 0.3f else 1f } // the floating copy follows the finger, this one marks where it came from
                         // Inside the cell's click handling, so it sees (and consumes) the lift before a click can fire.
                         val dragGesture = Modifier
                             .semantics { onLongClick(label = "item menu") { onItemLongPress(item); true } }
                             .pointerInput(item, slot) {
                                 detectDragGesturesAfterLongPress(
-                                    onDragStart = { drag.item = item; drag.offset = Offset.Zero },
-                                    onDrag = { change, amount -> change.consume(); drag.offset += amount },
-                                    onDragEnd = {
-                                        val from = drag.bounds[slot]
-                                        if (drag.offset.getDistance() < viewConfiguration.touchSlop) onItemLongPress(item)
-                                        else if (from != null) nearestCell(from.center + drag.offset, drag.bounds)?.let { target -> if (target != slot) onMoveItem(page, item, target) }
-                                        drag.item = null; drag.offset = Offset.Zero
+                                    onDragStart = { at ->
+                                        // Positions are read in this cell's own (never moved) frame and turned into screen positions.
+                                        val root = drag.toRoot(page, slot, at) ?: at
+                                        drag.item = item; drag.start = root; drag.finger = root; drag.edge = 0
                                     },
-                                    onDragCancel = { drag.item = null; drag.offset = Offset.Zero },
+                                    onDrag = { change, _ ->
+                                        change.consume()
+                                        drag.toRoot(page, slot, change.position)?.let { drag.finger = it }
+                                        drag.edge = edgeDirection(drag.finger.x, screenWidth(), 48.dp.toPx())
+                                    },
+                                    onDragEnd = {
+                                        val finger = drag.finger
+                                        if ((finger - drag.start).getDistance() < viewConfiguration.touchSlop) onItemLongPress(item)
+                                        else {
+                                            val target = currentPage()
+                                            when {
+                                                drag.dockBounds?.takeIf { it.isAttached }?.boundsInRoot()?.contains(finger) == true -> onDropOnDock(page, item)
+                                                else -> nearestCell(finger, drag.slotsOf(target))?.let { s ->
+                                                    if (target == page) { if (s != slot) onMoveItem(page, item, s) } else onMoveToPage(page, item, target, s)
+                                                }
+                                            }
+                                        }
+                                        drag.item = null; drag.edge = 0
+                                    },
+                                    onDragCancel = { drag.item = null; drag.edge = 0 },
                                 )
                             }
                         IconCell(label, { onItemTap(item) }, null, Modifier.weight(1f).then(placeModifier), labelSize = ui.density.labelSp.sp, gesture = dragGesture) { ItemIcon(item, ui, ui.density.iconDp.dp) }
                     }
                     // The rest of the last row: empty slots an icon can be dropped on.
-                    repeat(columns - block.items.size) { k -> SlotBox(block.start + block.items.size + k, ui, drag, Modifier.weight(1f)) }
+                    repeat(columns - block.items.size) { k -> SlotBox(page, block.start + block.items.size + k, ui, drag, Modifier.weight(1f)) }
                 }
                 if (block === tail && drag.item != null) {
-                    Row(Modifier.fillMaxWidth()) { repeat(columns) { k -> SlotBox(block.start + columns + k, ui, drag, Modifier.weight(1f)) } }
+                    // Takes no layout space (a bottom-anchored page would jump up a row the moment you pick an icon up): the
+                    // slots hang below the last row, invisible, only there to be dropped on.
+                    Row(Modifier.fillMaxWidth().layout { m, c -> val p = m.measure(c); layout(p.width, 0) { p.place(0, 0) } }) {
+                        repeat(columns) { k -> SlotBox(page, block.start + columns + k, ui, drag, Modifier.weight(1f)) }
+                    }
                 }
             }
         }

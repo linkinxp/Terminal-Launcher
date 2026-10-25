@@ -59,7 +59,9 @@ quick tiles and page one are drawn ahead of time, and so are the first 24 drawer
 ## Moving icons
 In the icon style, press and hold an icon to pick it up and drop it on any slot: onto an empty one (it stays where you put it and leaves a hole
 behind, so nothing else moves), onto another icon (it is inserted there and the rest shift over), or into the extra empty row that appears
-while you drag. Hold without moving and you get the item menu as before. The wallpaper settings only show the fields the chosen wallpaper uses.
+while you drag. Hold an icon at the left or right edge and the page turns, so you can drop it on another page; drop it on the dock to pin
+it there. A copy of the icon follows your finger. Hold without moving and you get the item menu as before. Swipes up and down on the home screen
+need about 44 dp of travel (a little more than before) to open the drawer or the shade. The wallpaper settings only show the fields the chosen wallpaper uses.
 
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head

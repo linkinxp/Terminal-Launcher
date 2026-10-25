@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.LauncherUi
@@ -43,9 +45,10 @@ fun Dock(
     onTap: (Item) -> Unit,
     onLongPress: (Item) -> Unit,
     modifier: Modifier = Modifier,
+    onBounds: (androidx.compose.ui.layout.LayoutCoordinates) -> Unit = {},
 ) {
     if (ui.homeStyle == HomeStyle.ICONS) {
-        Row(modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(modifier.fillMaxWidth().padding(vertical = 2.dp).onGloballyPositioned { onBounds(it) }, horizontalArrangement = Arrangement.SpaceEvenly) {
             ui.layout.dock.forEach { item ->
                 val label = dockLabel(item, ui) ?: return@forEach
                 IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.padding(horizontal = 4.dp), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) { ItemIcon(item, ui, ui.density.dockDp.dp) }

@@ -3,6 +3,18 @@ package dev.linkinxp.termlauncher.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 
+/** Which edge of the screen a finger is at while dragging: -1 left, 1 right, 0 neither ([edgePx] wide strips). */
+fun edgeDirection(x: Float, width: Float, edgePx: Float): Int = when {
+    x < edgePx -> -1
+    x > width - edgePx -> 1
+    else -> 0
+}
+
+private const val SWIPE_DP = 44f
+
+/** How far a vertical swipe must travel (in pixels at this screen [density]) before it opens the drawer or the shade. */
+fun swipeThresholdPx(density: Float): Float = SWIPE_DP * density
+
 /** How far past a cell's edge a drop still counts for it, as a fraction of the cell's size. */
 private const val SNAP = 0.75f
 
