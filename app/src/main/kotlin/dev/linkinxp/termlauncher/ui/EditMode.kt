@@ -33,6 +33,7 @@ import dev.linkinxp.termlauncher.LauncherViewModel
 import androidx.compose.ui.platform.testTag
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.WidgetSize
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.layout.PanelKind
 
@@ -130,10 +131,10 @@ fun EditMode(
                                 }
                                 is Adding.App -> if (a.page == i) {
                                     ui.apps.values.sortedBy { it.label.lowercase() }.filter { it.pkg !in ui.hidden }.forEach { app ->
-                                        TermText(
-                                            "  > ${app.label.lowercase()}",
-                                            Modifier.fillMaxWidth().clickable { vm.addToPage(i, Item.App(app.pkg)); adding = null }.padding(vertical = 5.dp),
-                                        )
+                                        Row(Modifier.fillMaxWidth().clickable { vm.addToPage(i, Item.App(app.pkg)); adding = null }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            if (ui.homeStyle == HomeStyle.ICONS) { IconTile(app.pkg, app.label, 24.dp); TermText(" ") }
+                                            TermText("  > ${app.label.lowercase()}")
+                                        }
                                     }
                                 }
                                 is Adding.Widget -> if (a.page == i) {

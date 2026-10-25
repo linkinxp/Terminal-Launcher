@@ -147,6 +147,10 @@ fun PagerHome(
     modifier: Modifier = Modifier,
 ) {
     val pageCount = ui.layout.pages.size
+    if (style == HomeStyle.ICONS) {
+        val targets = remember(ui.layout, ui.quick, ui.apps) { warmTargets(ui) }
+        WarmIcons(targets, listOf(56.dp, 48.dp, 22.dp))
+    }
     val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()

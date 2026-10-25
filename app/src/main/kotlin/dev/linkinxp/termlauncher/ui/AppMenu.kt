@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.Item
 
 @Composable
@@ -32,6 +33,7 @@ fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () ->
         Box(Modifier.padding(8.dp)) {
             DialogSurface(ui.theme) {
                 TermPanel(app.label.lowercase(), Modifier.fillMaxWidth().padding(8.dp)) {
+                    if (ui.homeStyle == HomeStyle.ICONS) IconTile(pkg, app.label, 40.dp, Modifier.padding(bottom = 6.dp))
                     if (pickingFolder) {
                         val folders = ui.layout.folders()
                         if (folders.isEmpty()) TermText("no folders: mkdir <name>", dim = true)
