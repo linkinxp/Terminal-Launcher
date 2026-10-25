@@ -221,20 +221,20 @@ fun PagerHome(
                 // Apps and folders in rows of one or two; panels and widgets always take the full width.
                 val perRow = if (style == HomeStyle.GRID) 2 else 1
                 if (style == HomeStyle.ICONS) {
-                    iconBlocks(items).forEach { block ->
+                    iconBlocks(items, ui.density.columns).forEach { block ->
                         when (block) {
                             is IconBlock.Full -> {
                                 val item = block.item
-                                if (item is Item.Widget) key(item.id) { WidgetPanel(item, vm) }
+                                if (item is Item.Widget) key(item.id) { WidgetPanel(item, vm, ui.density) }
                                 else if (item is Item.Panel) PanelItem(item.kind, ui, snapshot, onSearch)
                             }
                             is IconBlock.Cells -> Row(Modifier.fillMaxWidth()) {
                                 block.items.forEach { item ->
                                     val label = itemLabel(item, ui) ?: return@forEach
-                                    IconCell(label, { onItemTap(item) }, { onItemLongPress(item) }, Modifier.weight(1f)) { ItemIcon(item, ui, 56.dp) }
+                                    IconCell(label, { onItemTap(item) }, { onItemLongPress(item) }, Modifier.weight(1f), labelSize = ui.density.labelSp.sp) { ItemIcon(item, ui, ui.density.iconDp.dp) }
                                 }
                                 // Count only the cells actually drawn: an uninstalled app has no label and no cell.
-                                repeat(ICON_COLUMNS - block.items.count { itemLabel(it, ui) != null }) { Spacer(Modifier.weight(1f)) }
+                                repeat(ui.density.columns - block.items.count { itemLabel(it, ui) != null }) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
@@ -258,7 +258,7 @@ fun PagerHome(
                 }
                 items.forEach { item ->
                     when (item) {
-                        is Item.Widget -> { flush(); key(item.id) { WidgetPanel(item, vm) } }
+                        is Item.Widget -> { flush(); key(item.id) { WidgetPanel(item, vm, ui.density) } }
                         is Item.Panel -> { flush(); PanelItem(item.kind, ui, snapshot, onSearch) }
                         else -> run += item
                     }

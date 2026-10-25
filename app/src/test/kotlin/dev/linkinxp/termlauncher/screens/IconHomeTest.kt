@@ -133,4 +133,19 @@ class IconHomeTest {
         show(HomeStyle.CLASSIC, items = emptyList(), dock = emptyList(), quick = listOf(maps.pkg))
         rule.onNodeWithText("quick").assertIsDisplayed()
     }
+
+    @Test fun theDenseLevelDrawsSmallerIconsAndSixToARow() {
+        val more = (1..6).map { AppEntry("pkg.d$it", "Dd$it", 20L + it) }
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default, layout = HomeLayout(emptyList(), listOf(Page(more.map { Item.App(it.pkg) }))),
+            apps = more.associateBy { it.pkg }, homeStyle = HomeStyle.ICONS, density = dev.linkinxp.termlauncher.layout.Density.DENSE,
+        )
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, {}, {}, {}, {}) } }
+        rule.waitUntil(8_000) { rule.onAllNodesWithContentDescription("icon-pkg.d1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodesWithContentDescription("icon-pkg.d1", useUnmergedTree = true)[0].assertHeightIsEqualTo(44.dp)
+        val first = rule.onNodeWithText("dd1").getUnclippedBoundsInRoot().top
+        val sixth = rule.onNodeWithText("dd6").getUnclippedBoundsInRoot().top
+        assertEquals("all six share one row", first.value, sixth.value, 0.5f)
+    }
 }

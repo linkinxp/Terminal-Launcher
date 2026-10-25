@@ -192,4 +192,12 @@ class SettingsScreenTest {
         click("gesture-lock"); until({ "lock=${vm.ui.value.doubleTapLock}" }) { !vm.ui.value.doubleTapLock }
         click("gesture-lock"); until({ "lock=${vm.ui.value.doubleTapLock}" }) { vm.ui.value.doubleTapLock }
     }
+
+    @Test fun theDensityRowCyclesTheFourLevelsAndWraps() {
+        val vm = show()
+        val levels = dev.linkinxp.termlauncher.layout.Density.entries
+        assertEquals(dev.linkinxp.termlauncher.layout.Density.NORMAL, vm.ui.value.density)
+        val order = listOf(levels[3], levels[0], levels[1], levels[2]) // from normal: roomy, then wraps to dense, compact, normal
+        for (next in order) { click("density-row"); until({ "density=${vm.ui.value.density}" }) { vm.ui.value.density == next } }
+    }
 }

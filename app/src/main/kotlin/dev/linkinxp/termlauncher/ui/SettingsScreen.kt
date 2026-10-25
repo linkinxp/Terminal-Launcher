@@ -190,6 +190,7 @@ fun SettingsScreen(
 
             TermPanel("home", Modifier.padding(top = 4.dp)) {
                 SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
+                SettingRow("density", "${ui.density.name.lowercase()} (${ui.density.columns})", "density-row") { vm.cycleDensity() }
             }
 
             TermPanel("gestures", Modifier.padding(top = 4.dp)) {

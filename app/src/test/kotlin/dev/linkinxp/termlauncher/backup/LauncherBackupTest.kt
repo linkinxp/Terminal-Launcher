@@ -156,4 +156,9 @@ class LauncherBackupTest {
         assertEquals(false, decodeBackup(encodeBackup(sample().copy(doubleTapLock = false))).getOrThrow().doubleTapLock)
         assertEquals(true, decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().doubleTapLock)
     }
+
+    @Test fun theDensityRoundTripsAndDefaultsToNormal() {
+        assertEquals("DENSE", decodeBackup(encodeBackup(sample().copy(density = "DENSE"))).getOrThrow().density)
+        assertEquals("NORMAL", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().density)
+    }
 }

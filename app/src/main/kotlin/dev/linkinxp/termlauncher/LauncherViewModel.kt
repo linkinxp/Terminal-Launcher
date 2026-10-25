@@ -24,7 +24,9 @@ import kotlin.random.Random
 import dev.linkinxp.termlauncher.data.Prefs
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
+import dev.linkinxp.termlauncher.layout.Density
 import dev.linkinxp.termlauncher.layout.HomeStyle
+import dev.linkinxp.termlauncher.layout.densityPlan
 import dev.linkinxp.termlauncher.layout.PanelKind
 import dev.linkinxp.termlauncher.layout.Restructure
 import dev.linkinxp.termlauncher.layout.layoutPlan
@@ -147,6 +149,7 @@ data class LauncherUi(
     val customThemes: List<Theme> = emptyList(),
     val homeStyle: HomeStyle = HomeStyle.CLASSIC,
     val doubleTapLock: Boolean = true,
+    val density: Density = Density.NORMAL,
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -188,11 +191,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             Persisted(a[0] as Theme, a[1] as HomeLayout, a[2] as Set<String>, a[3] as DrawerSort, a[4] as IconMode, st, h.all(), fx, wall, panels)
         }
 
-    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle, val doubleTapLock: Boolean)
+    private class Extras(val wx: WxSettings, val quick: List<String>?, val drawerKeyboard: Boolean, val clockFormat: ClockFormat, val clockStyle: ClockStyle, val customThemes: List<Theme>, val homeStyle: HomeStyle, val doubleTapLock: Boolean, val density: Density)
 
-    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle, prefs.doubleTapLock) { a ->
+    private val extras = combine(prefs.wx, prefs.quick, prefs.drawerKeyboard, prefs.clockFormat, prefs.clockStyle, prefs.customThemes, prefs.homeStyle, prefs.doubleTapLock, prefs.density) { a ->
         @Suppress("UNCHECKED_CAST")
-        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle, a[7] as Boolean)
+        Extras(a[0] as WxSettings, a[1] as List<String>?, a[2] as Boolean, a[3] as ClockFormat, a[4] as ClockStyle, a[5] as List<Theme>, a[6] as HomeStyle, a[7] as Boolean, a[8] as Density)
     }
 
     /** Dialer, messages, camera and maps apps of this phone: the tiles until the user changes the list. */
@@ -239,6 +242,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             customThemes = x.customThemes,
             homeStyle = x.homeStyle,
             doubleTapLock = x.doubleTapLock,
+            density = x.density,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
         .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi(homeStyle = HomeStyle.DEFAULT))
@@ -616,6 +620,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 onFailure = { it.message },
             )
             is Command.Layout -> handleLayout(cmd.arg, cur)
+            is Command.Density -> if (cmd.arg == null) "density  ${cur.density.name.lowercase()} (${cur.density.columns} columns)"
+                else densityPlan(cmd.arg).let { plan -> plan.density?.let { setDensity(it) }; plan.message }
             is Command.Clock -> handleClock(cmd.sub, cmd.arg, cur)
             is Command.Quick -> parseQuickAction(cmd.sub, cmd.arg).fold(
                 onSuccess = { action -> handleQuick(action, cur) },
@@ -699,6 +705,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setSort(sort: DrawerSort) { viewModelScope.launch { prefs.setSort(sort) } }
     fun setClockFormat(f: ClockFormat) { viewModelScope.launch { prefs.setClockFormat(f) } }
     fun toggleDoubleTapLock() { viewModelScope.launch { prefs.setDoubleTapLock(!ui.value.doubleTapLock) } }
+    fun setDensity(d: Density) { viewModelScope.launch { prefs.setDensity(d) } }
+    fun cycleDensity() { setDensity(Density.entries.let { it[(it.indexOf(ui.value.density) + 1) % it.size] }) }
     fun setHomeStyle(s: HomeStyle) { viewModelScope.launch { prefs.setHomeStyle(s) } }
     fun cycleHomeStyle() { setHomeStyle(HomeStyle.entries.let { it[(it.indexOf(ui.value.homeStyle) + 1) % it.size] }) }
 
@@ -814,7 +822,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "0.7.0"
+        const val LAUNCHER_VERSION = "0.8.0"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L
         private const val CAL_LINES = 40
@@ -822,7 +830,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val DATE_FORMAT_12: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy hh:mm:ss a", Locale.ENGLISH)
         val COMMANDS = listOf(
             "theme", "pin", "hide", "mkdir", "mv", "rmdir", "ls", "help", "fx", "history",
-            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout",
+            "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout", "density",
         )
         val HELP = listOf(
             "theme <n>|add <n> bg fg acc dim|rm <n>",
@@ -831,12 +839,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             "mkdir|rmdir <f>  mv <app>|<f> <f|new>",
             "fx [n on|off]  wall <sub> [arg]",
             "panel <p> on|off  cal wx search quick",
-            "wx [city <n>|units c|f]  weather",
-            "quick [add|rm <app>|clear|reset]",
+            "wx city|units <v>  quick add|rm <app>",
             "history neofetch whoami uptime date",
             "fortune clear help settings sudo",
             "matrix [wake]  pill red|blue",
             "layout classic|bottom|grid|icons|apps",
+            "density dense|compact|normal|roomy",
         ).joinToString("\n")
     }
 }

@@ -26,16 +26,17 @@ fun QuickPanel(ui: LauncherUi, onTap: (String) -> Unit, onLongPress: (String) ->
     if (!ui.panels.quick || ui.quick.isEmpty()) return
     if (ui.homeStyle == HomeStyle.ICONS) {
         // Icon style: no bordered panel and no title, just a compact row of small icons, so the apps get the room.
+        val perRow = ui.density.columns
         Column(modifier.fillMaxWidth().padding(top = 2.dp)) {
-            tileRows(ui.quick, PER_ROW).forEach { row ->
+            tileRows(ui.quick, perRow).forEach { row ->
                 Row(Modifier.fillMaxWidth()) {
                     row.forEach { pkg ->
                         val label = tileLabel(ui.apps[pkg]?.label ?: pkg).lowercase()
-                        IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg"), labelSize = 10.sp, vPad = 3.dp) {
-                            IconTile(pkg, ui.apps[pkg]?.label ?: pkg, 40.dp)
+                        IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg"), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) {
+                            IconTile(pkg, ui.apps[pkg]?.label ?: pkg, ui.density.quickDp.dp)
                         }
                     }
-                    repeat(PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

@@ -3,6 +3,7 @@ package dev.linkinxp.termlauncher.screens
 import android.app.Application
 import android.os.Looper
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -121,4 +122,17 @@ class IconDrawerTest {
     }
 
     private fun pump() { repeat(15) { shadowOf(Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(20) } }
+
+    @Test fun theDrawerGridFollowsTheDensityColumns() {
+        val many = (1..6).map { AppEntry("pkg.c$it", "Cc$it", it.toLong()) }
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val ui = LauncherUi(
+            theme = ThemeRegistry.default, apps = many.associateBy { it.pkg }, drawer = buildDrawer(many, emptySet(), emptyMap(), DrawerSort.AZ, "", false),
+            drawerOpen = true, homeStyle = HomeStyle.ICONS, density = dev.linkinxp.termlauncher.layout.Density.DENSE, drawerKeyboard = false,
+        )
+        rule.setContent { TermTheme(ui.theme) { AppDrawer(ui, vm, {}, {}) } }
+        val a = rule.onNodeWithText("cc1").getUnclippedBoundsInRoot().top
+        val f = rule.onNodeWithText("cc6").getUnclippedBoundsInRoot().top
+        assertEquals(a.value, f.value, 0.5f)
+    }
 }

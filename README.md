@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.7.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 0.8.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest
@@ -39,6 +39,15 @@ and the quick panel show icon cells too, and the drawer is a 4-column icon grid 
 drawn as rounded tiles in your theme colors: an app's monochrome (themed) icon is tinted with the theme's foreground; apps without one get
 their icon grayscaled and tinted; an app with no icon gets its first letter. Tiles are drawn off the main thread and cached; the dock,
 quick tiles and page one are drawn ahead of time, and so are the first 24 drawer cells a moment after start. Other layouts are unchanged.
+
+## Density, wallpapers, gestures
+- `density dense|compact|normal|roomy` (or settings > home > density): how much fits. In the icon style it sets the grid's columns (6 / 5 / 4 / 3)
+  and the icon, label, dock and quick-icon sizes; it also scales widget heights (0.7x / 0.85x / 1x / 1.15x, never below what a widget needs).
+- `wall mode svg`, then `wall svg circuit|hexnet|radar|tunnel|glitch|windows|helix|topo|next|random`: eight generated vector wallpapers drawn in
+  the theme colors (the wall seed makes a picture repeatable; `wall dim` sets how strong it is).
+- Swipe down on the left half of the screen: notifications; on the right half: quick settings. Double-tap an empty spot: lock the screen (switch
+  on the "Terminal: lock screen" accessibility service once; settings > gestures has the shortcut). A one-line weather summary shows under the
+  date when the weather panel is on. Long-press an app for its own shortcuts (when Terminal is the default home app).
 
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head

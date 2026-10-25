@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.data
 
 import dev.linkinxp.termlauncher.clock.ClockFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
+import dev.linkinxp.termlauncher.layout.Density
 import dev.linkinxp.termlauncher.layout.HomeStyle
 import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -77,6 +78,7 @@ class Prefs(private val context: Context) {
     private val clockFormatKey = stringPreferencesKey("clock_format")
     private val customThemesKey = stringPreferencesKey("custom_themes")
     private val doubleTapLockKey = booleanPreferencesKey("double_tap_lock")
+    private val densityKey = stringPreferencesKey("density")
     private val homeStyleKey = stringPreferencesKey("home_style")
     private val clockStyleKey = stringPreferencesKey("clock_style")
     private val drawerKeyboardKey = booleanPreferencesKey("drawer_keyboard")
@@ -116,6 +118,7 @@ class Prefs(private val context: Context) {
     val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
     val clockFormat: Flow<ClockFormat> = data.map { ClockFormat.fromName(it[clockFormatKey]) }.distinctUntilChanged()
     val doubleTapLock: Flow<Boolean> = data.map { it[doubleTapLockKey] ?: true }.distinctUntilChanged()
+    val density: Flow<Density> = data.map { Density.fromName(it[densityKey]) }.distinctUntilChanged()
     val homeStyle: Flow<HomeStyle> = data.map { HomeStyle.fromStored(it[homeStyleKey]) }.distinctUntilChanged()
     val clockStyle: Flow<ClockStyle> = data.map { ClockStyle.fromName(it[clockStyleKey]) }.distinctUntilChanged()
     val drawerKeyboard: Flow<Boolean> = data.map { it[drawerKeyboardKey] ?: true }.distinctUntilChanged()
@@ -198,6 +201,7 @@ class Prefs(private val context: Context) {
 
     suspend fun setClockFormat(f: ClockFormat) { safeEdit { it[clockFormatKey] = f.name } }
     suspend fun setDoubleTapLock(on: Boolean) { safeEdit { it[doubleTapLockKey] = on } }
+    suspend fun setDensity(d: Density) { safeEdit { it[densityKey] = d.name } }
     suspend fun setHomeStyle(s: HomeStyle) { safeEdit { it[homeStyleKey] = s.name } }
     suspend fun setClockStyle(s: ClockStyle) { safeEdit { it[clockStyleKey] = s.name } }
     suspend fun setDrawerKeyboard(on: Boolean) { safeEdit { it[drawerKeyboardKey] = on } }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.apps.AppEntry
 import dev.linkinxp.termlauncher.apps.DrawerState
@@ -63,7 +64,7 @@ fun IconDrawerGrid(
 ) {
     val theme = LocalTheme.current
     LazyVerticalGrid(
-        GridCells.Fixed(ICON_COLUMNS), modifier.fillMaxSize().nestedScroll(scrollConnection), state = state,
+        GridCells.Fixed(ui.density.columns), modifier.fillMaxSize().nestedScroll(scrollConnection), state = state,
         contentPadding = PaddingValues(bottom = 8.dp),
     ) {
         layout.entries.forEach { entry ->
@@ -75,8 +76,8 @@ fun IconDrawerGrid(
                     TermText("~/${entry.name} (${entry.count})", Modifier.fillMaxWidth().clickable { onFolderTap(entry.name) }.padding(vertical = 8.dp), color = theme.accent.color())
                 }
                 is GridEntry.Cell -> item(key = entry.key) {
-                    IconCell(entry.app.label.lowercase(), { onLaunch(entry.app.pkg) }, { onAppLongPress(entry.app.pkg) }) {
-                        IconTile(entry.app.pkg, entry.app.label, 56.dp)
+                    IconCell(entry.app.label.lowercase(), { onLaunch(entry.app.pkg) }, { onAppLongPress(entry.app.pkg) }, labelSize = ui.density.labelSp.sp) {
+                        IconTile(entry.app.pkg, entry.app.label, ui.density.iconDp.dp)
                     }
                 }
             }

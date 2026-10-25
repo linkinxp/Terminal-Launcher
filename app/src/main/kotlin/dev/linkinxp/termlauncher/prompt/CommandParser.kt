@@ -16,6 +16,7 @@ sealed interface Command {
     data class Panel(val name: String?, val on: Boolean?) : Command
     data class Wx(val sub: String?, val arg: String?) : Command
     data class Layout(val arg: String?) : Command
+    data class Density(val arg: String?) : Command
     data class Clock(val sub: String?, val arg: String?) : Command
     data class Quick(val sub: String?, val arg: String?) : Command
     data object History : Command
@@ -48,6 +49,7 @@ fun parseCommand(input: String): Command {
         word == "quick" -> parseQuick(args)
         word == "clock" -> parseClock(args)
         word == "layout" -> Command.Layout(args.ifEmpty { null })
+        word == "density" -> Command.Density(args.ifEmpty { null })
         word == "matrix" && args.lowercase() == "wake" -> Command.Wake
         word == "pill" -> Command.Pill(args.ifEmpty { null })
         text.lowercase().trimEnd('.', '!').let { it == "follow the white rabbit" || it == "follow white rabbit" } -> Command.Rabbit

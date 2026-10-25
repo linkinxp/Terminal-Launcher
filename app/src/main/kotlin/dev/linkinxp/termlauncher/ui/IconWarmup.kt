@@ -16,13 +16,11 @@ private const val DRAWER_WARM_CELLS = 24
 /** An app tile to draw ahead of time at the size ([sizeDp]) it is shown at. */
 data class WarmTarget(val pkg: String, val label: String, val sizeDp: Float)
 
-private const val DOCK_DP = 44f
-private const val QUICK_DP = 40f
-private const val PAGE_DP = 56f
 private const val MINI = 0.4f // a folder's mini tiles are this fraction of the folder tile
 
 /** The tiles needed first, each at its real size: the dock, the quick tiles, then page one (folders: their first four apps, small). */
 fun warmTargets(ui: LauncherUi): List<WarmTarget> {
+    val dock = ui.density.dockDp; val quick = ui.density.quickDp; val page = ui.density.iconDp
     val out = ArrayList<WarmTarget>()
     fun add(pkg: String, size: Float) { ui.apps[pkg]?.let { out += WarmTarget(pkg, it.label, size) } }
     fun item(i: Item, size: Float) = when (i) {
@@ -30,15 +28,15 @@ fun warmTargets(ui: LauncherUi): List<WarmTarget> {
         is Item.Folder -> i.apps.take(4).forEach { add(it, size * MINI) }
         else -> {}
     }
-    ui.layout.dock.forEach { item(it, DOCK_DP) }
-    ui.quick.forEach { add(it, QUICK_DP) }
-    ui.layout.pages.firstOrNull()?.items.orEmpty().forEach { item(it, PAGE_DP) }
+    ui.layout.dock.forEach { item(it, dock) }
+    ui.quick.forEach { add(it, quick) }
+    ui.layout.pages.firstOrNull()?.items.orEmpty().forEach { item(it, page) }
     return out.distinctBy { it.pkg to it.sizeDp }.take(HOME_WARM_MAX)
 }
 
 /** The first drawer cells: `recent`, then the top of the first sections. */
-fun drawerWarmTargets(d: DrawerState): List<WarmTarget> =
-    (d.recent + d.sections.flatMap { it.apps }).distinctBy { it.pkg }.take(DRAWER_WARM_CELLS).map { WarmTarget(it.pkg, it.label, PAGE_DP) }
+fun drawerWarmTargets(d: DrawerState, iconDp: Float = 56f): List<WarmTarget> =
+    (d.recent + d.sections.flatMap { it.apps }).distinctBy { it.pkg }.take(DRAWER_WARM_CELLS).map { WarmTarget(it.pkg, it.label, iconDp) }
 
 /** Draws (off the main thread) the tiles in [targets] at each of [sizes] so they are cached before they are needed. */
 @Composable

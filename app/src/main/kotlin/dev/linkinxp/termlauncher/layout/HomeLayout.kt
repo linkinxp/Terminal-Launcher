@@ -237,7 +237,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         private val DEFAULT_PANELS: List<Item> = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX).map { Item.Panel(it) }
         val RESERVED_WORDS = setOf(
             "ls", "theme", "pin", "hide", "mkdir", "mv", "rmdir", "help",
-            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout",
+            "fx", "history", "neofetch", "whoami", "uptime", "date", "fortune", "clear", "sudo", "matrix", "wall", "panel", "wx", "settings", "quick", "clock", "pill", "layout", "density",
         )
         private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 

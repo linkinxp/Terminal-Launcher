@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.backup
 
 import dev.linkinxp.termlauncher.clock.ClockFormat
 import dev.linkinxp.termlauncher.clock.ClockStyle
+import dev.linkinxp.termlauncher.layout.Density
 import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
@@ -49,6 +50,7 @@ class BackupRepository(private val prefs: Prefs) {
             clockFormat = prefs.clockFormat.first().name,
             clockStyle = prefs.clockStyle.first().name,
             homeStyle = prefs.homeStyle.first().name,
+            density = prefs.density.first().name,
             doubleTapLock = prefs.doubleTapLock.first(),
             panelItems = true,
             customThemes = prefs.customThemes.first().map {
@@ -92,6 +94,7 @@ class BackupRepository(private val prefs: Prefs) {
         prefs.setClockFormat(ClockFormat.fromName(b.clockFormat))
         prefs.setClockStyle(ClockStyle.fromName(b.clockStyle))
         prefs.setHomeStyle(HomeStyle.fromName(b.homeStyle))
+        prefs.setDensity(Density.fromName(b.density))
         prefs.setDoubleTapLock(b.doubleTapLock)
         prefs.setWx(WxSettings(b.wx.city, b.wx.lat, b.wx.lon, b.wx.fahrenheit))
         prefs.clearWxCache()

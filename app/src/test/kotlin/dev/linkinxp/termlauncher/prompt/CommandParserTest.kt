@@ -150,4 +150,10 @@ class CommandParserTest {
         assertEquals(Command.Layout("Apps-First"), parseCommand("LAYOUT Apps-First"))
         assertEquals(Command.Layout("grid now"), parseCommand("layout grid now"))
     }
+
+    @Test fun densityCommand() {
+        assertEquals(Command.Density(null), parseCommand("density"))
+        assertEquals(Command.Density("Dense"), parseCommand("DENSITY Dense"))
+        assertEquals(Command.Density("a b"), parseCommand("density a b"))
+    }
 }

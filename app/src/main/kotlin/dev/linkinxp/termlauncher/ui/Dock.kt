@@ -46,7 +46,7 @@ fun Dock(
         Row(modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             ui.layout.dock.forEach { item ->
                 val label = dockLabel(item, ui) ?: return@forEach
-                IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.padding(horizontal = 4.dp), labelSize = 10.sp, vPad = 3.dp) { ItemIcon(item, ui, 44.dp) }
+                IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.padding(horizontal = 4.dp), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) { ItemIcon(item, ui, ui.density.dockDp.dp) }
             }
         }
         return
