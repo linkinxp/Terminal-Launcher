@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.apps
 
+import dev.linkinxp.termlauncher.icons.IconRepository
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,7 +37,11 @@ class AppRepository(private val context: Context) {
     val apps: Flow<List<AppEntry>> = callbackFlow<Unit> {
         trySend(Unit)
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, i: Intent) { trySend(Unit) }
+            override fun onReceive(c: Context, i: Intent) {
+                // An updated or replaced app may ship a new icon: forget its drawn tiles.
+                i.data?.schemeSpecificPart?.let { IconRepository.get(c).invalidate(it) }
+                trySend(Unit)
+            }
         }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)

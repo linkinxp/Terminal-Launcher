@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -19,10 +20,12 @@ fun rememberThemedIcon(pkg: String, label: String, size: Dp, selected: Boolean =
     val context = LocalContext.current
     val theme = LocalTheme.current
     val px = with(LocalDensity.current) { size.roundToPx() }
-    val tile by produceState<ImageBitmap?>(null, pkg, label, theme.background, theme.foreground, theme.accent, theme.dim, px, selected) {
-        value = IconRepository.get(context).tile(pkg, label, theme, px, selected)
+    val repo = IconRepository.get(context)
+    val cached = remember(pkg, theme.background, theme.foreground, theme.accent, theme.dim, px, selected) { repo.peek(pkg, theme, px, selected) }
+    val tile by produceState<ImageBitmap?>(cached, pkg, label, theme.background, theme.foreground, theme.accent, theme.dim, px, selected) {
+        value = repo.tile(pkg, label, theme, px, selected)
     }
-    return tile
+    return cached ?: tile
 }
 
 /** The tile at its final size; an empty box of the same size stands in until it is ready, so nothing jumps. */

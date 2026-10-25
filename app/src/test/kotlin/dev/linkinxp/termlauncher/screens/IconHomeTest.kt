@@ -2,6 +2,7 @@ package dev.linkinxp.termlauncher.screens
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -99,5 +100,17 @@ class IconHomeTest {
         show(HomeStyle.ICONS, items = many.map { Item.App(it.pkg) }, extra = many)
         rule.waitForIdle()
         rule.onNodeWithText("app 1").assertIsDisplayed()
+    }
+
+    @Test fun aMissingAppDoesNotWidenTheOtherCellsOfItsRow() {
+        val more = listOf("Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot").mapIndexed { i, n -> AppEntry("pkg.${n.lowercase()}", n, 10L + i) }
+        val row1 = listOf(more[0], more[1], more[2], more[3]).map { Item.App(it.pkg) }
+        val row2 = listOf(Item.App("pkg.gone"), Item.App(more[4].pkg), Item.App(more[5].pkg), Item.App(maps.pkg))
+        show(HomeStyle.ICONS, items = row1 + Item.Panel(dev.linkinxp.termlauncher.layout.PanelKind.SYS) + row2, quick = emptyList(), dock = emptyList(), extra = more)
+        rule.waitForIdle()
+        // second column of the first row vs the second drawn cell of the row that starts with an uninstalled app
+        val second = rule.onNodeWithText("bravo").getUnclippedBoundsInRoot().left
+        val shifted = rule.onNodeWithText("foxtrot").getUnclippedBoundsInRoot().left
+        assertEquals("both rows keep four equal columns", second.value, shifted.value, 1.5f)
     }
 }

@@ -84,4 +84,17 @@ class IconTileTest {
         val t = repo().tile("no.such.app", "Nothing", green, 64)
         assertEquals(64, t.width)
     }
+
+    @Test fun aCachedTileIsAvailableWithoutWaiting() = runBlocking {
+        val r = repo()
+        assertEquals(null, r.peek("p.mono", green, 96))
+        val t = r.tile("p.mono", "mono", green, 96)
+        assertSame(t, r.peek("p.mono", green, 96))
+    }
+
+    @Test fun anAdaptiveIconWithoutAMonochromeLayerDoesNotPaintItsBackgroundAsASolidSquare() {
+        val adaptive = AdaptiveIconDrawable(ColorDrawable(Color.RED), ColorDrawable(Color.TRANSPARENT))
+        val c = center(drawTile(adaptive, "a", white, 96))
+        assertTrue("only the faint tile fill shows (alpha ${Color.alpha(c)})", Color.alpha(c) < 100)
+    }
 }

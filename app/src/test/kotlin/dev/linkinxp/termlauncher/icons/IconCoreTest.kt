@@ -45,19 +45,37 @@ class IconCoreTest {
         assertEquals(0.5f, gray[0], 0.01f); assertEquals(0f, gray[1], 0.01f)
     }
 
-    @Test fun cacheEvictsTheLeastRecentlyUsed() {
-        val c = IconCache<String>(2)
+    private fun cache(maxWeight: Long) = IconCache<String>(maxWeight) { it.length }
+
+    @Test fun cacheEvictsTheLeastRecentlyUsedWhenTheWeightIsExceeded() {
+        val c = cache(10)
         val a = IconKey("a", "k", 1); val b = IconKey("b", "k", 1); val d = IconKey("d", "k", 1)
-        c.put(a, "A"); c.put(b, "B")
-        assertEquals("A", c.get(a)) // a is now the freshest
-        c.put(d, "D")
+        c.put(a, "AAAA"); c.put(b, "BBBB")          // weight 8
+        assertEquals("AAAA", c.get(a))               // a is now the freshest
+        c.put(d, "DDDD")                             // 12 > 10: the oldest (b) goes
         assertNull(c.get(b))
-        assertEquals("A", c.get(a)); assertEquals("D", c.get(d))
-        assertEquals(2, c.size)
+        assertEquals("AAAA", c.get(a)); assertEquals("DDDD", c.get(d))
+        assertEquals(8L, c.weight)
+    }
+
+    @Test fun oneBigEntryEvictsSeveralSmallOnes() {
+        val c = cache(10)
+        c.put(IconKey("a", "k", 1), "AA"); c.put(IconKey("b", "k", 1), "BB"); c.put(IconKey("c", "k", 1), "CCCCCCCCC")
+        assertEquals(1, c.size)
+    }
+
+    @Test fun removingAPackageDropsEverySizeAndTheme() {
+        val c = cache(100)
+        c.put(IconKey("a", "k1", 56), "x"); c.put(IconKey("a", "k2", 48), "y"); c.put(IconKey("b", "k1", 56), "z")
+        c.removePackage("a")
+        assertEquals(1, c.size)
+        assertNull(c.get(IconKey("a", "k1", 56)))
+        assertEquals("z", c.get(IconKey("b", "k1", 56)))
+        assertEquals(1L, c.weight)
     }
 
     @Test fun cacheStaysBoundedUnderConcurrentUse() {
-        val c = IconCache<Int>(16)
+        val c = IconCache<Int>(16) { 1 }
         val pool = Executors.newFixedThreadPool(8)
         repeat(8) { t -> pool.execute { repeat(500) { i -> c.put(IconKey("p${(t * 31 + i) % 60}", "k", 1), i); c.get(IconKey("p$i", "k", 1)) } } }
         pool.shutdown(); assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS))

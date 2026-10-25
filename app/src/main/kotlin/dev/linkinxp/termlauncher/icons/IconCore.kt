@@ -25,14 +25,34 @@ fun tintMatrix(argb: Long): FloatArray {
     )
 }
 
-/** A small thread-safe LRU: the least recently read or written entry goes first once [capacity] is exceeded. */
-class IconCache<V>(private val capacity: Int = 256) {
-    private val map = object : LinkedHashMap<IconKey, V>(32, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<IconKey, V>?) = size > capacity
-    }
+/**
+ * A thread-safe LRU bounded by total weight (for bitmaps: bytes), not by entry count: once [maxWeight] is exceeded the
+ * least recently read or written entries go first (the newest entry always stays).
+ */
+class IconCache<V>(private val maxWeight: Long, private val weigh: (V) -> Int) {
+    private val map = LinkedHashMap<IconKey, V>(32, 0.75f, true)
+    private var total = 0L
 
     @Synchronized fun get(key: IconKey): V? = map[key]
-    @Synchronized fun put(key: IconKey, value: V) { map[key] = value }
-    @Synchronized fun clear() = map.clear()
+
+    @Synchronized fun put(key: IconKey, value: V) {
+        map.put(key, value)?.let { total -= weigh(it) }
+        total += weigh(value)
+        val it = map.entries.iterator()
+        while (total > maxWeight && map.size > 1 && it.hasNext()) {
+            val eldest = it.next()
+            if (eldest.key == key) continue
+            total -= weigh(eldest.value); it.remove()
+        }
+    }
+
+    /** Drops every tile of [pkg] (all sizes and themes), e.g. after the app was updated. */
+    @Synchronized fun removePackage(pkg: String) {
+        val it = map.entries.iterator()
+        while (it.hasNext()) { val e = it.next(); if (e.key.pkg == pkg) { total -= weigh(e.value); it.remove() } }
+    }
+
+    @Synchronized fun clear() { map.clear(); total = 0 }
     val size: Int @Synchronized get() = map.size
+    val weight: Long @Synchronized get() = total
 }

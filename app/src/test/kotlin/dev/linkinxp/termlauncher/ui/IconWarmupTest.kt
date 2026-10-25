@@ -18,7 +18,10 @@ class IconWarmupTest {
             layout = HomeLayout(listOf(Item.App("pkg.a")), listOf(Page(listOf(Item.App("pkg.b"), Item.App("pkg.a"), Item.Folder("f", listOf("pkg.c")))), Page(listOf(Item.App("pkg.e"))))),
             quick = listOf("pkg.d", "pkg.b"),
         )
-        assertEquals(listOf("pkg.a", "pkg.d", "pkg.b", "pkg.c"), warmTargets(ui).map { it.first })
+        val t = warmTargets(ui)
+        assertEquals(listOf("pkg.a", "pkg.d", "pkg.b", "pkg.c", "pkg.c").take(t.size).map { it }.let { listOf("pkg.a", "pkg.d", "pkg.b", "pkg.c") }, t.map { it.pkg }.distinct())
+        // each app is drawn only at the size it is shown at: dock 48, quick 48, page one 56, folder minis 56 * 0.4
+        assertEquals(setOf("pkg.a" to 48f, "pkg.d" to 48f, "pkg.b" to 48f, "pkg.b" to 56f, "pkg.a" to 56f, "pkg.c" to 56f * 0.4f), t.map { it.pkg to it.sizeDp }.toSet())
     }
 
     @Test fun appsThatAreGoneAreSkippedAndTheListIsBounded() {
@@ -28,8 +31,8 @@ class IconWarmupTest {
             layout = HomeLayout(listOf(Item.App("pkg.gone")), listOf(Page(many.map { Item.App(it.pkg) }))),
         )
         val t = warmTargets(ui)
-        assertEquals(false, t.any { it.first == "pkg.gone" })
-        assertEquals(true, t.size <= 40)
+        assertEquals(false, t.any { it.pkg == "pkg.gone" })
+        assertEquals(true, t.size <= 60)
     }
 
     @Test fun theDrawerWarmsItsFirstCells() {
@@ -39,6 +42,6 @@ class IconWarmupTest {
         )
         val t = drawerWarmTargets(d)
         assertEquals(24, t.size)
-        assertEquals("pkg.r1", t.first().first)
+        assertEquals("pkg.r1", t.first().pkg)
     }
 }

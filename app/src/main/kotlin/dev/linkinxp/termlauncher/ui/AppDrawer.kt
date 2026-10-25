@@ -134,7 +134,7 @@ fun AppDrawer(
         val folderRows = folders.map { it.name to it.apps.size }
         remember(d, folderRows, filtering) { gridLayout(d, folderRows, filtering) }
     } else null
-    if (iconStyle) WarmIcons(remember(d) { drawerWarmTargets(d) }, listOf(56.dp), delayMs = 1_500)
+    if (iconStyle) WarmIcons(remember(d) { drawerWarmTargets(d) }, delayMs = 1_500)
     val searchRow: @Composable () -> Unit = {
     Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         TermText("| grep ", dim = true)

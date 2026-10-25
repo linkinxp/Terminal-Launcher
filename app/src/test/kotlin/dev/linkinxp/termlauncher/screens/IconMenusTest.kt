@@ -47,12 +47,12 @@ class IconMenusTest {
         assertEquals(0, icons())
     }
 
-    @Test fun editModeShowsIconsInItsAddAppListWhenAsked() {
+    @Test fun theEditModeAddListStaysTextSoALongListCannotFloodTheIconCache() {
         val u = ui(HomeStyle.ICONS); val v = vm()
         rule.setContent { TermTheme(u.theme) { EditMode(u, v, { _, _ -> }, {}, {}) } }
-        rule.onAllNodesWithContentDescription("none").fetchSemanticsNodes() // dialog composed
         rule.onNodeWithTextClick("[+app]")
-        rule.waitUntil(8_000) { icons() > 0 }
+        rule.waitForIdle()
+        assertEquals(0, icons())
     }
 
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onNodeWithTextClick(t: String) =

@@ -53,6 +53,15 @@ fun drawTile(icon: Drawable?, label: String, theme: Theme, sizePx: Int, selected
             d.colorFilter = PorterDuffColorFilter(tint.toInt(), PorterDuff.Mode.SRC_IN)
             d.draw(canvas)
         }
+        icon is AdaptiveIconDrawable -> {
+            // Only the foreground layer: the background would turn into a solid square after the tint.
+            val layer = s / SAFE
+            val off = (s - layer) / 2
+            val d = icon.foreground.mutate()
+            d.setBounds(off.toInt(), off.toInt(), (off + layer).toInt(), (off + layer).toInt())
+            d.colorFilter = ColorMatrixColorFilter(tintMatrix(tint))
+            d.draw(canvas)
+        }
         icon != null -> {
             val d = icon.mutate()
             d.setBounds(inset.toInt(), inset.toInt(), (s - inset).toInt(), (s - inset).toInt())
@@ -72,10 +81,15 @@ fun drawTile(icon: Drawable?, label: String, theme: Theme, sizePx: Int, selected
 
 /** Renders and caches themed tiles; every call is safe from any thread and never throws. */
 class IconRepository(private val context: Context) {
-    private val cache = IconCache<ImageBitmap>()
+    private val cache = IconCache<ImageBitmap>(24L * 1024 * 1024) { it.width * it.height * 4 }
+
+    private fun keyOf(pkg: String, theme: Theme, sizePx: Int, selected: Boolean) = IconKey(pkg, themeKey(theme) + if (selected) "!" else "", sizePx)
+
+    /** The tile if it is already drawn, else null: lets a composable show it in its very first frame. */
+    fun peek(pkg: String, theme: Theme, sizePx: Int, selected: Boolean = false): ImageBitmap? = cache.get(keyOf(pkg, theme, sizePx, selected))
 
     suspend fun tile(pkg: String, label: String, theme: Theme, sizePx: Int, selected: Boolean = false): ImageBitmap {
-        val key = IconKey(pkg, themeKey(theme) + if (selected) "!" else "", sizePx)
+        val key = keyOf(pkg, theme, sizePx, selected)
         cache.get(key)?.let { return it }
         return withContext(Dispatchers.Default) {
             val icon = try { context.packageManager.getApplicationIcon(pkg) } catch (_: Exception) { null }
@@ -85,6 +99,9 @@ class IconRepository(private val context: Context) {
     }
 
     fun invalidate() = cache.clear()
+
+    /** Forget one app's tiles (it was updated or replaced, so its icon may have changed). */
+    fun invalidate(pkg: String) = cache.removePackage(pkg)
 
     companion object {
         @Volatile private var instance: IconRepository? = null

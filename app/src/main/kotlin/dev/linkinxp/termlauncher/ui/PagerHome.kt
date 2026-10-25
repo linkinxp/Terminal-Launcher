@@ -149,7 +149,7 @@ fun PagerHome(
     val pageCount = ui.layout.pages.size
     if (style == HomeStyle.ICONS) {
         val targets = remember(ui.layout, ui.quick, ui.apps) { warmTargets(ui) }
-        WarmIcons(targets, listOf(56.dp, 48.dp, 22.dp))
+        WarmIcons(targets)
     }
     val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
@@ -210,7 +210,8 @@ fun PagerHome(
                                     val label = itemLabel(item, ui) ?: return@forEach
                                     IconCell(label, { onItemTap(item) }, { onItemLongPress(item) }, Modifier.weight(1f)) { ItemIcon(item, ui, 56.dp) }
                                 }
-                                repeat(ICON_COLUMNS - block.items.size) { Spacer(Modifier.weight(1f)) }
+                                // Count only the cells actually drawn: an uninstalled app has no label and no cell.
+                                repeat(ICON_COLUMNS - block.items.count { itemLabel(it, ui) != null }) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }

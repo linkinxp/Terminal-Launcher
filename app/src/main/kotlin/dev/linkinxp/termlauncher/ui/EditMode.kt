@@ -132,7 +132,6 @@ fun EditMode(
                                 is Adding.App -> if (a.page == i) {
                                     ui.apps.values.sortedBy { it.label.lowercase() }.filter { it.pkg !in ui.hidden }.forEach { app ->
                                         Row(Modifier.fillMaxWidth().clickable { vm.addToPage(i, Item.App(app.pkg)); adding = null }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            if (ui.homeStyle == HomeStyle.ICONS) { IconTile(app.pkg, app.label, 24.dp); TermText(" ") }
                                             TermText("  > ${app.label.lowercase()}")
                                         }
                                     }
