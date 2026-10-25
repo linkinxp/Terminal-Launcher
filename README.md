@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.6.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 0.7.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest
@@ -30,6 +30,15 @@ show in the settings theme list with `+` and `[rm]`, and are part of the backup.
 anchored to the bottom, next to your thumb) and page two is a glance page (big clock, search, sys, calendar and weather). `layout classic`
 puts everything back on page one; `layout bottom` and `layout grid` change only how the items are arranged (one or two columns, anchored
 to the bottom). Also in settings under `home`. The dock shows full app names (`messages`), cut at nine characters.
+
+## Icons (`layout icons`)
+`layout icons` (or settings > home > layout) switches to the icon style and moves the panels to their own glance page. The home page becomes a
+4-column grid of themed icons with one-line labels, anchored near your thumb; folders are tiles previewing their first four apps. The dock
+and the quick panel show icon cells too, and the drawer is a 4-column icon grid with the letter sections and the A-Z rail, with search and
+`sort` / `[cfg]` in a bar at the bottom (swipe down on it or press Back to close; the keyboard still opens with the drawer). Icons are
+drawn as rounded tiles in your theme colors: an app's monochrome (themed) icon is tinted with the theme's foreground; apps without one get
+their icon grayscaled and tinted; an app with no icon gets its first letter. Tiles are drawn off the main thread and cached; the dock,
+quick tiles and page one are drawn ahead of time, and so are the first 24 drawer cells a moment after start. Other layouts are unchanged.
 
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head

@@ -414,4 +414,44 @@ class ScreenshotsTest {
         rule.waitForIdle()
         rule.onRoot().captureRoboImage("build/shots/apps-first-page2.png")
     }
+
+    // ---- icon style (apps are not installed in the test, so the tiles are letter tiles) ----
+    private fun iconHome(name: String, theme: String) {
+        val vm = vm()
+        val th = ThemeRegistry.byName(theme)!!
+        val items = listOf(
+            Item.Folder("media", listOf(pkg("Spotify"), pkg("Bandcamp"), pkg("Photos"), pkg("Signal"))), Item.App(pkg("Maps")), Item.App(pkg("Garmin Connect")),
+            Item.App(pkg("Notes")), Item.App(pkg("Signal")), Item.App(pkg("Files")), Item.App(pkg("Photos")), Item.App(pkg("Chrome")), Item.App(pkg("Strava")),
+        )
+        rule.setContent {
+            TermTheme(th) {
+                val base = ui(th, quick = listOf(pkg("Phone"), pkg("Messages"), pkg("Maps"), pkg("Camera")))
+                val ui = base.copy(layout = base.layout.copy(pages = listOf(Page(items))), homeStyle = HomeStyle.ICONS)
+                PagerHome(ui, vm, {}, {}, {}, {})
+            }
+        }
+        rule.waitForIdle()
+        Thread.sleep(300); rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/shots/$name.png")
+    }
+
+    private fun iconDrawer(name: String, theme: String) {
+        val vm = vm()
+        val th = ThemeRegistry.byName(theme)!!
+        rule.setContent {
+            TermTheme(th) {
+                val base = ui(th, drawer = true)
+                AppDrawer(base.copy(homeStyle = HomeStyle.ICONS, drawerKeyboard = false), vm, {}, {})
+            }
+        }
+        rule.waitForIdle()
+        Thread.sleep(300); rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/shots/$name.png")
+    }
+
+    @Test fun iconHomeTokyo() = iconHome("icons-home-tokyo-night", "tokyo-night")
+    @Test fun iconHomeMatrix() = iconHome("icons-home-matrix", "matrix")
+    @Test fun iconHomeNeon() = iconHome("icons-home-neon-city", "neon-city")
+    @Test fun iconDrawerTokyo() = iconDrawer("icons-drawer-tokyo-night", "tokyo-night")
+    @Test fun iconDrawerMatrix() = iconDrawer("icons-drawer-matrix", "matrix")
 }
