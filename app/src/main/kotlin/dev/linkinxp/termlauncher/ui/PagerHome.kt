@@ -169,6 +169,7 @@ fun PagerHome(
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
     onMoveItem: (page: Int, item: Item, target: Item) -> Unit = { _, _, _ -> },
+    imeSkip: () -> Boolean = { false },
     onSwipeDown: (SwipeDownAction) -> Unit = {},
     onDoubleTap: () -> Unit = {},
     style: HomeStyle = ui.homeStyle,
@@ -220,7 +221,7 @@ fun PagerHome(
         }
     }
     Box(
-        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePaddingUnless(imeSkip)
             .onSizeChanged { widthPx[0] = it.width.toFloat() }
             .pointerInput(Unit) {
                 // Watches where every gesture starts without taking part in it.

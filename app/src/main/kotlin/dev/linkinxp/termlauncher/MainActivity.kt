@@ -303,6 +303,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onSwipeUp = { vm.openDrawer() },
                     onMoveItem = vm::moveItem,
+                    imeSkip = { uiState.value.drawerOpen },
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
                     },

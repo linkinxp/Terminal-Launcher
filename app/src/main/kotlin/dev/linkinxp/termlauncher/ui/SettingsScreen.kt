@@ -200,7 +200,8 @@ fun SettingsScreen(
             TermPanel("notifications", Modifier.padding(top = 4.dp)) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 ToggleRow("badges", ui.badges, "badges-row") { vm.toggleBadges() }
-                SettingRow("access", if (isBadgeAccessGranted(context)) "on" else "off [grant]", "badges-access") {
+                val resumed = rememberResumeTick() // coming back from the system screen re-reads the status
+                SettingRow("access", if (remember(resumed) { isBadgeAccessGranted(context) }) "on" else "off [grant]", "badges-access") {
                     context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
                 TermText("counts only: Terminal never reads the notification text", dim = true, size = 12.sp, maxLines = 2)
@@ -209,7 +210,8 @@ fun SettingsScreen(
             TermPanel("gestures", Modifier.padding(top = 4.dp)) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 ToggleRow("double-tap lock", ui.doubleTapLock, "gesture-lock") { vm.toggleDoubleTapLock() }
-                SettingRow("lock service", if (ScreenLock.isEnabled(context)) "on" else "off [enable]", "gesture-service") {
+                val resumedLock = rememberResumeTick()
+                SettingRow("lock service", if (remember(resumedLock) { ScreenLock.isEnabled(context) }) "on" else "off [enable]", "gesture-service") {
                     context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
                 TermText("swipe down: left = notifications, right = quick settings", dim = true, size = 12.sp, maxLines = 2)

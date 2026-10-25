@@ -483,6 +483,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val weatherMutex = Mutex()
     private var lastWeatherAttemptMs: Long? = null
 
+    /** The city or the units changed: the weather on screen is for the old ones, so drop it until the new forecast arrives. */
+    private fun forgetShownWeather() = eph.update { it.copy(weather = PanelData.Message("wx: loading..."), weatherLine = null) }
+
     private fun say(message: String) = eph.update { it.withPrompt(it.prompt.copy(message = message)) }
 
     private fun handleWx(action: WxAction) {
@@ -492,6 +495,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 is WxAction.Units -> {
                     prefs.setWx(prefs.wx.first().copy(fahrenheit = action.fahrenheit))
                     prefs.clearWxCache() // cached values are in the old unit
+                    forgetShownWeather()
                     refreshWeather(force = true)?.let(::say)
                 }
                 is WxAction.City -> weatherRepo.geocode(action.name).fold(
@@ -499,6 +503,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         prefs.setWx(prefs.wx.first().copy(city = geo.name, lat = geo.lat, lon = geo.lon))
                         prefs.setPanels(prefs.panels.first().copy(wx = true))
                         prefs.clearWxCache()
+                        forgetShownWeather()
                         refreshWeather(force = true)?.let(::say)
                     },
                     onFailure = { e ->
@@ -519,7 +524,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val lat = wx.lat
         val lon = wx.lon
         if (wx.city == null || lat == null || lon == null) {
-            eph.update { it.copy(weather = PanelData.Message("wx: set a city: wx city <name>")) }
+            eph.update { it.copy(weather = PanelData.Message("wx: set a city: wx city <name>"), weatherLine = null) }
             return@withLock null
         }
         fun show(json: String, at: Long): Boolean = parseForecast(json, at).fold(
