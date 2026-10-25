@@ -41,6 +41,7 @@ import dev.linkinxp.termlauncher.data.IconMode
 import dev.linkinxp.termlauncher.theme.ThemeBook
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
 import dev.linkinxp.termlauncher.wall.AsciiStyle
+import dev.linkinxp.termlauncher.wall.SvgStyle
 import dev.linkinxp.termlauncher.wall.WallMode
 import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.wall.applyWall
@@ -107,6 +108,7 @@ fun SettingsScreen(
             TermPanel("wallpaper", Modifier.padding(top = 4.dp)) {
                 // Every control updates the stored value atomically, so quick taps never lose each other.
                 SettingRow("mode", w.mode.name.lowercase(), "wall-mode") { vm.updateWall { it.copy(mode = WallMode.entries.after(it.mode)) } }
+                SettingRow("svg style", w.svgStyle.name.lowercase(), "wall-svg-style") { vm.updateWall { it.copy(svgStyle = SvgStyle.entries.after(it.svgStyle)) } }
                 SettingRow("style", w.style.name.lowercase(), "wall-style") { vm.updateWall { it.copy(style = AsciiStyle.entries.after(it.style)) } }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     TermText("seed".padEnd(11), dim = true)

@@ -78,7 +78,7 @@ class WallSettingsTest {
 
     @Test fun unknownSubcommandFails() {
         assertEquals(
-            "wall: bogus: unknown (random next style seed mode dim animate)",
+            "wall: bogus: unknown (random next style seed mode dim animate svg)",
             apply("bogus").exceptionOrNull()?.message,
         )
     }
@@ -90,7 +90,7 @@ class WallSettingsTest {
     @Test fun describeShowsEveryField() {
         val text = d.copy(mode = WallMode.ASCII, seed = 9, dim = 40, animate = true).describe()
         val lines = text.lines()
-        listOf("mode", "style", "seed", "dim", "anim").forEach { key -> assertTrue(lines.any { it.startsWith(key) }) }
+        listOf("mode", "style", "seed", "dim", "anim", "svg").forEach { key -> assertTrue(lines.any { it.startsWith(key) }) }
         assertTrue(text.contains("ascii") && text.contains("9") && text.contains("40") && text.contains("on"))
         assertNotEquals(d.describe(), text)
     }
@@ -98,5 +98,19 @@ class WallSettingsTest {
     @Test fun rainIsAWallMode() {
         assertEquals(WallMode.RAIN, apply("mode", "rain").getOrThrow().mode)
         assertTrue(apply("mode", "bad").exceptionOrNull()?.message?.contains("rain") == true)
+    }
+
+    @Test fun svgIsAWallMode() {
+        assertEquals(WallMode.SVG, apply("mode", "svg").getOrThrow().mode)
+    }
+
+    @Test fun svgSubcommand() {
+        assertEquals(d, apply("svg", null).getOrThrow())          // bare: shows the settings, unchanged
+        assertEquals(SvgStyle.RADAR, apply("svg", "RADAR").getOrThrow().svgStyle)
+        assertEquals(SvgStyle.HEXNET, apply("svg", "next").getOrThrow().svgStyle)   // from CIRCUIT
+        assertEquals(SvgStyle.CIRCUIT, apply("svg", "next", d.copy(svgStyle = SvgStyle.TOPO)).getOrThrow().svgStyle) // wraps
+        val r = apply("svg", "random").getOrThrow()
+        assertTrue(r.svgStyle != d.svgStyle || r.seed != d.seed)
+        assertEquals("usage: wall svg circuit|hexnet|radar|tunnel|glitch|windows|helix|topo|next|random", apply("svg", "nope").exceptionOrNull()?.message)
     }
 }

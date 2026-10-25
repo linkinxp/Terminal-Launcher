@@ -2,7 +2,7 @@ package dev.linkinxp.termlauncher.wall
 
 import kotlin.random.Random
 
-enum class WallMode { SOLID, SYSTEM, ASCII, RAIN }
+enum class WallMode { SOLID, SYSTEM, ASCII, RAIN, SVG }
 
 data class WallSettings(
     val mode: WallMode = WallMode.SOLID,
@@ -10,6 +10,7 @@ data class WallSettings(
     val seed: Int = 1,
     val dim: Int = 55,
     val animate: Boolean = false,
+    val svgStyle: SvgStyle = SvgStyle.CIRCUIT,
 ) {
     /** One `key value` line per setting. */
     fun describe(): String = listOf(
@@ -18,9 +19,11 @@ data class WallSettings(
         "seed  $seed",
         "dim   $dim",
         "anim  ${if (animate) "on" else "off"}",
+        "svg   ${svgStyle.name.lowercase()}",
     ).joinToString("\n")
 }
 
+private val SVG_USAGE = "usage: wall svg " + SvgStyle.entries.joinToString("|") { it.name.lowercase() } + "|next|random"
 private val STYLES = AsciiStyle.entries.joinToString(" ") { it.name.lowercase() }
 private val MODES = WallMode.entries.joinToString(" ") { it.name.lowercase() }
 
@@ -57,6 +60,17 @@ fun applyWall(current: WallSettings, sub: String?, arg: String?, random: Random)
             "off" -> Result.success(current.copy(animate = false))
             else -> fail("usage: wall animate on|off")
         }
-        else -> fail("wall: $sub: unknown (random next style seed mode dim animate)")
+        "svg" -> when (a?.lowercase()) {
+            null, "" -> Result.success(current)
+            "next" -> Result.success(current.copy(svgStyle = SvgStyle.entries[(current.svgStyle.ordinal + 1) % SvgStyle.entries.size]))
+            "random" -> {
+                var next = current.copy(svgStyle = SvgStyle.entries[random.nextInt(SvgStyle.entries.size)], seed = random.nextInt())
+                if (next.svgStyle == current.svgStyle && next.seed == current.seed) next = next.copy(seed = next.seed + 1)
+                Result.success(next)
+            }
+            else -> SvgStyle.entries.firstOrNull { it.name.equals(a, ignoreCase = true) }?.let { Result.success(current.copy(svgStyle = it)) }
+                ?: fail(SVG_USAGE)
+        }
+        else -> fail("wall: $sub: unknown (random next style seed mode dim animate svg)")
     }
 }

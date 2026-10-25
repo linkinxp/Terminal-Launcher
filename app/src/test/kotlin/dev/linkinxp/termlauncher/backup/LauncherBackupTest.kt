@@ -146,4 +146,9 @@ class LauncherBackupTest {
         assertEquals("ICONS", decodeBackup(encodeBackup(sample().copy(homeStyle = "ICONS"))).getOrThrow().homeStyle)
         assertEquals("CLASSIC", decodeBackup("""{"format":"terminal-launcher-backup","version":1}""").getOrThrow().homeStyle)
     }
+
+    @Test fun theSvgWallpaperStyleRoundTripsAndOldBackupsDefaultToCircuit() {
+        assertEquals("TOPO", decodeBackup(encodeBackup(sample().copy(wall = WallBackup(svgStyle = "TOPO")))).getOrThrow().wall.svgStyle)
+        assertEquals("CIRCUIT", decodeBackup("""{"format":"terminal-launcher-backup","version":1,"wall":{"mode":"ASCII"}}""").getOrThrow().wall.svgStyle)
+    }
 }

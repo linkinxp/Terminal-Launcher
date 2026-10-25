@@ -454,4 +454,20 @@ class ScreenshotsTest {
     @Test fun iconHomeNeon() = iconHome("icons-home-neon-city", "neon-city")
     @Test fun iconDrawerTokyo() = iconDrawer("icons-drawer-tokyo-night", "tokyo-night")
     @Test fun iconDrawerMatrix() = iconDrawer("icons-drawer-matrix", "matrix")
+
+    // ---- SVG wallpapers (art only; the dim setting is 40 here) ----
+    private fun svgShot(name: String, style: dev.linkinxp.termlauncher.wall.SvgStyle, theme: String) {
+        val th = ThemeRegistry.byName(theme)!!
+        rule.setContent { TermTheme(th, WallSettings(mode = WallMode.SVG, svgStyle = style, dim = 30, seed = 3)) { } }
+        rule.waitForIdle(); Thread.sleep(1500); rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/shots/$name.png")
+    }
+    @Test fun svgCircuit() = svgShot("svg-circuit", dev.linkinxp.termlauncher.wall.SvgStyle.CIRCUIT, "matrix")
+    @Test fun svgHexnet() = svgShot("svg-hexnet", dev.linkinxp.termlauncher.wall.SvgStyle.HEXNET, "neon-city")
+    @Test fun svgRadar() = svgShot("svg-radar", dev.linkinxp.termlauncher.wall.SvgStyle.RADAR, "matrix")
+    @Test fun svgTunnel() = svgShot("svg-tunnel", dev.linkinxp.termlauncher.wall.SvgStyle.TUNNEL, "neon-city")
+    @Test fun svgGlitch() = svgShot("svg-glitch", dev.linkinxp.termlauncher.wall.SvgStyle.GLITCH, "matrix")
+    @Test fun svgWindows() = svgShot("svg-windows", dev.linkinxp.termlauncher.wall.SvgStyle.WINDOWS, "neon-city")
+    @Test fun svgHelix() = svgShot("svg-helix", dev.linkinxp.termlauncher.wall.SvgStyle.HELIX, "matrix")
+    @Test fun svgTopo() = svgShot("svg-topo", dev.linkinxp.termlauncher.wall.SvgStyle.TOPO, "neon-city")
 }

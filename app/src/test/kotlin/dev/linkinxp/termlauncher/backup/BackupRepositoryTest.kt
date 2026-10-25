@@ -151,4 +151,11 @@ class BackupRepositoryTest {
         repo.apply(sample().copy(panelItems = true)) // an explicit layout without panels stays without
         assertEquals(emptySet<PanelKind>(), prefs.layout.first().placedPanels())
     }
+
+    @Test fun theSvgWallpaperIsBackedUpAndAnUnknownNameFallsBackToCircuit() = runBlocking {
+        repo.apply(sample().copy(wall = WallBackup(mode = "SVG", svgStyle = "RADAR")))
+        assertEquals("SVG", repo.snapshot().wall.mode); assertEquals("RADAR", repo.snapshot().wall.svgStyle)
+        repo.apply(sample().copy(wall = WallBackup(mode = "SVG", svgStyle = "nonsense")))
+        assertEquals("CIRCUIT", repo.snapshot().wall.svgStyle)
+    }
 }

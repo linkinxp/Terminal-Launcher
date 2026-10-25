@@ -27,6 +27,7 @@ import dev.linkinxp.termlauncher.quick.decodeQuick
 import dev.linkinxp.termlauncher.quick.encodeQuick
 import dev.linkinxp.termlauncher.theme.Theme
 import dev.linkinxp.termlauncher.weather.WxSettings
+import dev.linkinxp.termlauncher.wall.SvgStyle
 import dev.linkinxp.termlauncher.wall.WallSettings
 import dev.linkinxp.termlauncher.theme.CustomThemes
 import dev.linkinxp.termlauncher.theme.ThemeBook
@@ -60,6 +61,7 @@ class Prefs(private val context: Context) {
     private val wallStyleKey = stringPreferencesKey("wall_style")
     private val wallSeedKey = intPreferencesKey("wall_seed")
     private val wallDimKey = intPreferencesKey("wall_dim")
+    private val wallSvgKey = stringPreferencesKey("wall_svg")
     private val wallAnimateKey = booleanPreferencesKey("wall_animate")
     private val wxCityKey = stringPreferencesKey("wx_city")
     private val wxLatKey = doublePreferencesKey("wx_lat")
@@ -247,6 +249,7 @@ class Prefs(private val context: Context) {
             seed = p[wallSeedKey] ?: d.seed,
             dim = p[wallDimKey]?.takeIf { it in 0..100 } ?: d.dim,
             animate = p[wallAnimateKey] ?: d.animate,
+            svgStyle = SvgStyle.fromName(p[wallSvgKey]),
         )
     }
 
@@ -256,6 +259,7 @@ class Prefs(private val context: Context) {
         p[wallSeedKey] = w.seed
         p[wallDimKey] = w.dim
         p[wallAnimateKey] = w.animate
+        p[wallSvgKey] = w.svgStyle.name
     }
 
     private fun panelsFrom(p: Preferences) =

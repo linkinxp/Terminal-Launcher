@@ -32,6 +32,7 @@ private const val NOT_A_BACKUP = "import: not a launcher backup"
     val seed: Int = 1,
     val dim: Int = 55,
     val animate: Boolean = false,
+    val svgStyle: String = "CIRCUIT",
 )
 
 @Serializable data class PanelBackup(

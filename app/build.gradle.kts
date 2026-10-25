@@ -31,6 +31,8 @@ dependencies {
     // Pinned above the version Compose pulls in: 1.0.1 ships a native lib whose RELRO is not 16 KB aligned.
     implementation("androidx.graphics:graphics-path:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    // Draws the generated SVG wallpapers (Apache 2.0, ~200 KB).
+    implementation("com.caverock:androidsvg-aar:1.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     // JVM screenshots of the Compose screens (no emulator)

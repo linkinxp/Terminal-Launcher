@@ -47,6 +47,7 @@ fun WallBackground(wall: WallSettings, theme: Theme, reduceMotion: Boolean, modi
         WallMode.SYSTEM -> Box(modifier.fillMaxSize().background(bg.copy(alpha = wall.dim.coerceIn(0, 100) / 100f)))
         WallMode.ASCII -> AsciiBackground(wall, theme, reduceMotion, modifier)
         WallMode.RAIN -> RainBackground(wall, theme, reduceMotion, modifier)
+        WallMode.SVG -> SvgBackground(wall, theme, modifier)
     }
 }
 

@@ -39,7 +39,7 @@ class BackupRepository(private val prefs: Prefs) {
             hidden = prefs.hidden.first(),
             theme = prefs.theme.first().name,
             fx = FxBackup(fx.scanlines, fx.flicker, fx.glitch, fx.cursor, fx.boot),
-            wall = WallBackup(wall.mode.name, wall.style.name, wall.seed, wall.dim, wall.animate),
+            wall = WallBackup(wall.mode.name, wall.style.name, wall.seed, wall.dim, wall.animate, wall.svgStyle.name),
             panels = PanelBackup(panels.cal, panels.wx, panels.search, panels.quick),
             wx = WxBackup(wx.city, wx.lat, wx.lon, wx.fahrenheit),
             drawerSort = prefs.sort.first().name,
@@ -79,6 +79,7 @@ class BackupRepository(private val prefs: Prefs) {
             WallSettings(
                 mode = enumOr(b.wall.mode, d.mode),
                 style = enumOr(b.wall.style, d.style),
+                svgStyle = enumOr(b.wall.svgStyle, d.svgStyle),
                 seed = b.wall.seed,
                 dim = b.wall.dim.takeIf { it in 0..100 } ?: d.dim,
                 animate = b.wall.animate,
