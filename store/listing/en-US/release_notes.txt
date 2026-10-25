@@ -1,1 +1,1 @@
-Easier to use: a starter home on a fresh install, bigger tap targets, a confirmation before removing a page (its apps move instead of vanishing), hidden apps and page editing in settings, clearer messages, dates in your language. Restoring an older backup no longer switches the scanlines off.
+Terminal now offers to become your home app after install (and from settings, home app), and can be opened from the Play Store. Plus the 1.0.1 fixes: starter home, bigger tap targets, safe page removal, hidden apps in settings.

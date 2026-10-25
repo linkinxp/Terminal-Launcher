@@ -72,6 +72,10 @@ class MainActivity : ComponentActivity() {
         vm.refreshExtras()
     }
 
+    private val homeRoleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+
+    private fun requestHomeRole() = homeRoleLauncher.launch(dev.linkinxp.termlauncher.home.homeRoleIntent(this))
+
     private val bindLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) afterBind() else cancelPendingWidget()
     }
@@ -272,6 +276,17 @@ class MainActivity : ComponentActivity() {
             var menuPkg by remember { mutableStateOf<String?>(null) }
             var folderName by remember { mutableStateOf<String?>(null) }
             var editing by remember { mutableStateOf(false) }
+            var askHome by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                if (dev.linkinxp.termlauncher.home.shouldAskDefaultHome(dev.linkinxp.termlauncher.home.isDefaultHome(this@MainActivity), vm.defaultHomeAsked())) askHome = true
+            }
+            if (askHome) {
+                dev.linkinxp.termlauncher.home.DefaultHomeDialog(
+                    theme,
+                    onYes = { askHome = false; vm.markDefaultHomeAsked(); requestHomeRole() },
+                    onLater = { askHome = false; vm.markDefaultHomeAsked() },
+                )
+            }
             val homeSignal = homePresses.intValue
             LaunchedEffect(homeSignal) {
                 if (homeSignal > 0) { menuPkg = null; folderName = null; editing = false }
@@ -342,6 +357,7 @@ class MainActivity : ComponentActivity() {
                         onImport = { importLauncher.launch(arrayOf("*/*")) },
                         onImportLauncher = { launcherImportLauncher.launch(arrayOf("*/*")) },
                         onEditPages = { settingsOpen.value = false; editing = true },
+                        onMakeDefault = ::requestHomeRole,
                         onClose = { settingsOpen.value = false },
                     )
                 }

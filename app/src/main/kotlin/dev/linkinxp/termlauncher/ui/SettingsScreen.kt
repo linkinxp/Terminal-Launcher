@@ -80,6 +80,7 @@ fun SettingsScreen(
     onImportLauncher: () -> Unit,
     onClose: () -> Unit,
     onEditPages: () -> Unit = {},
+    onMakeDefault: () -> Unit = {},
 ) {
     val theme = LocalTheme.current
     BackHandler(onBack = onClose)
@@ -199,6 +200,10 @@ fun SettingsScreen(
                 SettingRow("layout", ui.homeStyle.name.lowercase(), "home-style-row") { vm.cycleHomeStyle() }
                 SettingRow("density", "${ui.density.name.lowercase()} (${ui.density.columns})", "density-row") { vm.cycleDensity() }
                 SettingRow("pages", "[edit pages, widgets, panels]", "settings-edit-pages", onEditPages)
+                val homeContext = androidx.compose.ui.platform.LocalContext.current
+                val homeTick = rememberResumeTick()
+                val isHome = remember(homeTick) { dev.linkinxp.termlauncher.home.isDefaultHome(homeContext) }
+                SettingRow("home app", if (isHome) "terminal" else "other [make terminal the default]", "settings-default-home", onMakeDefault)
             }
 
             TermPanel("hidden apps", Modifier.padding(top = 4.dp)) {

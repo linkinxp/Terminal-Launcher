@@ -782,6 +782,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return reply.text
     }
 
+    suspend fun defaultHomeAsked(): Boolean = prefs.askedDefaultHome.first()
+    fun markDefaultHomeAsked() { viewModelScope.launch { prefs.setAskedDefaultHome() } }
     fun toggleDrawerKeyboard() { viewModelScope.launch { prefs.setDrawerKeyboard(!ui.value.drawerKeyboard) } }
     fun setIconMode(mode: IconMode) { viewModelScope.launch { prefs.setIconMode(mode) } }
     fun toggleHidden(pkg: String) {
@@ -869,7 +871,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.1"
+        const val LAUNCHER_VERSION = "1.0.2"
         const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L

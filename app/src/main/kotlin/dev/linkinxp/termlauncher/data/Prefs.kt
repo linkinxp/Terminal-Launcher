@@ -80,6 +80,7 @@ class Prefs(private val context: Context) {
     private val customThemesKey = stringPreferencesKey("custom_themes")
     private val doubleTapLockKey = booleanPreferencesKey("double_tap_lock")
     private val badgesKey = booleanPreferencesKey("badges")
+    private val askedHomeKey = booleanPreferencesKey("asked_default_home")
     private val densityKey = stringPreferencesKey("density")
     private val homeStyleKey = stringPreferencesKey("home_style")
     private val clockStyleKey = stringPreferencesKey("clock_style")
@@ -216,6 +217,9 @@ class Prefs(private val context: Context) {
 
     suspend fun setClockFormat(f: ClockFormat) { safeEdit { it[clockFormatKey] = f.name } }
     suspend fun setDoubleTapLock(on: Boolean) { safeEdit { it[doubleTapLockKey] = on } }
+    /** Whether the "make Terminal your home app?" question was already put to the user (not part of backups). */
+    val askedDefaultHome: Flow<Boolean> = data.map { it[askedHomeKey] ?: false }.distinctUntilChanged()
+    suspend fun setAskedDefaultHome() { safeEdit { it[askedHomeKey] = true } }
     suspend fun setBadges(on: Boolean) { safeEdit { it[badgesKey] = on } }
     suspend fun setDensity(d: Density) { safeEdit { it[densityKey] = d.name } }
     suspend fun setHomeStyle(s: HomeStyle) { safeEdit { it[homeStyleKey] = s.name } }
