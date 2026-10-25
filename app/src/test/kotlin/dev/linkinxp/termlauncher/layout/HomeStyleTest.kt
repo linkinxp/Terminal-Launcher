@@ -20,6 +20,14 @@ class HomeStyleTest {
         }
     }
 
+    @Test fun iconsIsTheDefaultForAnythingNotStoredYet() {
+        assertEquals(HomeStyle.ICONS, HomeStyle.DEFAULT)
+        assertEquals(HomeStyle.ICONS, HomeStyle.fromStored(null))
+        assertEquals(HomeStyle.ICONS, HomeStyle.fromStored("junk"))
+        assertEquals(HomeStyle.CLASSIC, HomeStyle.fromStored("CLASSIC"))
+        assertEquals(HomeStyle.GRID, HomeStyle.fromStored("GRID"))
+    }
+
     @Test fun storedNamesDecode() {
         assertEquals(HomeStyle.GRID, HomeStyle.fromName("GRID"))
         assertEquals(HomeStyle.ICONS, HomeStyle.fromName("ICONS"))

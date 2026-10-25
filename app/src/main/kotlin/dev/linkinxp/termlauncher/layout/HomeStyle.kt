@@ -5,7 +5,13 @@ enum class HomeStyle {
     CLASSIC, BOTTOM, GRID, ICONS;
 
     companion object {
+        /** What a phone gets until the user picks a style: the icon grid. */
+        val DEFAULT = ICONS
+
         fun fromName(name: String?): HomeStyle = entries.firstOrNull { it.name == name } ?: CLASSIC
+
+        /** Reads a stored style: nothing stored (or an unknown name) means the default. */
+        fun fromStored(name: String?): HomeStyle = entries.firstOrNull { it.name == name } ?: DEFAULT
     }
 }
 

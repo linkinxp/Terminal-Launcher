@@ -243,18 +243,21 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
 
         fun default(): HomeLayout = HomeLayout(emptyList(), listOf(Page(emptyList())))
 
+        /** A new home: an empty apps page, then the glance page with the four info panels. */
+        fun fresh(): HomeLayout = default().withDefaultPanels().appsFirst()
+
         fun decode(raw: String?): HomeLayout {
-            if (raw == null) return default().withDefaultPanels()
+            if (raw == null) return fresh()
             return try {
                 val env = json.decodeFromString(Envelope.serializer(), raw)
                 when {
-                    env.layout.pages.isEmpty() -> default().withDefaultPanels()
+                    env.layout.pages.isEmpty() -> fresh()
                     env.v == VERSION -> env.layout
                     env.v == 1 -> env.layout.withDefaultPanels() // panels used to be fixed above everything else
-                    else -> default().withDefaultPanels()
+                    else -> fresh()
                 }
             } catch (e: Exception) {
-                default().withDefaultPanels()
+                fresh()
             }
         }
     }

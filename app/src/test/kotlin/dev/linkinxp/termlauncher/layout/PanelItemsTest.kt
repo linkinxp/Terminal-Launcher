@@ -11,8 +11,8 @@ class PanelItemsTest {
     private val wx = Item.Panel(PanelKind.WX)
     private fun layout(vararg pages: List<Item>) = HomeLayout(emptyList(), pages.map { Page(it) })
 
-    @Test fun aFreshLayoutHasTheFourPanelsInTheOldOrder() {
-        assertEquals(listOf<Item>(s, sys, cal, wx), HomeLayout.decode(null).pages[0].items)
+    @Test fun aFreshLayoutHasTheFourPanelsInTheOldOrderOnTheGlancePage() {
+        assertEquals(listOf<Item>(s, sys, cal, wx), HomeLayout.decode(null).pages[1].items)
     }
 
     @Test fun panelsSurviveEncodeAndDecode() {

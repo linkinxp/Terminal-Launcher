@@ -234,7 +234,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             homeStyle = x.homeStyle,
         )
     }.flowOn(Dispatchers.Default) // the rebuild is pure computation: keep it off the main thread
-        .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, LauncherUi(homeStyle = HomeStyle.DEFAULT))
 
     // ---- backup and import ----
 

@@ -112,7 +112,7 @@ class Prefs(private val context: Context) {
     /** The quick tiles (package names) the user set, or null when never set (then the device defaults apply). */
     val quick: Flow<List<String>?> = data.map { decodeQuick(it[quickKey]) }.distinctUntilChanged()
     val clockFormat: Flow<ClockFormat> = data.map { ClockFormat.fromName(it[clockFormatKey]) }.distinctUntilChanged()
-    val homeStyle: Flow<HomeStyle> = data.map { HomeStyle.fromName(it[homeStyleKey]) }.distinctUntilChanged()
+    val homeStyle: Flow<HomeStyle> = data.map { HomeStyle.fromStored(it[homeStyleKey]) }.distinctUntilChanged()
     val clockStyle: Flow<ClockStyle> = data.map { ClockStyle.fromName(it[clockStyleKey]) }.distinctUntilChanged()
     val drawerKeyboard: Flow<Boolean> = data.map { it[drawerKeyboardKey] ?: true }.distinctUntilChanged()
     val history: Flow<CommandHistory> = data.map { it[historyKey] }.distinctUntilChanged().map { CommandHistory.decode(it) }

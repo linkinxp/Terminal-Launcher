@@ -100,11 +100,18 @@ class HomeLayoutTest {
     }
 
     @Test fun decodeOfNullCorruptOrNewerVersionIsDefault() {
-        val fresh = empty.withDefaultPanels() // a fresh home starts with the four info panels on page one
+        val fresh = HomeLayout.fresh() // a fresh home is the icon layout: an apps page, then the glance page with the four panels
         assertEquals(fresh, HomeLayout.decode(null))
         assertEquals(fresh, HomeLayout.decode("{bad"))
         assertEquals(fresh, HomeLayout.decode("{\"v\":99}"))
         assertEquals(fresh, HomeLayout.decode("{\"v\":99,\"layout\":{\"dock\":[],\"pages\":[{\"items\":[]}]}}"))
+    }
+
+    @Test fun aFreshHomeHasAnAppsPageAndAGlancePage() {
+        val l = HomeLayout.fresh()
+        assertEquals(2, l.pages.size)
+        assertTrue(l.pages[0].items.isEmpty())
+        assertEquals(listOf<Item>(Item.Panel(PanelKind.SEARCH), Item.Panel(PanelKind.SYS), Item.Panel(PanelKind.CAL), Item.Panel(PanelKind.WX)), l.pages[1].items)
     }
 
     @Test fun encodeDecodeRoundTrips() {
