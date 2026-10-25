@@ -2,7 +2,7 @@
 
 A terminal-styled, cyberpunk-flavoured Android home launcher (Kotlin, Jetpack Compose) with themes, home pages,
 folders, a prompt (`user@phone:~$`), a live system panel and an app drawer. Personal use, installed alongside the
-stock launcher. Version 0.9.0, requires Android 14+ (minSdk 34).
+stock launcher. Version 1.0.0, requires Android 14+ (minSdk 34).
 
 ## Build / install (on android-dev)
     ./gradlew --no-daemon assembleDebug testDebugUnitTest

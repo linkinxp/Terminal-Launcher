@@ -1,25 +1,53 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("io.github.takahirom.roborazzi")
 }
+// Upload-key signing for the Play bundle: read from a properties file outside the repository (absent on a dev machine without it).
+val signingProps = Properties()
+File("/root/.signing/keystore.properties").takeIf { it.exists() }?.inputStream()?.use { signingProps.load(it) }
+
 android {
     namespace = "dev.linkinxp.termlauncher"
     compileSdk = 37
     defaultConfig {
-        applicationId = "dev.linkinxp.termlauncher"
+        // The Play Store app. The debug build keeps the old id (see androidComponents below) so a phone running it is not disturbed.
+        applicationId = "com.linkinxp.terminal"
         // 34+: androidx.graphics.path then uses the framework PathIterator, so its native lib (not 16 KB
         // aligned, even in 1.1.0) is never loaded and is left out of the APK.
         minSdk = 34
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.9.0"
+        versionCode = 100
+        versionName = "1.0.0"
     }
     packaging { jniLibs { excludes += "**/libandroidx.graphics.path.so" } }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
+    signingConfigs {
+        if (signingProps.containsKey("storeFile")) create("upload") {
+            storeFile = File(signingProps.getProperty("storeFile"))
+            storePassword = signingProps.getProperty("storePassword")
+            keyAlias = signingProps.getProperty("keyAlias")
+            keyPassword = signingProps.getProperty("keyPassword")
+        }
+    }
+    buildTypes {
+        debug { buildConfigField("boolean", "LOCK_SERVICE", "true") }
+        release {
+            // No accessibility service in the store build (src/release/AndroidManifest.xml removes it).
+            buildConfigField("boolean", "LOCK_SERVICE", "false")
+            isMinifyEnabled = false
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
+        }
+    }
     testOptions { unitTests { isIncludeAndroidResources = true } }
 }
+androidComponents {
+    onVariants { variant -> if (variant.buildType == "debug") variant.applicationId.set("dev.linkinxp.termlauncher") }
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.material3:material3")

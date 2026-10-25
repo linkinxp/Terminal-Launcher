@@ -55,6 +55,7 @@ import dev.linkinxp.termlauncher.ui.MatrixRain
 import dev.linkinxp.termlauncher.ui.WakeUpOverlay
 import dev.linkinxp.termlauncher.ui.rememberReduceMotion
 import dev.linkinxp.termlauncher.ui.ImportDialog
+import dev.linkinxp.termlauncher.gestures.Features
 import dev.linkinxp.termlauncher.gestures.ScreenLock
 import dev.linkinxp.termlauncher.gestures.SwipeDownAction
 import dev.linkinxp.termlauncher.sys.expandNotificationShade
@@ -310,7 +311,7 @@ class MainActivity : ComponentActivity() {
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
                     },
                     onDoubleTap = {
-                        if (uiState.value.doubleTapLock && !ScreenLock.lock()) {
+                        if (Features.lockService && uiState.value.doubleTapLock && !ScreenLock.lock()) {
                             vm.showMessage("double-tap lock: switch on Terminal: lock screen in accessibility settings (settings > gestures)")
                         }
                     },

@@ -242,4 +242,20 @@ class SettingsScreenTest {
         click("badges-row"); until({ "badges=${vm.ui.value.badges}" }) { !vm.ui.value.badges }
         click("badges-row"); until({ "badges=${vm.ui.value.badges}" }) { vm.ui.value.badges }
     }
+
+    @Test fun theLockServiceRowsAreHiddenInABuildWithoutTheService() {
+        dev.linkinxp.termlauncher.gestures.Features.lockService = false
+        try {
+            show()
+            assertTrue(!has("gesture-lock") && !has("gesture-service"))
+        } finally {
+            dev.linkinxp.termlauncher.gestures.Features.lockService = true
+        }
+    }
+
+    @Test fun theLockServiceRowsShowWhereTheServiceExists() {
+        dev.linkinxp.termlauncher.gestures.Features.lockService = true
+        show()
+        assertTrue(has("gesture-lock") && has("gesture-service"))
+    }
 }

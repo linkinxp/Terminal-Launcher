@@ -105,6 +105,9 @@ class IconRepository(private val context: Context) {
 
     companion object {
         @Volatile private var instance: IconRepository? = null
+        /** Forget the shared instance (tests: every test has its own application and package manager). */
+        fun reset() { instance = null }
+
         fun get(context: Context): IconRepository =
             instance ?: synchronized(this) { instance ?: IconRepository(context.applicationContext).also { instance = it } }
     }

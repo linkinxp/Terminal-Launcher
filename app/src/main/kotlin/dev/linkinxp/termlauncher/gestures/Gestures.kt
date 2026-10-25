@@ -6,6 +6,11 @@ import android.content.Context
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 
+/** What this build includes. The store build leaves out the accessibility service (Google Play restricts that API to accessibility tools). */
+object Features {
+    @Volatile var lockService: Boolean = dev.linkinxp.termlauncher.BuildConfig.LOCK_SERVICE
+}
+
 /** What a swipe down on the home screen opens: the notifications from the left half, the quick settings from the right. */
 enum class SwipeDownAction { NOTIFICATIONS, QUICK_SETTINGS }
 

@@ -1,0 +1,1 @@
+First release: icon grid, themes, SVG wallpapers, panels, drag and drop, universal search.

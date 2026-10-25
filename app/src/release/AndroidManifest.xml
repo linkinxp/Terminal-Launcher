@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- Google Play restricts the accessibility API to accessibility tools: the store build has no screen-lock service. -->
+        <service android:name=".gestures.LockAccessibilityService" tools:node="remove" />
+    </application>
+</manifest>

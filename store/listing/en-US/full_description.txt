@@ -1,0 +1,31 @@
+Terminal is a home screen for people who like their phone to feel like a terminal.
+
+It is built around a prompt: type to find and open an app, run commands to change the look, or ignore the prompt and just tap. Everything has a command and a settings screen.
+
+LOOK
+- 15 built-in color themes (matrix, nord, tokyo-night, gruvbox, dracula, catppuccin and more) and your own: theme add <name> <colors>
+- A themed icon grid: every app's icon is redrawn in your theme colors (it uses the app's themed icon where there is one)
+- Eight generated SVG wallpapers that follow your theme: circuit board, hex network, radar, tunnel, glitch skull, terminal windows, DNA helix, topographic map
+- Falling-code wallpaper, ASCII-art wallpapers, or your system wallpaper
+- CRT effects: scanlines, a sweeping scan band, glitch bars, flicker. All optional, all off with reduced motion
+- Seven clock styles: pixel, 7-segment, FIGlet, binary, hex, unix epoch, plain; 12 or 24 hour
+
+LAYOUT
+- Icon grid or text list, four densities (6, 5, 4 or 3 columns) that also scale widgets
+- Hold an icon and drag it anywhere: empty slots, other icons, other pages, the dock
+- Panels you can place on any page: search, system stats, calendar (30 days, scrolls), weather, now playing, toggles (flashlight and shortcuts to wifi, bluetooth, sound, location)
+- Android widgets, folders, a dock, quick tiles
+- A one-line weather summary under the date
+
+USEFUL
+- App drawer with letter index, search, recent apps, and a search bar at the bottom within thumb reach
+- Drawer search also finds your contacts, Android settings pages and the web
+- Long-press an app for its own shortcuts
+- Notification badges on icons (counts only, optional)
+- Swipe down on the left half for notifications, on the right half for quick settings
+- Import your layout from another launcher; back up and restore your whole setup to a file
+
+PRIVACY
+No account, no ads, no analytics. Everything stays on your phone. The only network request is the optional weather panel, which sends the coordinates of the city you chose to Open-Meteo. Notification access (for badges and the now-playing panel) and contacts or calendar access are optional and used only on the device. Full policy: https://github.com/linkinxp/Terminal-Launcher/blob/main/PRIVACY.md
+
+Terminal replaces your home screen; you can switch back any time in Android settings.
