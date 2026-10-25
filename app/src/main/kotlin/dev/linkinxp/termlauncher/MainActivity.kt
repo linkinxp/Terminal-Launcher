@@ -288,7 +288,7 @@ class MainActivity : ComponentActivity() {
                     when (item) {
                         is Item.App -> vm.launch(item.pkg)
                         is Item.Folder -> folderName = item.name
-                        is Item.Widget, is Item.Panel -> Unit
+                        is Item.Widget, is Item.Panel, is Item.Gap -> Unit
                     }
                 }
                 PagerHome(
@@ -298,11 +298,11 @@ class MainActivity : ComponentActivity() {
                         when (item) {
                             is Item.App -> menuPkg = item.pkg
                             is Item.Folder -> folderName = item.name
-                            is Item.Widget, is Item.Panel -> Unit
+                            is Item.Widget, is Item.Panel, is Item.Gap -> Unit
                         }
                     },
                     onSwipeUp = { vm.openDrawer() },
-                    onMoveItem = vm::moveItem,
+                    onMoveItem = vm::placeItem,
                     imeSkip = { uiState.value.drawerOpen },
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)

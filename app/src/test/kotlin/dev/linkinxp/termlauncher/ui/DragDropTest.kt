@@ -28,26 +28,10 @@ class DragDropTest {
         assertNull(nearestCell(Offset(10f, 10f), emptyMap()))
     }
 
-    private fun layout(vararg items: Item) = HomeLayout(emptyList(), listOf(Page(items.toList())))
-
-    @Test fun movingForwardPutsTheItemAtTheTargetsPlace() {
-        assertEquals(listOf(b, c, a, d), layout(a, b, c, d).moveItem(0, a, c).pages[0].items)
-    }
-
-    @Test fun movingBackwardPutsTheItemAtTheTargetsPlace() {
-        assertEquals(listOf(d, a, b, c), layout(a, b, c, d).moveItem(0, d, a).pages[0].items)
-    }
-
-    @Test fun badMovesChangeNothing() {
-        val l = layout(a, b)
-        assertEquals(l, l.moveItem(0, a, a))
-        assertEquals(l, l.moveItem(0, a, c))      // target not on the page
-        assertEquals(l, l.moveItem(0, c, a))
-        assertEquals(l, l.moveItem(5, a, b))      // no such page
-    }
-
-    @Test fun aPanelInTheWayJustShiftsOverLikeAnyOtherItem() {
-        val p = Item.Panel(dev.linkinxp.termlauncher.layout.PanelKind.SYS)
-        assertEquals(listOf(p, b, a), layout(a, p, b).moveItem(0, a, b).pages[0].items)
+    @Test fun theSameLookupWorksForSlotNumbers() {
+        val slots = mapOf(0 to Rect(0f, 0f, 100f, 100f), 1 to Rect(100f, 0f, 200f, 100f), 5 to Rect(0f, 100f, 100f, 200f))
+        assertEquals(1, nearestCell(Offset(150f, 50f), slots))
+        assertEquals(5, nearestCell(Offset(10f, 190f), slots))
+        assertNull(nearestCell(Offset(900f, 900f), slots))
     }
 }

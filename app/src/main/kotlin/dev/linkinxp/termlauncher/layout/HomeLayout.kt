@@ -14,6 +14,9 @@ sealed interface Item {
 
     /** One of the built-in info panels (search, sys, calendar, weather) placed on a page. */
     @Serializable @SerialName("panel") data class Panel(val kind: PanelKind) : Item
+
+    /** An empty slot in the icon grid: lets an icon be placed anywhere, with holes around it. */
+    @Serializable @SerialName("gap") data object Gap : Item
 }
 
 @Serializable enum class PanelKind { SEARCH, SYS, CAL, WX, MEDIA, TOGGLES }
@@ -127,15 +130,21 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     }
 
     /**
-     * Moves [item] to where [target] is on [page] (a drag and drop): the item takes the target's place and the ones
-     * in between shift over by one. Anything that is not on the page, or a move onto itself, changes nothing.
+     * Puts [item] in grid slot [slot] of [page] (a drag and drop). An empty slot is simply taken (the old slot becomes a
+     * hole, so nothing else moves); an occupied one gets the item inserted there; past the end the gap is padded with holes.
+     * Trailing holes are dropped. An item that is not on the page, its own slot or an absurd slot change nothing.
      */
-    fun moveItem(page: Int, item: Item, target: Item): HomeLayout {
-        if (page !in pages.indices || item == target) return this
+    fun placeItem(page: Int, item: Item, slot: Int): HomeLayout {
+        if (page !in pages.indices || item == Item.Gap) return this
         val items = pages[page].items.toMutableList()
-        val from = items.indexOf(item); val to = items.indexOf(target)
-        if (from < 0 || to < 0) return this
-        items.add(to, items.removeAt(from))
+        val from = items.indexOf(item)
+        if (from < 0 || slot < 0 || slot == from || slot > items.size + MAX_PAD) return this
+        when {
+            slot >= items.size -> { items[from] = Item.Gap; while (items.size < slot) items.add(Item.Gap); items.add(item) } // past the end: holes in between
+            items[slot] == Item.Gap -> { items[slot] = item; items[from] = Item.Gap }                                         // an empty slot: take it, leave a hole
+            else -> items.add(slot, items.removeAt(from))                                                                      // an occupied slot: insert, the rest shift
+        }
+        while (items.lastOrNull() == Item.Gap) items.removeAt(items.lastIndex)
         return copy(pages = pages.mapIndexed { i, p -> if (i == page) Page(items) else p })
     }
 
@@ -235,6 +244,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
                 is Item.Folder -> item.copy(apps = item.apps.filter { it in installed })
                 is Item.Widget -> item
                 is Item.Panel -> item
+                is Item.Gap -> item
             }
         }
         return copy(dock = clean(dock), pages = pages.map { Page(clean(it.items)) })
@@ -246,6 +256,7 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         const val MAX_DOCK = 5
         const val MAX_PAGES = 5
         const val MAX_FOLDER_NAME = 24
+        private const val MAX_PAD = 40
         private const val VERSION = 2
         private val DEFAULT_PANELS: List<Item> = listOf(PanelKind.SEARCH, PanelKind.SYS, PanelKind.CAL, PanelKind.WX).map { Item.Panel(it) }
         val RESERVED_WORDS = setOf(

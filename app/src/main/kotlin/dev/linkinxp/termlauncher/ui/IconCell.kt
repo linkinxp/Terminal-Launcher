@@ -24,17 +24,20 @@ const val ICON_COLUMNS = 4
 
 /** What the icon page lays out: a row of app/folder cells, or a panel/widget that keeps the full width. */
 sealed interface IconBlock {
-    data class Cells(val items: List<Item>) : IconBlock
+    /** One row of cells; [start] is the page-list index of its first item (slot numbers follow from it). */
+    data class Cells(val items: List<Item>, val start: Int = 0) : IconBlock
     data class Full(val item: Item) : IconBlock
 }
 
 /** Apps and folders in rows of [columns]; panels and widgets break the run and stand alone. */
 fun iconBlocks(items: List<Item>, columns: Int = ICON_COLUMNS): List<IconBlock> {
     val out = ArrayList<IconBlock>()
+    var runStart = 0
     val run = ArrayList<Item>()
-    fun flush() { run.chunked(columns).forEach { out += IconBlock.Cells(it) }; run.clear() }
-    items.forEach { item ->
-        if (item is Item.Widget || item is Item.Panel) { flush(); out += IconBlock.Full(item) } else run += item
+    fun flush() { run.chunked(columns).forEachIndexed { r, row -> out += IconBlock.Cells(row, runStart + r * columns) }; run.clear() }
+    items.forEachIndexed { i, item ->
+        if (item is Item.Widget || item is Item.Panel) { flush(); out += IconBlock.Full(item); runStart = i + 1 }
+        else { if (run.isEmpty()) runStart = i; run += item }
     }
     flush()
     return out

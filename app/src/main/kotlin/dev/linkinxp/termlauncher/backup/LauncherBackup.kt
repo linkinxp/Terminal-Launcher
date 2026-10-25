@@ -150,7 +150,7 @@ fun describeBackup(b: LauncherBackup, installed: Set<String>): List<String> {
         when (it) {
             is Item.App -> listOf(it.pkg)
             is Item.Folder -> it.apps
-            is Item.Widget, is Item.Panel -> emptyList()
+            is Item.Widget, is Item.Panel, is Item.Gap -> emptyList()
         }
     }.toSet()
     return listOf(

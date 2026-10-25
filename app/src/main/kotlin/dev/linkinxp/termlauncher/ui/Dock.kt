@@ -23,6 +23,7 @@ fun dockLabel(item: Item, ui: LauncherUi): String? = when (item) {
     is Item.Folder -> "~${item.name}"
     is Item.Widget -> null
     is Item.Panel -> null
+    is Item.Gap -> null
 }
 
 /** Display name of a layout item; null when an app is no longer installed. */
@@ -31,6 +32,7 @@ fun itemLabel(item: Item, ui: LauncherUi): String? = when (item) {
     is Item.Folder -> "~${item.name}"
     is Item.Widget -> null
     is Item.Panel -> null
+    is Item.Gap -> null
 }
 
 /** Row of text tabs for the pinned items. Tap opens, long-press asks for the item menu. */

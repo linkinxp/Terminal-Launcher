@@ -57,8 +57,9 @@ quick tiles and page one are drawn ahead of time, and so are the first 24 drawer
   `toggles` (flashlight, and shortcuts to the wifi, bluetooth, sound and location screens).
 
 ## Moving icons
-In the icon style, press and hold an icon to pick it up, drag it onto another icon and let go: it takes that place and the others shift over.
-Hold without moving and you get the item menu as before. The wallpaper settings only show the fields the chosen wallpaper uses.
+In the icon style, press and hold an icon to pick it up and drop it on any slot: onto an empty one (it stays where you put it and leaves a hole
+behind, so nothing else moves), onto another icon (it is inserted there and the rest shift over), or into the extra empty row that appears
+while you drag. Hold without moving and you get the item menu as before. The wallpaper settings only show the fields the chosen wallpaper uses.
 
 ## Matrix
 - `wall mode rain` (also in settings > wallpaper): falling half-width katakana and digits behind home, in the theme color with a bright head

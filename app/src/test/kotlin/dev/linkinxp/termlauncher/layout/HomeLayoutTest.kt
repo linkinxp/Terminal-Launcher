@@ -7,7 +7,7 @@ import org.junit.Test
 class HomeLayoutTest {
     private val empty = HomeLayout.default()
     private fun apps(l: HomeLayout) = (l.dock + l.pages.flatMap { it.items }).flatMap {
-        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps; is Item.Widget, is Item.Panel -> emptyList() }
+        when (it) { is Item.App -> listOf(it.pkg); is Item.Folder -> it.apps; is Item.Widget, is Item.Panel, is Item.Gap -> emptyList() }
     }
 
     @Test fun defaultHasEmptyDockAndOneEmptyPage() {

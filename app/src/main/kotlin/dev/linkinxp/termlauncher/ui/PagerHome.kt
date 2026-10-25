@@ -84,14 +84,6 @@ import java.util.Locale
 
 private const val SWIPE_PX = 80f
 
-/** The icon being dragged on the home grid, how far it has moved, and where every cell is (read only when it drops). */
-private class DragState {
-    var item by mutableStateOf<Item?>(null)
-    var offset by mutableStateOf(Offset.Zero)
-    var moved = 0f
-    val bounds = HashMap<Item, Rect>()
-}
-
 @Composable
 private fun rememberNow(): LocalDateTime {
     val context = LocalContext.current
@@ -132,7 +124,7 @@ private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle
 
 /** A placed info panel; it shows only while its `panel` switch is on (sys has none). */
 @Composable
-private fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, onSearch: (String) -> Unit) {
+internal fun PanelItem(kind: PanelKind, ui: LauncherUi, snapshot: SysSnapshot, onSearch: (String) -> Unit) {
     when (kind) {
         PanelKind.SEARCH -> if (ui.panels.search) SearchBar(onSearch)
         PanelKind.SYS -> SysPanel(snapshot)
@@ -168,7 +160,7 @@ fun PagerHome(
     homeSignal: Int = 0,
     onSearch: (String) -> Unit = {},
     onSettings: () -> Unit = {},
-    onMoveItem: (page: Int, item: Item, target: Item) -> Unit = { _, _, _ -> },
+    onMoveItem: (page: Int, item: Item, slot: Int) -> Unit = { _, _, _ -> },
     imeSkip: () -> Boolean = { false },
     onSwipeDown: (SwipeDownAction) -> Unit = {},
     onDoubleTap: () -> Unit = {},
@@ -180,7 +172,6 @@ fun PagerHome(
         val targets = remember(ui.layout, ui.quick, ui.apps, ui.density) { warmTargets(ui) }
         WarmIcons(targets)
     }
-    val drag = remember { DragState() }
     val bigClockPage = ui.layout.pages.indexOfFirst { p -> p.items.any { it is Item.Panel } }.coerceAtLeast(0)
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
@@ -242,49 +233,7 @@ fun PagerHome(
                 // Apps and folders in rows of one or two; panels and widgets always take the full width.
                 val perRow = if (style == HomeStyle.GRID) 2 else 1
                 if (style == HomeStyle.ICONS) {
-                    iconBlocks(items, ui.density.columns).forEach { block ->
-                        when (block) {
-                            is IconBlock.Full -> {
-                                val item = block.item
-                                if (item is Item.Widget) key(item.id) { WidgetPanel(item, vm, ui.density) }
-                                else if (item is Item.Panel) PanelItem(item.kind, ui, snapshot, onSearch)
-                            }
-                            is IconBlock.Cells -> Row(Modifier.fillMaxWidth().zIndex(if (drag.item in block.items) 1f else 0f)) {
-                                block.items.forEach { item ->
-                                    val label = itemLabel(item, ui) ?: return@forEach
-                                    val dragging = drag.item == item
-                                    // Hold an icon to pick it up; drag it onto another to put it there. A hold with no movement is the menu.
-                                    val placeModifier = Modifier
-                                        .onGloballyPositioned { drag.bounds[item] = it.boundsInRoot() }
-                                        .graphicsLayer {
-                                            if (dragging) { translationX = drag.offset.x; translationY = drag.offset.y; scaleX = 1.12f; scaleY = 1.12f; alpha = 0.9f }
-                                        }
-                                    // Inside the cell's click handling, so it sees (and consumes) the lift before a click can fire.
-                                    val dragGesture = Modifier
-                                        .semantics { onLongClick(label = "item menu") { onItemLongPress(item); true } }
-                                        .pointerInput(item, index) {
-                                            detectDragGesturesAfterLongPress(
-                                                onDragStart = { drag.item = item; drag.offset = Offset.Zero; drag.moved = 0f },
-                                                onDrag = { change, amount -> change.consume(); drag.offset += amount; drag.moved += amount.getDistance() },
-                                                onDragEnd = {
-                                                    val from = drag.bounds[item]
-                                                    if (drag.offset.getDistance() < viewConfiguration.touchSlop) onItemLongPress(item)
-                                                    else if (from != null) {
-                                                        val pageCells = ui.layout.pages[index].items.mapNotNull { i -> drag.bounds[i]?.let { r -> i to r } }.toMap()
-                                                        nearestCell(from.center + drag.offset, pageCells)?.let { target -> if (target != item) onMoveItem(index, item, target) }
-                                                    }
-                                                    drag.item = null; drag.offset = Offset.Zero
-                                                },
-                                                onDragCancel = { drag.item = null; drag.offset = Offset.Zero },
-                                            )
-                                        }
-                                    IconCell(label, { onItemTap(item) }, null, Modifier.weight(1f).then(placeModifier), labelSize = ui.density.labelSp.sp, gesture = dragGesture) { ItemIcon(item, ui, ui.density.iconDp.dp) }
-                                }
-                                // Count only the cells actually drawn: an uninstalled app has no label and no cell.
-                                repeat(ui.density.columns - block.items.count { itemLabel(it, ui) != null }) { Spacer(Modifier.weight(1f)) }
-                            }
-                        }
-                    }
+                    IconPageContent(index, ui, vm, snapshot, onSearch, onItemTap, onItemLongPress, onMoveItem)
                     return@content
                 }
                 val run = ArrayList<Item>()

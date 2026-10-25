@@ -111,10 +111,10 @@ class IconHomeTest {
         val row2 = listOf(Item.App("pkg.gone"), Item.App(more[4].pkg), Item.App(more[5].pkg), Item.App(maps.pkg))
         show(HomeStyle.ICONS, items = row1 + Item.Panel(dev.linkinxp.termlauncher.layout.PanelKind.SYS) + row2, quick = emptyList(), dock = emptyList(), extra = more)
         rule.waitForIdle()
-        // second column of the first row vs the second drawn cell of the row that starts with an uninstalled app
+        // second column of the first row vs the row that starts with an uninstalled app (its slot stays, empty)
         val second = rule.onNodeWithText("bravo").getUnclippedBoundsInRoot().left
-        val shifted = rule.onNodeWithText("foxtrot").getUnclippedBoundsInRoot().left
-        assertEquals("both rows keep four equal columns", second.value, shifted.value, 1.5f)
+        val shifted = rule.onNodeWithText("echo").getUnclippedBoundsInRoot().left
+        assertEquals("the empty slot keeps the grid aligned", second.value, shifted.value, 1.5f)
     }
 
     @Test fun theQuickTilesInTheIconStyleHaveNoFrameAndSmallerIcons() {
@@ -150,7 +150,7 @@ class IconHomeTest {
         assertEquals("all six share one row", first.value, sixth.value, 0.5f)
     }
 
-    private val moves = mutableListOf<Triple<Int, Item, Item>>()
+    private val moves = mutableListOf<Triple<Int, Item, Int>>()
 
     private fun showForDrag() {
         val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
@@ -158,7 +158,7 @@ class IconHomeTest {
             theme = ThemeRegistry.default, layout = HomeLayout(emptyList(), listOf(Page(listOf(Item.App(maps.pkg), Item.App(notes.pkg), Item.App(phone.pkg))))),
             apps = listOf(maps, notes, phone).associateBy { it.pkg }, homeStyle = HomeStyle.ICONS,
         )
-        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, { taps += it }, { longs += it }, {}, {}, onMoveItem = { p, i, t -> moves += Triple(p, i, t) }) } }
+        rule.setContent { TermTheme(ui.theme) { PagerHome(ui, vm, { taps += it }, { longs += it }, {}, {}, onMoveItem = { p, i, slot -> moves += Triple(p, i, slot) }) } }
     }
 
     @Test fun holdingAnIconAndDraggingItOntoAnotherMovesIt() {
@@ -169,7 +169,7 @@ class IconHomeTest {
             down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(to.x - from.x, to.y - from.y), 200); up()
         }
         rule.waitForIdle()
-        assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, Item.App(notes.pkg) as Item)), moves)
+        assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, 1)), moves)
         assertEquals("a drag is not a tap or a menu", emptyList<Item>(), taps + longs)
     }
 
@@ -178,7 +178,7 @@ class IconHomeTest {
         rule.onNodeWithText("notes").performTouchInput { longClick() }
         rule.waitForIdle()
         assertEquals(listOf<Item>(Item.App(notes.pkg)), longs)
-        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+        assertEquals(emptyList<Triple<Int, Item, Int>>(), moves)
     }
 
     @Test fun droppingOnNothingMovesNothing() {
@@ -187,7 +187,7 @@ class IconHomeTest {
             down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(0f, -1500f), 200); up()
         }
         rule.waitForIdle()
-        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+        assertEquals(emptyList<Triple<Int, Item, Int>>(), moves)
     }
 
     @Test fun anAppWithNotificationsShowsABadgeOnItsIconWhenBadgesAreOn() {
@@ -218,7 +218,7 @@ class IconHomeTest {
             advanceEventTime(900); up()
         }
         rule.waitForIdle()
-        assertEquals(emptyList<Triple<Int, Item, Item>>(), moves)
+        assertEquals(emptyList<Triple<Int, Item, Int>>(), moves)
     }
 
     @Test fun anIconOffersItsMenuToAccessibilityServicesToo() {
@@ -226,5 +226,27 @@ class IconHomeTest {
         rule.onNodeWithText("notes").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnLongClick)
         rule.waitForIdle()
         assertEquals(listOf<Item>(Item.App(notes.pkg)), longs)
+    }
+
+    @Test fun anEmptySlotInTheRowIsAValidDropTarget() {
+        showForDrag() // three icons on a four-column grid: slot 3 is empty
+        val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
+        val slot = rule.onNodeWithTag("slot-3").fetchSemanticsNode().boundsInRoot.center
+        rule.onNodeWithText("maps").performTouchInput {
+            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(slot.x - from.x, slot.y - from.y), 200); up()
+        }
+        rule.waitForIdle()
+        assertEquals(listOf(Triple(0, Item.App(maps.pkg) as Item, 3)), moves)
+    }
+
+    @Test fun whileDraggingThereIsAnotherEmptyRowToDropOn() {
+        showForDrag()
+        val from = rule.onNodeWithText("maps").fetchSemanticsNode().boundsInRoot.center
+        rule.onNodeWithText("maps").performTouchInput {
+            down(center); advanceEventTime(900); moveBy(androidx.compose.ui.geometry.Offset(1f, 20f), 100)
+        }
+        rule.onNodeWithTag("slot-4").assertExists() // the first slot of the extra row
+        rule.onNodeWithText("maps").performTouchInput { up() }
+        assertEquals(from.x > 0, true)
     }
 }
