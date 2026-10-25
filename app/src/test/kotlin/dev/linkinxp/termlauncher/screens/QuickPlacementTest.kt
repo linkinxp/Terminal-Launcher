@@ -14,6 +14,7 @@ import dev.linkinxp.termlauncher.apps.AppEntry
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import dev.linkinxp.termlauncher.layout.Item
 import dev.linkinxp.termlauncher.theme.ThemeRegistry
+import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.ui.PagerHome
 import dev.linkinxp.termlauncher.ui.TermTheme
 import org.junit.Assert.assertTrue
@@ -60,5 +61,21 @@ class QuickPlacementTest {
         rule.onNodeWithText("2:two").performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("quick-pkg.phone").assertIsDisplayed()
+    }
+
+    @Test fun theWeatherLineSitsRightUnderTheDateAndOnlyWhenThereIsOne() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val withLine = LauncherUi(theme = ThemeRegistry.default, layout = HomeLayout.default(), weatherLine = "12°C clear  hi 13° lo 6°  zagreb")
+        rule.setContent { TermTheme(withLine.theme) { PagerHome(withLine, vm, {}, {}, {}, {}) } }
+        val date = rule.onNodeWithText("wk ", substring = true).getUnclippedBoundsInRoot()
+        val wx = rule.onNodeWithText("12°C clear", substring = true).assertIsDisplayed().getUnclippedBoundsInRoot()
+        assertTrue("weather ${wx.top} below the date ${date.bottom}", wx.top >= date.bottom - 1.dp)
+    }
+
+    @Test fun noWeatherLineWithoutForecast() {
+        val vm = LauncherViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val none = LauncherUi(theme = ThemeRegistry.default, layout = HomeLayout.default())
+        rule.setContent { TermTheme(none.theme) { PagerHome(none, vm, {}, {}, {}, {}) } }
+        rule.onNodeWithText("°C", substring = true).assertDoesNotExist()
     }
 }

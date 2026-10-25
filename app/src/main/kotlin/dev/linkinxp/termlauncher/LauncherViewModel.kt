@@ -46,6 +46,7 @@ import dev.linkinxp.termlauncher.weather.WeatherRepository
 import dev.linkinxp.termlauncher.weather.WxSettings
 import dev.linkinxp.termlauncher.weather.WxAction
 import dev.linkinxp.termlauncher.weather.formatWeather
+import dev.linkinxp.termlauncher.weather.weatherSummary
 import dev.linkinxp.termlauncher.weather.parseForecast
 import dev.linkinxp.termlauncher.weather.shouldFetchWeather
 import dev.linkinxp.termlauncher.weather.parseWxAction
@@ -135,6 +136,8 @@ data class LauncherUi(
     val panels: PanelSettings = PanelSettings(),
     val calendar: PanelData = PanelData.Off,
     val weather: PanelData = PanelData.Off,
+    /** One-line summary shown under the date (null without a forecast or with the weather panel switched off). */
+    val weatherLine: String? = null,
     val wx: WxSettings = WxSettings(),
     /** The quick tiles as package names, already limited to apps installed here. */
     val quick: List<String> = emptyList(),
@@ -159,6 +162,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val boot: Boolean = false,
         val calendar: PanelData = PanelData.Off,
         val weather: PanelData = PanelData.Off,
+        val weatherLine: String? = null,
     )
 
     private val eph = MutableStateFlow(Ephemeral())
@@ -225,6 +229,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             panels = p.panels,
             calendar = if (p.panels.cal) e.calendar else PanelData.Off,
             weather = if (p.panels.wx) e.weather else PanelData.Off,
+            weatherLine = if (p.panels.wx) e.weatherLine else null,
             wx = x.wx,
             quick = (x.quick ?: quickDefaults).filter { it in installed },
             drawerKeyboard = x.drawerKeyboard,
@@ -492,7 +497,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * Returns an error message for the output panel, or null. A failed fetch keeps the cached forecast.
      */
     private suspend fun refreshWeather(force: Boolean): String? = weatherMutex.withLock {
-        if (!prefs.panels.first().wx) { eph.update { it.copy(weather = PanelData.Off) }; return@withLock null }
+        if (!prefs.panels.first().wx) { eph.update { it.copy(weather = PanelData.Off, weatherLine = null) }; return@withLock null }
         val wx = prefs.wx.first()
         val lat = wx.lat
         val lon = wx.lon
@@ -502,7 +507,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
         fun show(json: String, at: Long): Boolean = parseForecast(json, at).fold(
             onSuccess = { f ->
-                eph.update { it.copy(weather = PanelData.Lines(formatWeather(wx.city, f, wx.fahrenheit, System.currentTimeMillis()))) }
+                eph.update {
+                    it.copy(
+                        weather = PanelData.Lines(formatWeather(wx.city, f, wx.fahrenheit, System.currentTimeMillis())),
+                        weatherLine = weatherSummary(wx.city, f, wx.fahrenheit),
+                    )
+                }
                 true
             },
             onFailure = { false },

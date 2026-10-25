@@ -93,7 +93,7 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle, glitch: Boolean) {
+private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle, glitch: Boolean, weatherLine: String?) {
     val date = now.toLocalDate()
     Column(Modifier.fillMaxWidth()) {
         ClockView(clockStyle, now, h24, glitch)
@@ -101,8 +101,10 @@ private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle
             "${date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.dayOfMonth} " +
                 "${date.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).lowercase()} ${date.year}  " +
                 "wk ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}  day ${date.dayOfYear}" + if (h24) "" else "  ${amPm(now.hour)}",
-            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = if (weatherLine == null) 8.dp else 2.dp),
         )
+        // The weather in one line, right under the date.
+        weatherLine?.let { TermText(it, Modifier.fillMaxWidth().padding(bottom = 8.dp), dim = true) }
     }
 }
 
@@ -245,8 +247,8 @@ fun PagerHome(
             val tapEdit = Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onEdit() }) }
             // The big clock heads the first page with panels (the glance page); with a non-classic style page one keeps a one-line clock.
             val header: @Composable () -> Unit = {
-                if (style == HomeStyle.CLASSIC) { if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch) }
-                else if (index == bigClockPage) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch)
+                if (style == HomeStyle.CLASSIC) { if (index == 0) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch, ui.weatherLine) }
+                else if (index == bigClockPage) ClockHeader(now, h24, ui.clockStyle, ui.fx.glitch, ui.weatherLine)
                 else if (index == 0) CompactClock(now, h24)
             }
             val topDown = style == HomeStyle.CLASSIC || ui.layout.pages[index].items.any { it is Item.Panel }

@@ -53,4 +53,15 @@ class WeatherFormatTest {
         assertTrue(text(city = "C".repeat(60)).all { it.length <= 40 })
         assertTrue(text().all { it.length <= 40 })
     }
+
+    @Test fun theOneLineSummary() {
+        assertEquals("10°C partly cloudy  hi 13° lo 6°  zagreb", weatherSummary("Zagreb", forecast, false))
+        assertEquals("10°F partly cloudy  hi 13° lo 6°  zagreb", weatherSummary("Zagreb", forecast, true)) // the data is already in the chosen unit
+    }
+
+    @Test fun theSummaryFitsFortyColumnsEvenWithALongCity() {
+        val line = weatherSummary("Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch", forecast, false)
+        assertTrue(line.length <= 40)
+        assertTrue(line.startsWith("10°C partly cloudy"))
+    }
 }

@@ -11,6 +11,13 @@ fun compass(deg: Int): String {
     return names[Math.floorMod(((deg + 22.5) / 45).toInt().let { if (deg + 22.5 < 0) it - 1 else it }, 8)]
 }
 
+/** One line for under the date: `12°C clear  hi 13° lo 6°  zagreb` (at most 40 columns; a long city name is cut). */
+fun weatherSummary(city: String, f: Forecast, fahrenheit: Boolean): String {
+    val unit = if (fahrenheit) "F" else "C"
+    val head = "${f.temp.roundToInt()}°$unit ${conditionText(conditionOf(f.code))}  hi ${f.high.roundToInt()}° lo ${f.low.roundToInt()}°"
+    return "$head  ${city.lowercase()}".take(MAX_COLS).trimEnd()
+}
+
 /**
  * The weather panel body: city, then art on the left with temperature/condition, wind, humidity and high/low
  * on the right, the 3-hour strip, and how old the data is. Every line is at most 40 columns.
