@@ -1,1 +1,1 @@
-Terminal now offers to become your home app after install (and from settings, home app), and can be opened from the Play Store. Plus the 1.0.1 fixes: starter home, bigger tap targets, safe page removal, hidden apps in settings.
+Long-press an app in the drawer and choose "add to home" to put it on your home screen. Terminal also offers to become your home app after install.

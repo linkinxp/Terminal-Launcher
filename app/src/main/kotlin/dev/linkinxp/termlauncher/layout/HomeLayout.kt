@@ -69,6 +69,14 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
         else -> copy(dock = dock + Item.App(pkg))
     }
 
+    /** Puts an app on the first page without panels (the apps page); nothing changes when it is already docked or on a page. */
+    fun addToHome(pkg: String): HomeLayout {
+        val app = Item.App(pkg)
+        if (app in dock || pages.any { app in it.items }) return this
+        val target = pages.indexOfFirst { p -> p.items.none { it is Item.Panel } }.coerceAtLeast(0)
+        return addToPage(target, app)
+    }
+
     /** Why [pin] would do nothing, in plain words. */
     fun pinProblem(pkg: String, label: String): String =
         if (dock.contains(Item.App(pkg))) "${label.lowercase()} is already in the dock" else "dock is full ($MAX_DOCK): unpin one first"

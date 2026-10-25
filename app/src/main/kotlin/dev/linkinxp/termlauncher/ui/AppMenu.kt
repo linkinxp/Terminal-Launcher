@@ -56,6 +56,7 @@ fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () ->
                             if (pinned) vm.unpin(pkg) else vm.pin(pkg); onDismiss()
                         }
                         if (onHome) MenuLine("remove from home") { vm.removeShortcut(pkg); onDismiss() }
+                        else if (!pinned) MenuLine("add to home") { vm.addToHome(pkg); onDismiss() }
                         MenuLine("add to folder") { pickingFolder = true }
                         MenuLine(if (pkg in ui.hidden) "unhide" else "hide") { vm.toggleHidden(pkg); onDismiss() }
                         MenuLine("app info") { vm.appInfo(pkg); onDismiss() }

@@ -812,6 +812,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun pinFolder(name: String) = edit { it.pinFolder(name) }
     fun unpinFolder(name: String) = edit { it.unpinFolder(name) }
     fun mkdirOnPage(name: String, page: Int) = applyLayout { it.mkdir(name, page) }
+    fun addToHome(pkg: String) = edit { it.addToHome(pkg) }
     fun removeShortcut(pkg: String) = edit { it.removeShortcut(pkg) }
     fun mv(pkg: String, folder: String) = applyLayout { it.mv(pkg, folder) }
 
@@ -871,7 +872,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.2"
+        const val LAUNCHER_VERSION = "1.0.3"
         const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L
