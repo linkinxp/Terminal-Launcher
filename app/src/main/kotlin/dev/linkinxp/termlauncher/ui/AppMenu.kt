@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.platform.LocalContext
+import dev.linkinxp.termlauncher.shortcuts.AppShortcut
+import dev.linkinxp.termlauncher.shortcuts.ShortcutRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,6 +33,9 @@ private fun MenuLine(text: String, onClick: () -> Unit) {
 fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () -> Unit) {
     val app = ui.apps[pkg] ?: return
     var pickingFolder by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val shortcutRepo = remember(context) { ShortcutRepository(context) }
+    val shortcuts by produceState(emptyList<AppShortcut>(), pkg) { value = withContext(Dispatchers.IO) { shortcutRepo.list(pkg) } }
     val pinned = ui.layout.dock.any { it == Item.App(pkg) }
     val onHome = ui.layout.pages.any { p -> p.items.contains(Item.App(pkg)) }
     Dialog(onDismissRequest = onDismiss) {
@@ -41,6 +50,8 @@ fun AppMenu(pkg: String, ui: LauncherUi, vm: LauncherViewModel, onDismiss: () ->
                             MenuLine("~/${f.name}") { vm.mv(pkg, f.name); onDismiss() }
                         }
                     } else {
+                        // The app's own shortcuts (when Terminal is the default home app, Android hands them over).
+                        shortcuts.forEach { sc -> MenuLine("> ${sc.label.lowercase()}") { shortcutRepo.start(sc); onDismiss() } }
                         MenuLine(if (pinned) "unpin from dock" else "pin to dock") {
                             if (pinned) vm.unpin(pkg) else vm.pin(pkg); onDismiss()
                         }
