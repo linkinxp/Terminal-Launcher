@@ -10,7 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.LauncherUi
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.layout.Item
+import androidx.compose.ui.unit.sp
 
 /** The first word of an app name, lowercase, at most nine characters (`messages`, `garmin`). */
 fun dockName(label: String): String = label.trim().substringBefore(' ').lowercase().take(9)
@@ -40,6 +42,15 @@ fun Dock(
     onLongPress: (Item) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (ui.homeStyle == HomeStyle.ICONS) {
+        Row(modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            ui.layout.dock.forEach { item ->
+                val label = dockLabel(item, ui) ?: return@forEach
+                IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.padding(horizontal = 4.dp), labelSize = 10.sp) { ItemIcon(item, ui, 48.dp) }
+            }
+        }
+        return
+    }
     Row(modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
         ui.layout.dock.forEach { item ->
             val label = dockLabel(item, ui) ?: return@forEach

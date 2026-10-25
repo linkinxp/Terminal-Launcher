@@ -189,10 +189,29 @@ fun PagerHome(
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { index ->
             val scroll = rememberScrollState()
             val tapPadding = if (style == HomeStyle.CLASSIC) 8.dp else 12.dp
-            val content: @Composable () -> Unit = {
+            val content: @Composable () -> Unit = content@{
                 val items = ui.layout.pages[index].items
                 // Apps and folders in rows of one or two; panels and widgets always take the full width.
                 val perRow = if (style == HomeStyle.GRID) 2 else 1
+                if (style == HomeStyle.ICONS) {
+                    iconBlocks(items).forEach { block ->
+                        when (block) {
+                            is IconBlock.Full -> {
+                                val item = block.item
+                                if (item is Item.Widget) key(item.id) { WidgetPanel(item, vm) }
+                                else if (item is Item.Panel) PanelItem(item.kind, ui, snapshot, onSearch)
+                            }
+                            is IconBlock.Cells -> Row(Modifier.fillMaxWidth()) {
+                                block.items.forEach { item ->
+                                    val label = itemLabel(item, ui) ?: return@forEach
+                                    IconCell(label, { onItemTap(item) }, { onItemLongPress(item) }, Modifier.weight(1f)) { ItemIcon(item, ui, 56.dp) }
+                                }
+                                repeat(ICON_COLUMNS - block.items.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                    return@content
+                }
                 val run = ArrayList<Item>()
                 @Composable fun flush() {
                     run.chunked(perRow).forEach { row ->

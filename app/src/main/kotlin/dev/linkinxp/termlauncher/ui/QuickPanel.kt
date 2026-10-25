@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import dev.linkinxp.termlauncher.LauncherUi
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.quick.tileLabel
 import dev.linkinxp.termlauncher.quick.tileRows
 
@@ -23,6 +24,16 @@ fun QuickPanel(ui: LauncherUi, onTap: (String) -> Unit, onLongPress: (String) ->
     if (!ui.panels.quick || ui.quick.isEmpty()) return
     TermPanel("quick", modifier.fillMaxWidth().padding(top = 8.dp)) {
         tileRows(ui.quick, PER_ROW).forEach { row ->
+            if (ui.homeStyle == HomeStyle.ICONS) {
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { pkg ->
+                        val label = tileLabel(ui.apps[pkg]?.label ?: pkg).lowercase()
+                        IconCell(label, { onTap(pkg) }, { onLongPress(pkg) }, Modifier.weight(1f).testTag("quick-$pkg")) { IconTile(pkg, ui.apps[pkg]?.label ?: pkg, 48.dp) }
+                    }
+                    repeat(PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+                return@forEach
+            }
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { pkg ->
                     TermText(
