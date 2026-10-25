@@ -52,6 +52,7 @@ import dev.linkinxp.termlauncher.LauncherUi
 import dev.linkinxp.termlauncher.LauncherViewModel
 import dev.linkinxp.termlauncher.apps.DrawerSort
 import dev.linkinxp.termlauncher.data.IconMode
+import dev.linkinxp.termlauncher.layout.HomeStyle
 import dev.linkinxp.termlauncher.wall.WallMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,6 +78,8 @@ fun AppDrawer(
     val theme = LocalTheme.current
     val d = ui.drawer
     val listState = rememberLazyListState()
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val iconStyle = ui.homeStyle == HomeStyle.ICONS
     val scope = rememberCoroutineScope()
     DrawerBackHandler(open) { vm.closeDrawer() }
 
@@ -104,7 +107,7 @@ fun AppDrawer(
                 withContext(Dispatchers.Main) {
                     keyboard?.hide(); focusManager.clearFocus()
                     filterValue = TextFieldValue("")
-                    listState.scrollToItem(0)
+                    listState.scrollToItem(0); gridState.scrollToItem(0)
                 }
             }
         }
@@ -127,6 +130,34 @@ fun AppDrawer(
         map
     }
 
+    val grid = if (iconStyle) {
+        val folderRows = folders.map { it.name to it.apps.size }
+        remember(d, folderRows, filtering) { gridLayout(d, folderRows, filtering) }
+    } else null
+    val searchRow: @Composable () -> Unit = {
+    Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        TermText("| grep ", dim = true)
+        BasicTextField(
+            value = filterValue,
+            onValueChange = { filterValue = it; vm.setFilter(it.text) },
+            singleLine = true,
+            textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
+            cursorBrush = SolidColor(theme.accent.color()),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            // Search key: launch the best match (or open the best matching folder).
+            keyboardActions = KeyboardActions(onSearch = {
+                val top = d.results.firstOrNull()
+                if (top != null) { vm.launch(top.pkg); vm.closeDrawer() }
+                else if (filtering) folders.firstOrNull()?.let { onFolderTap(it.name) }
+            }),
+            modifier = Modifier.weight(1f).focusRequester(focus).testTag("drawer-search"),
+        )
+        if (filterValue.text.isNotEmpty()) {
+            TermText("[clr]", Modifier.clickable { filterValue = TextFieldValue(""); vm.setFilter("") }.padding(start = 8.dp), dim = true)
+        }
+    }
+    }
+
     Box(
         // The drawer is composed ahead of time and kept off-screen while closed, so opening it is a layer move,
         // not a composition + layout of the whole app list. Off-screen content receives no touches.
@@ -136,6 +167,31 @@ fun AppDrawer(
             .statusBarsPadding().navigationBarsPadding().imePadding(),
     ) {
         Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 32.dp)) {
+            if (iconStyle) {
+                IconDrawerGrid(
+                    grid!!, ui, gridState, hideKeyboardOnScroll,
+                    onLaunch = { pkg -> vm.launch(pkg); vm.closeDrawer() }, onAppLongPress = onAppLongPress, onFolderTap = onFolderTap,
+                    modifier = Modifier.weight(1f),
+                )
+                // Controls and search sit at the bottom, in reach of the thumb; a swipe down on them closes the drawer.
+                Column(
+                    Modifier.pointerInput(Unit) {
+                        var total = 0f
+                        detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { if (total > 120f) vm.closeDrawer() }) { _, dy -> total += dy }
+                    },
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TermText(if (ui.showHidden) "ls -a" else "ls", color = theme.accent.color(), bold = true)
+                        Row {
+                            TermText("sort:${SORT_LABEL.getValue(ui.sort)}", Modifier.clickable {
+                                vm.setSort(DrawerSort.entries[(ui.sort.ordinal + 1) % DrawerSort.entries.size])
+                            }.padding(horizontal = 8.dp, vertical = 8.dp))
+                            TermText("[cfg]", Modifier.testTag("drawer-cfg").clickable(onClick = onSettings).padding(horizontal = 8.dp, vertical = 8.dp), bold = true)
+                        }
+                    }
+                    searchRow()
+                }
+            } else {
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     .pointerInput(Unit) {
@@ -159,27 +215,7 @@ fun AppDrawer(
                     TermText("[x]", Modifier.clickable { vm.closeDrawer() }.padding(start = 8.dp), dim = true)
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                TermText("| grep ", dim = true)
-                BasicTextField(
-                    value = filterValue,
-                    onValueChange = { filterValue = it; vm.setFilter(it.text) },
-                    singleLine = true,
-                    textStyle = TextStyle(color = theme.foreground.color(), fontFamily = TermFont, fontSize = 14.sp),
-                    cursorBrush = SolidColor(theme.accent.color()),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    // Search key: launch the best match (or open the best matching folder).
-                    keyboardActions = KeyboardActions(onSearch = {
-                        val top = d.results.firstOrNull()
-                        if (top != null) { vm.launch(top.pkg); vm.closeDrawer() }
-                        else if (filtering) folders.firstOrNull()?.let { onFolderTap(it.name) }
-                    }),
-                    modifier = Modifier.weight(1f).focusRequester(focus),
-                )
-                if (filterValue.text.isNotEmpty()) {
-                    TermText("[clr]", Modifier.clickable { filterValue = TextFieldValue(""); vm.setFilter("") }.padding(start = 8.dp), dim = true)
-                }
-            }
+            searchRow()
             LazyColumn(Modifier.weight(1f).nestedScroll(hideKeyboardOnScroll), state = listState) {
                 if (showFolders) items(folders.size, key = { "f-${folders[it].name}" }) { i ->
                     val f = folders[i]
@@ -210,11 +246,15 @@ fun AppDrawer(
                 }
                 if (!filtering && d.sections.isEmpty()) item { TermText("no match", dim = true) }
             }
+            }
         }
         if (!filtering) {
             AlphaIndex(
-                letters = headerIndex.keys.toList(),
-                onSelect = { c -> headerIndex[c]?.let { scope.launch { listState.scrollToItem(it) } } },
+                letters = (if (grid != null) grid.headerIndex.keys else headerIndex.keys).toList(),
+                onSelect = { c ->
+                    if (grid != null) grid.headerIndex[c]?.let { scope.launch { gridState.scrollToItem(it) } }
+                    else headerIndex[c]?.let { scope.launch { listState.scrollToItem(it) } }
+                },
                 modifier = Modifier.align(androidx.compose.ui.Alignment.CenterEnd).padding(vertical = 64.dp),
             )
         }
