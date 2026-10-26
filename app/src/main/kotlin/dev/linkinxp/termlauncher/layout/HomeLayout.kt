@@ -127,6 +127,27 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     fun pinProblem(pkg: String, label: String): String =
         if (dock.contains(Item.App(pkg))) "${label.lowercase()} is already in the dock" else "dock is full ($MAX_DOCK): unpin one first"
 
+    /**
+     * A full page hands its last icon (app or folder) to the front of the next page without panels or widgets, adding a page
+     * when there is none and room for one. Unchanged when the page has no icon to give or nowhere to put it.
+     */
+    fun spillPage(page: Int): HomeLayout {
+        if (page !in pages.indices) return this
+        val items = pages[page].items
+        val at = items.indexOfLast { it is Item.App || it is Item.Folder }
+        if (at < 0 || items.drop(at + 1).any { it !is Item.Gap }) return this
+        val icon = items[at]
+        val rest = trimmed(items.take(at).toMutableList())
+        fun plain(i: Int) = pages[i].items.none { it is Item.Panel || it is Item.Widget }
+        val target = (page + 1 until pages.size).firstOrNull(::plain)
+        val moved = when {
+            target != null -> pages.mapIndexed { i, p -> if (i == target) Page(listOf(icon) + p.items) else if (i == page) Page(rest) else p }
+            pages.size < MAX_PAGES -> pages.mapIndexed { i, p -> if (i == page) Page(rest) else p } + Page(listOf(icon))
+            else -> return this
+        }
+        return copy(pages = moved)
+    }
+
     /** Moves the pinned item at [from] to position [to]; anything out of range or unchanged leaves the dock alone. */
     fun moveInDock(from: Int, to: Int): HomeLayout {
         if (from !in dock.indices || to !in dock.indices || from == to) return this

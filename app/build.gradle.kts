@@ -20,8 +20,8 @@ android {
         // aligned, even in 1.1.0) is never loaded and is left out of the APK.
         minSdk = 34
         targetSdk = 36
-        versionCode = 107
-        versionName = "1.0.7"
+        versionCode = 108
+        versionName = "1.0.8"
     }
     packaging { jniLibs { excludes += "**/libandroidx.graphics.path.so" } }
     buildFeatures { compose = true; buildConfig = true }

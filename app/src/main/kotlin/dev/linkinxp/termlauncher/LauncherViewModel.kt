@@ -820,6 +820,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         edit { it.mergeOnto(fromPage, item, toPage, slot) }
     }
     fun renameFolder(old: String, new: String) = applyLayout { it.renameFolder(old, new) }
+    /** A page that is too full hands its last icon to the next page. */
+    fun spillPage(page: Int) = edit { it.spillPage(page) }
     fun moveInDock(from: Int, to: Int) = edit { it.moveInDock(from, to) }
     fun addAt(page: Int, pkg: String, slot: Int) = edit { it.addAt(page, pkg, slot) }
     fun addToHome(pkg: String) = edit { it.addToHome(pkg) }
@@ -882,7 +884,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.7"
+        const val LAUNCHER_VERSION = "1.0.8"
         const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L

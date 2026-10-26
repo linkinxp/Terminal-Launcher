@@ -1,5 +1,10 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.SideEffect
 import dev.linkinxp.termlauncher.clock.dateLine
@@ -176,6 +181,7 @@ fun PagerHome(
     onPinNew: (pkg: String) -> Unit = {},
     onMerge: (fromPage: Int, item: Item.App, toPage: Int, slot: Int) -> Unit = { _, _, _, _ -> },
     onMoveDock: (from: Int, to: Int) -> Unit = { _, _ -> },
+    onSpill: (page: Int) -> Unit = { vm.spillPage(it) },
     style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
@@ -209,6 +215,7 @@ fun PagerHome(
     // A Home press scrolls back to the first page.
     LaunchedEffect(homeSignal) { if (homeSignal > 0) pager.animateScrollToPage(0) }
     val context = LocalContext.current
+    val imeShown = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val now = rememberNow()
     val h24 = ui.clockFormat.is24(DateFormat.is24HourFormat(context))
     val snapshot = remember(now) { readSystemStats(context) }
@@ -311,6 +318,37 @@ fun PagerHome(
                 else if (index == 0) CompactClock(now, h24)
             }
             val topDown = style == HomeStyle.CLASSIC || ui.layout.pages[index].items.any { it is Item.Panel }
+            if (style == HomeStyle.ICONS) {
+                // The icon home never scrolls: what does not fit goes to the next page. Only when nothing can move
+                // on (no page left to hand an icon to) the page falls back to scrolling so nothing is out of reach.
+                var viewport by remember { mutableIntStateOf(0) }
+                var natural by remember { mutableIntStateOf(0) }
+                val overflow = viewport > 0 && natural > viewport
+                val canSpill = remember(ui.layout, index) { ui.layout.spillPage(index) != ui.layout }
+                val prompt = ui.prompt
+                // A message, the suggestions or the keyboard shrink the page for a moment: that is not a reason to move icons.
+                val steady = prompt.text.isEmpty() && prompt.message == null && prompt.suggestions.isEmpty() && drag.item == null && !imeShown
+                LaunchedEffect(overflow, canSpill, steady, ui.layout) {
+                    if (overflow && canSpill && steady) { delay(300); onSpill(index) }
+                }
+                var scrollMode by remember(ui.layout) { mutableStateOf(false) }
+                LaunchedEffect(overflow, canSpill) { if (overflow && !canSpill) scrollMode = true }
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).then(tapEdit)) {
+                    Box(readSwipe) { header() }
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().clipToBounds().onSizeChanged { viewport = it.height }
+                            .then(if (scrollMode) Modifier.verticalScroll(scroll) else readSwipe)
+                            // Measured as tall as it wants to be, so overflow shows in the size it asks for; apps sit at the
+                            // top of a glance page and at the bottom (by the thumb) otherwise, and from the top once too tall.
+                            .layout { m, c ->
+                                val p = m.measure(c.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                                if (natural != p.height) natural = p.height
+                                val h = if (c.hasBoundedHeight) c.maxHeight else p.height
+                                layout(p.width, h) { p.place(0, if (!topDown && p.height < h) h - p.height else 0) }
+                            },
+                    ) { content() }
+                }
+            } else
             // Always a scroll container: what the page cannot scroll any further reaches edgeSwipes as the swipe.
             if (topDown) {
                 // The clock header stays put; only what is below it scrolls.
