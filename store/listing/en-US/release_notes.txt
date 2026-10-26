@@ -1,1 +1,1 @@
-Make folders by dragging: drop an icon right on top of another to create a folder with both, or on a folder to add it. Folders can be renamed from their panel.
+Apps you pin now sit in the same bottom row as your quick tiles instead of a row of their own.

@@ -23,7 +23,7 @@ private const val PER_ROW = 4
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun QuickPanel(ui: LauncherUi, onTap: (String) -> Unit, onLongPress: (String) -> Unit, modifier: Modifier = Modifier) {
-    if (!ui.panels.quick || ui.quick.isEmpty()) return
+    if (!ui.panels.quick || ui.quick.isEmpty() || bottomBar(ui) != null) return // merged into the dock row
     if (ui.homeStyle == HomeStyle.ICONS) {
         // Icon style: no bordered panel and no title, just a compact row of small icons, so the apps get the room.
         val perRow = ui.density.columns
