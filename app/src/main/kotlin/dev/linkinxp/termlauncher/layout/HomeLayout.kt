@@ -127,6 +127,14 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     fun pinProblem(pkg: String, label: String): String =
         if (dock.contains(Item.App(pkg))) "${label.lowercase()} is already in the dock" else "dock is full ($MAX_DOCK): unpin one first"
 
+    /** Moves the pinned item at [from] to position [to]; anything out of range or unchanged leaves the dock alone. */
+    fun moveInDock(from: Int, to: Int): HomeLayout {
+        if (from !in dock.indices || to !in dock.indices || from == to) return this
+        val list = dock.toMutableList()
+        list.add(to, list.removeAt(from))
+        return copy(dock = list)
+    }
+
     fun unpin(pkg: String): HomeLayout = copy(dock = dock - Item.App(pkg))
 
     /** The panel kinds placed on some page. */

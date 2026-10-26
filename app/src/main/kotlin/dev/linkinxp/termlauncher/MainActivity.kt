@@ -330,6 +330,7 @@ class MainActivity : ComponentActivity() {
                     onAddAt = vm::addAt,
                     onPinNew = vm::pin,
                     onMerge = vm::mergeOnto,
+                    onMoveDock = vm::moveInDock,
                     imeSkip = { uiState.value.drawerOpen },
                     onSwipeDown = { action ->
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)

@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.SideEffect
 import dev.linkinxp.termlauncher.clock.dateLine
 import android.text.format.DateFormat
@@ -115,7 +116,7 @@ private fun rememberNow(): LocalDateTime {
 @Composable
 private fun ClockHeader(now: LocalDateTime, h24: Boolean, clockStyle: ClockStyle, glitch: Boolean, weatherLine: String?) {
     val date = now.toLocalDate()
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().testTag("clock-header")) {
         ClockView(clockStyle, now, h24, glitch)
         TermText(
             dateLine(date, Locale.getDefault()) + if (h24) "" else "  ${amPm(now.hour)}",
@@ -174,6 +175,7 @@ fun PagerHome(
     onAddAt: (page: Int, pkg: String, slot: Int) -> Unit = { _, _, _ -> },
     onPinNew: (pkg: String) -> Unit = {},
     onMerge: (fromPage: Int, item: Item.App, toPage: Int, slot: Int) -> Unit = { _, _, _, _ -> },
+    onMoveDock: (from: Int, to: Int) -> Unit = { _, _ -> },
     style: HomeStyle = ui.homeStyle,
     modifier: Modifier = Modifier,
 ) {
@@ -241,6 +243,15 @@ fun PagerHome(
             }
         }
     }
+    // Parts of the screen that do not scroll (the clock, the bars below) read the swipe straight from the finger.
+    val readSwipe = Modifier.pointerInput(Unit) {
+        var total = 0f
+        var done = false
+        detectVerticalDragGestures(onDragStart = { total = 0f; done = false }) { _, dy ->
+            total += dy
+            if (!done && kotlin.math.abs(total) > swipePx) { done = true; swipes(total) }
+        }
+    }
     Box(
         modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePaddingUnless(imeSkip)
             .onSizeChanged { widthPx[0] = it.width.toFloat() }
@@ -302,9 +313,10 @@ fun PagerHome(
             val topDown = style == HomeStyle.CLASSIC || ui.layout.pages[index].items.any { it is Item.Panel }
             // Always a scroll container: what the page cannot scroll any further reaches edgeSwipes as the swipe.
             if (topDown) {
-                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).then(tapEdit).verticalScroll(scroll)) {
-                    header()
-                    content()
+                // The clock header stays put; only what is below it scrolls.
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).then(tapEdit)) {
+                    Box(readSwipe) { header() }
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) { content() }
                 }
             } else {
                 // The clock stays put at the top; the apps are anchored to the bottom, next to the thumb.
@@ -319,20 +331,11 @@ fun PagerHome(
             }
         }
         // The bars below the pager are not scrollable, so they read the swipe directly.
-        Column(
-            Modifier.pointerInput(Unit) {
-                var total = 0f
-                var done = false
-                detectVerticalDragGestures(onDragStart = { total = 0f; done = false }) { _, dy ->
-                    total += dy
-                    if (!done && kotlin.math.abs(total) > swipePx) { done = true; swipes(total) }
-                }
-            },
-        ) {
+        Column(readSwipe) {
             StatusLine(pageCount, pager.currentPage, snapshot, now, h24, onPage = { i -> scope.launch { pager.animateScrollToPage(i) } }, onSettings = onSettings)
             // Quick tiles live with the pinned apps at the bottom, so they stay in reach on every page.
             QuickPanel(ui, { onItemTap(Item.App(it)) }, { onItemLongPress(Item.App(it)) }, Modifier.padding(horizontal = 16.dp))
-            Dock(ui, onItemTap, onItemLongPress, onBounds = { drag.dockBounds = it })
+            Dock(ui, onItemTap, onItemLongPress, onBounds = { drag.dockBounds = it }, onMoveDock = onMoveDock)
             PromptBar(ui, vm)
         }
     }

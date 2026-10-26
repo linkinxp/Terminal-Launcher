@@ -1,5 +1,10 @@
 package dev.linkinxp.termlauncher.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.runtime.remember
 import dev.linkinxp.termlauncher.layout.HomeLayout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.Spacer
@@ -62,7 +67,10 @@ fun Dock(
     onLongPress: (Item) -> Unit,
     modifier: Modifier = Modifier,
     onBounds: (androidx.compose.ui.layout.LayoutCoordinates) -> Unit = {},
+    onMoveDock: (from: Int, to: Int) -> Unit = { _, _ -> },
 ) {
+    val reorder = remember { DockReorder() }
+    val pinnedCount = ui.layout.dock.size
     val merged = bottomBar(ui)
     if (merged != null) {
         val perRow = maxOf(LAYOUT_MAX_DOCK, ui.density.columns)
@@ -72,7 +80,11 @@ fun Dock(
                     row.forEach { item ->
                         val label = dockLabel(item, ui) ?: return@forEach
                         val tag = if (item is Item.App && item !in ui.layout.dock) Modifier.testTag("quick-${item.pkg}") else Modifier
-                        IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.weight(1f).then(tag), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) { ItemIcon(item, ui, ui.density.dockDp.dp) }
+                        val at = ui.layout.dock.indexOf(item)
+                        val tint = if (at >= 0 && reorder.from >= 0 && reorder.over == at && at != reorder.from) LocalTheme.current.accent.color().copy(alpha = 0.22f) else Color.Transparent
+                        val drag = if (at >= 0) Modifier.dockReorder(reorder, at, pinnedCount, onMoveDock) { onLongPress(item) } else Modifier
+                        val fade = if (at >= 0 && reorder.from == at) Modifier.graphicsLayer { alpha = 0.35f } else Modifier
+                        IconCell(label, { onTap(item) }, if (at >= 0) null else ({ onLongPress(item) }), Modifier.weight(1f).then(tag).then(fade).background(tint, RoundedCornerShape(14.dp)), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp, gesture = drag) { ItemIcon(item, ui, ui.density.dockDp.dp) }
                     }
                     repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
                 }
@@ -82,9 +94,11 @@ fun Dock(
     }
     if (ui.homeStyle == HomeStyle.ICONS) {
         Row(modifier.fillMaxWidth().padding(vertical = 2.dp).onGloballyPositioned { onBounds(it) }, horizontalArrangement = Arrangement.SpaceEvenly) {
-            ui.layout.dock.forEach { item ->
-                val label = dockLabel(item, ui) ?: return@forEach
-                IconCell(label, { onTap(item) }, { onLongPress(item) }, Modifier.padding(horizontal = 4.dp), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp) { ItemIcon(item, ui, ui.density.dockDp.dp) }
+            ui.layout.dock.forEachIndexed { at, item ->
+                val label = dockLabel(item, ui) ?: return@forEachIndexed
+                val tint = if (reorder.from >= 0 && reorder.over == at && at != reorder.from) LocalTheme.current.accent.color().copy(alpha = 0.22f) else Color.Transparent
+                val fade = if (reorder.from == at) Modifier.graphicsLayer { alpha = 0.35f } else Modifier
+                IconCell(label, { onTap(item) }, null, Modifier.padding(horizontal = 4.dp).then(fade).background(tint, RoundedCornerShape(14.dp)), labelSize = minOf(10f, ui.density.labelSp).sp, vPad = 3.dp, gesture = Modifier.dockReorder(reorder, at, pinnedCount, onMoveDock) { onLongPress(item) }) { ItemIcon(item, ui, ui.density.dockDp.dp) }
             }
         }
         return

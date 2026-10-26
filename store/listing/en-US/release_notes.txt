@@ -1,1 +1,1 @@
-Apps you pin now sit in the same bottom row as your quick tiles instead of a row of their own.
+The clock now stays at the top while a long page scrolls beneath it. Hold a pinned app and drag it over another pinned app to reorder the dock.
