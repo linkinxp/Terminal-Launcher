@@ -51,6 +51,10 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
     fun removeWidget(id: Int): HomeLayout =
         copy(pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget && it.id == id }) })
 
+    /** Removes the widgets with these host ids (ones a restored backup brought along that this phone never created). */
+    fun dropWidgets(ids: Set<Int>): HomeLayout =
+        if (ids.isEmpty()) this else copy(pages = pages.map { p -> Page(p.items.filterNot { it is Item.Widget && it.id in ids }) })
+
     fun resizeWidget(id: Int, size: WidgetSize): HomeLayout = copy(
         pages = pages.map { p -> Page(p.items.map { if (it is Item.Widget && it.id == id) it.copy(size = size) else it }) },
     )
@@ -146,6 +150,15 @@ data class HomeLayout(val dock: List<Item>, val pages: List<Page>) {
             else -> return this
         }
         return copy(pages = moved)
+    }
+
+    /** Reorders the apps of folder [name] (on a page or in the dock): the app at [from] goes to position [to]. */
+    fun moveInFolder(name: String, from: Int, to: Int): HomeLayout {
+        val folder = folders().firstOrNull { it.name == name } ?: return this
+        if (from !in folder.apps.indices || to !in folder.apps.indices || from == to) return this
+        val apps = folder.apps.toMutableList().also { it.add(to, it.removeAt(from)) }
+        fun fix(items: List<Item>) = items.map { if (it == folder) folder.copy(apps = apps) else it }
+        return copy(dock = fix(dock), pages = pages.map { Page(fix(it.items)) })
     }
 
     /** Moves the pinned item at [from] to position [to]; anything out of range or unchanged leaves the dock alone. */

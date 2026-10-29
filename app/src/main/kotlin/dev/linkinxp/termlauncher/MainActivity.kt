@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher
 
+import dev.linkinxp.termlauncher.gestures.AdminLock
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -336,8 +337,8 @@ class MainActivity : ComponentActivity() {
                         if (action == SwipeDownAction.QUICK_SETTINGS) expandQuickSettings(this@MainActivity) else expandNotificationShade(this@MainActivity)
                     },
                     onDoubleTap = {
-                        if (Features.lockService && uiState.value.doubleTapLock && !ScreenLock.lock()) {
-                            vm.showMessage("double-tap lock: switch on Terminal: lock screen in accessibility settings (settings > gestures)")
+                        if (uiState.value.doubleTapLock && !AdminLock.lock(this@MainActivity) && !(Features.lockService && ScreenLock.lock())) {
+                            vm.showMessage("double-tap lock: turn on lock access in settings > gestures")
                         }
                     },
                     onEdit = { editing = true },

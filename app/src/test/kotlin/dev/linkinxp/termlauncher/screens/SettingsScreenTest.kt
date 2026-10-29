@@ -243,11 +243,11 @@ class SettingsScreenTest {
         click("badges-row"); until({ "badges=${vm.ui.value.badges}" }) { vm.ui.value.badges }
     }
 
-    @Test fun theLockServiceRowsAreHiddenInABuildWithoutTheService() {
+    @Test fun onlyTheAccessibilityRowIsHiddenInABuildWithoutTheService() {
         dev.linkinxp.termlauncher.gestures.Features.lockService = false
         try {
             show()
-            assertTrue(!has("gesture-lock") && !has("gesture-service"))
+            assertTrue(!has("gesture-service") && has("gesture-lock") && has("settings-lock-admin"))
         } finally {
             dev.linkinxp.termlauncher.gestures.Features.lockService = true
         }

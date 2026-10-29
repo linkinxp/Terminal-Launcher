@@ -1,5 +1,6 @@
 package dev.linkinxp.termlauncher.ui
 
+import dev.linkinxp.termlauncher.gestures.AdminLock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -229,8 +230,14 @@ fun SettingsScreen(
 
             TermPanel("gestures", Modifier.padding(top = 4.dp)) {
                 val context = androidx.compose.ui.platform.LocalContext.current
+                ToggleRow("double-tap lock", ui.doubleTapLock, "gesture-lock") { vm.toggleDoubleTapLock() }
+                val resumedAdmin = rememberResumeTick()
+                val adminOn = remember(resumedAdmin) { AdminLock.isActive(context) }
+                SettingRow("lock access", if (adminOn) "on [turn off]" else "off [enable]", "settings-lock-admin") {
+                    if (adminOn) AdminLock.remove(context)
+                    else context.startActivity(AdminLock.requestIntent(context).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
                 if (Features.lockService) {
-                    ToggleRow("double-tap lock", ui.doubleTapLock, "gesture-lock") { vm.toggleDoubleTapLock() }
                     val resumedLock = rememberResumeTick()
                     SettingRow("lock service", if (remember(resumedLock) { ScreenLock.isEnabled(context) }) "on" else "off [enable]", "gesture-service") {
                         context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))

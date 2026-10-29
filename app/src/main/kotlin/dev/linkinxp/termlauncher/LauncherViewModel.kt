@@ -471,8 +471,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun showMessage(text: String) = say(text)
 
     /** Drops widgets whose provider was uninstalled (skipped when the provider query failed or came back empty). */
+    private var staleWidgetsChecked = false
+
     private suspend fun pruneMissingWidgets() {
         val providers = widgets.providersOrNull()?.map { it.provider }?.toSet()?.takeIf { it.isNotEmpty() } ?: return
+        // Widgets that arrived with a restored backup have ids this phone never allocated: drop those first.
+        // Once per start only: a provider that is being updated can look unknown for a moment and must not lose its widget.
+        if (!staleWidgetsChecked) {
+            staleWidgetsChecked = true
+            val stale = prefs.layout.first().widgetIds().filterNot(widgets::isKnown).toSet()
+            if (stale.isNotEmpty()) applyLayout { Result.success(it.dropWidgets(stale)) }
+        }
         if (prefs.layout.first().pruneWidgets(providers).second.isEmpty()) return
         applyLayout { Result.success(it.pruneWidgets(providers).first) }
     }
@@ -822,6 +831,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun renameFolder(old: String, new: String) = applyLayout { it.renameFolder(old, new) }
     /** A page that is too full hands its last icon to the next page. */
     fun spillPage(page: Int) = edit { it.spillPage(page) }
+    fun moveInFolder(name: String, from: Int, to: Int) = edit { it.moveInFolder(name, from, to) }
     fun moveInDock(from: Int, to: Int) = edit { it.moveInDock(from, to) }
     fun addAt(page: Int, pkg: String, slot: Int) = edit { it.addAt(page, pkg, slot) }
     fun addToHome(pkg: String) = edit { it.addToHome(pkg) }
@@ -884,7 +894,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        const val LAUNCHER_VERSION = "1.0.8"
+        const val LAUNCHER_VERSION = "1.1.0"
         const val FIRST_RUN_HINT = "long-press empty space to edit pages | swipe up for all apps"
         private const val WEATHER_STALE_MS = 30L * 60 * 1000
         private const val CAL_DAYS = 30L

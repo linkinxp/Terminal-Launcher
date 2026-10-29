@@ -68,6 +68,9 @@ class WidgetHostController(context: Context) {
         false
     }
 
+    /** Whether this phone knows the widget id (false for ids that came along in a restored backup). */
+    fun isKnown(id: Int): Boolean = try { manager.getAppWidgetInfo(id) != null } catch (_: Exception) { false }
+
     fun createView(id: Int): AppWidgetHostView? = try {
         manager.getAppWidgetInfo(id)?.let { host.createView(app, id, it) }
     } catch (_: Exception) {

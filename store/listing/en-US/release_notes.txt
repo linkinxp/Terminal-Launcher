@@ -1,1 +1,1 @@
-The home screen no longer scrolls: when a page is full, the next icon you add moves on to the next page (a new one is created when needed).
+Folders open as an icon grid you can reorder by dragging. Your layout and settings now come back on a new phone or after a reinstall through Android backup. Double-tap to lock works in the store build through a lock-only device admin (settings > gestures > lock access).

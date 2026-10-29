@@ -22,6 +22,8 @@ Nothing else leaves the device.
 ## Backups
 "Export" writes a file to a place you choose; it contains your layout and settings. The app does not upload it.
 
+Android's own backup (if you have it switched on in your phone settings) may also copy the app's layout and settings to your Google account, so they come back on a new phone or after a reinstall. That is handled by Android and your Google account, not by the app; it never includes your notifications, contacts or calendar.
+
 ## Children
 The app is not directed at children and collects no personal information from anyone.
 
